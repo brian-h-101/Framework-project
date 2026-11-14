@@ -1,10 +1,10 @@
 extends RefCounted
 
 const AttributeConnector = preload(
-	"res://Framework/Entity/attribute_connector.gd"
+	"res://Framework/Implementation/Entity/attribute_connector.gd"
 )
 const AttributeReference = preload(
-	"res://Framework/Entity/attribute_reference.gd"
+	"res://Framework/Implementation/Entity/attribute_reference.gd"
 )
 
 var _connector: AttributeConnector

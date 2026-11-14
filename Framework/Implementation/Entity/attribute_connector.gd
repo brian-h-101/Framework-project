@@ -1,10 +1,10 @@
 extends RefCounted
 
 const EntityRegistry = preload(
-	"res://Framework/Entity/entity_registry.gd"
+	"res://Framework/Implementation/Entity/entity_registry.gd"
 )
 const AttributeReference = preload(
-	"res://Framework/Entity/attribute_reference.gd"
+	"res://Framework/Implementation/Entity/attribute_reference.gd"
 )
 
 var _registry: EntityRegistry

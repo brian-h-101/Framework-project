@@ -1,7 +1,13 @@
 extends RefCounted
 
+signal attribute_written(
+	entity_id: int,
+	container_id: StringName,
+	attribute_name: StringName
+)
+
 const EntityDefinition = preload(
-	"res://Framework/Entity/entity_definition.gd"
+	"res://Framework/Implementation/Entity/entity_definition.gd"
 )
 
 var _next_id: int = 1
@@ -76,8 +82,9 @@ func set_value(
 	var stored_value: Variant = value
 	if value is Dictionary or value is Array:
 		stored_value = value.duplicate(true)
-
+		
 	_entities[entity_id][container_id][String(attribute_name)] = stored_value
+	attribute_written.emit(entity_id, container_id, attribute_name)
 	return true
 
 func print_entities() -> void:

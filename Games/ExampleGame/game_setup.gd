@@ -1,4 +1,4 @@
-extends "res://Framework/Runtime/game_setup.gd"
+extends "res://Framework/API/Runtime/game_setup.gd"
 
 const EntityContent = preload(
 	"res://Framework/Content/Authored/Entity/entities.gd"

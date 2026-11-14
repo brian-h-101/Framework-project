@@ -1,6 +1,6 @@
 extends RefCounted
 
-const GameRuntime = preload("res://Framework/Runtime/game_runtime.gd")
+const GameRuntime = preload("res://Framework/API/Runtime/game_runtime.gd")
 const PlayerContent = preload(
 	"res://Framework/Content/Authored/Entity/Player/player.gd"
 )
