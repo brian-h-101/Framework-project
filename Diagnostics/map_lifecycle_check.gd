@@ -25,7 +25,7 @@ func _run_check() -> void:
 	var player_id: int = _host.entry.entity_ids[&"player"]
 	var bridge := _host.entry.world_bridge
 	var initial_player := bridge.node_for(player_id)
-	var initial_label := initial_player.get_node("Health") as Label
+	var initial_label := initial_player.get_node("View2D/Health") as Label
 
 	print("[view] Initial text: ", initial_label.text)
 	print("[map] Set player health: ",
@@ -43,7 +43,10 @@ func _run_check() -> void:
 
 	var map_node: Node = loaded.value
 	var player_node := map_node.get_node("Player")
-	var health_label := player_node.get_node("Health") as Label
+	var health_label := player_node.get_node("View2D/Health") as Label
+
+	print("[entity] Player root type: ", player_node.get_class())
+	print("[entity] Enemy root type: ", map_node.get_node("Enemy").get_class())
 
 	print("[view] After reload: ", health_label.text)
 	print("[view] Listeners after reload: ",

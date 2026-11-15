@@ -97,18 +97,29 @@ func _bind_map_entities(map_root: Node) -> Dictionary:
 
 		_bound_entity_ids.append(entity_id)
 
-		for component in world_node.get_children():
-			if component.has_method(&"configure_entity"):
-				component.call(&"configure_entity", _bridge, world_node)
-
-			if component.has_method(&"configure_controls"):
-				component.call(&"configure_controls", _controls)
-
-			if component.has_method(&"configure_displays"):
-				component.call(&"configure_displays", _displays)
+		_configure_entity_components(world_node, world_node)
 
 	return {"ok": true, "value": true, "error": ""}
 
+
+func _configure_entity_components(
+	entity_node: Node,
+	parent_node: Node
+) -> void:
+	for component in parent_node.get_children():
+		if component.has_meta(&"entity_key"):
+			continue
+
+		if component.has_method(&"configure_entity"):
+			component.call(&"configure_entity", _bridge, entity_node)
+
+		if component.has_method(&"configure_controls"):
+			component.call(&"configure_controls", _controls)
+
+		if component.has_method(&"configure_displays"):
+			component.call(&"configure_displays", _displays)
+
+		_configure_entity_components(entity_node, component)
 
 func _failure(message: String) -> Dictionary:
 	return {"ok": false, "value": null, "error": message}
