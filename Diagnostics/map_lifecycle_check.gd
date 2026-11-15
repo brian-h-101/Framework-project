@@ -63,6 +63,21 @@ func _run_check() -> void:
 	print("[map] Inside scene tree: ",
 		map_node.is_inside_tree())
 
+	await process_frame
+
+	var input_event := InputEventAction.new()
+	input_event.action = &"primary_interaction"
+	input_event.pressed = true
+	root.push_input(input_event)
+
+	var enemy_node := map_node.get_node("Enemy")
+
+	print("[controls] Enemy health after configured input: ",
+		bridge.read_attribute(enemy_node, &"health", ["current"]))
+
+	input_event.pressed = false
+	root.push_input(input_event)
+
 	_host.maps.unload_map()
 	print("[view] Listeners after unload: ",
 		bridge.attribute_written.get_connections().size())

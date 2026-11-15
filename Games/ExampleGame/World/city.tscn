@@ -1,6 +1,6 @@
 [gd_scene load_steps=3 format=3]
 
-[ext_resource type="Script" path="res://Framework/Env/Presentation/health_display.gd" id="1_health"]
+[ext_resource type="Script" path="res://Framework/Env/Presentation/attribute_display.gd" id="1_health"]
 [ext_resource type="Script" path="res://Framework/Env/Input/interaction_input.gd" id="2_input"]
 [node name="City" type="Node2D"]
 
@@ -38,6 +38,7 @@ offset_right = 160.0
 offset_bottom = 80.0
 text = "Health: ..."
 script = ExtResource("1_health")
+display_id = &"health"
 
 [node name="InteractionInput" type="Node" parent="Player"]
 script = ExtResource("2_input")
@@ -65,6 +66,7 @@ offset_right = 160.0
 offset_bottom = 80.0
 text = "Health: ..."
 script = ExtResource("1_health")
+display_id = &"health"
 
 [node name="Controls" type="Label" parent="."]
 offset_left = 24.0

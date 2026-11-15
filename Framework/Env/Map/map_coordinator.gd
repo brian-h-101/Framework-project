@@ -9,16 +9,21 @@ var _active_map: Node
 var _bridge: WorldBridge
 var _entity_ids: Dictionary[StringName, int] = {}
 var _bound_entity_ids: Array[int] = []
-
+var _controls: Dictionary[StringName, Dictionary] = {}
+var _displays: Dictionary[StringName, Dictionary] = {}
 
 func _init(
 	map_parent: Node,
 	bridge: WorldBridge,
-	entity_ids: Dictionary[StringName, int]
+	entity_ids: Dictionary[StringName, int],
+	controls: Dictionary[StringName, Dictionary],
+	displays: Dictionary[StringName, Dictionary]
 ) -> void:
 	_map_parent = map_parent
 	_bridge = bridge
 	_entity_ids = entity_ids
+	_controls = controls
+	_displays = displays
 
 
 func load_map(scene: PackedScene) -> Dictionary:
@@ -95,6 +100,12 @@ func _bind_map_entities(map_root: Node) -> Dictionary:
 		for component in world_node.get_children():
 			if component.has_method(&"configure_entity"):
 				component.call(&"configure_entity", _bridge, world_node)
+
+			if component.has_method(&"configure_controls"):
+				component.call(&"configure_controls", _controls)
+
+			if component.has_method(&"configure_displays"):
+				component.call(&"configure_displays", _displays)
 
 	return {"ok": true, "value": true, "error": ""}
 

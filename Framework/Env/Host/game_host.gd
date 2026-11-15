@@ -9,7 +9,15 @@ const EnvironmentSetup = preload(
 const MapCoordinator = preload(
 	"res://Framework/Env/Map/map_coordinator.gd"
 )
-
+const Controls = preload(
+	"res://Framework/Content/Configuration/Input/controls.gd"
+)
+const InputConfiguration = preload(
+	"res://Framework/Env/Input/input_configuration.gd"
+)
+const Displays = preload(
+	"res://Framework/Content/Configuration/Presentation/displays.gd"
+)
 var entry := GameEntry.new()
 var maps: MapCoordinator
 
@@ -27,10 +35,16 @@ func start(map_parent: Node) -> Dictionary:
 	if not started.ok:
 		return started
 
+	var controls := Controls.defaults()
+	InputConfiguration.apply(controls)
+	var displays := Displays.defaults()
+
 	maps = MapCoordinator.new(
 		map_parent,
 		entry.world_bridge,
-		entry.entity_ids
+		entry.entity_ids,
+		controls,
+		displays
 	)
 
 	var loaded := maps.load_map(setup.get_initial_map())
