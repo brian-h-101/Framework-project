@@ -1,4 +1,4 @@
-extends "res://Framework/API/Runtime/game_setup.gd"
+extends "res://Framework/Infrastructure/API/Runtime/game_setup.gd"
 
 const EntityContent = preload(
 	"res://Framework/Content/Authored/Entity/entities.gd"
@@ -9,7 +9,9 @@ const ChangeHealth = preload(
 const Strike = preload(
 	"res://Framework/Content/Interaction/strike.gd"
 )
-
+const InitialMap = preload(
+	"res://Games/ExampleGame/World/city.tscn"
+)
 
 func register_content(runtime: GameRuntime) -> void:
 	EntityContent.define(runtime)
@@ -32,3 +34,5 @@ func create_entities(
 		&"second_player": second_player_id,
 		&"enemy": enemy_id,
 	}
+func get_initial_map() -> PackedScene:
+	return InitialMap

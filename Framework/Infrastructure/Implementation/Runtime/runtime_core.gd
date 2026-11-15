@@ -7,25 +7,25 @@ signal attribute_written(
 )
 
 const EntityDefinition = preload(
-	"res://Framework/Implementation/Entity/entity_definition.gd"
+	"res://Framework/Infrastructure/Implementation/Entity/entity_definition.gd"
 )
 const EntityRegistry = preload(
-	"res://Framework/Implementation/Entity/entity_registry.gd"
+	"res://Framework/Infrastructure/Implementation/Entity/entity_registry.gd"
 )
 const AttributeConnector = preload(
-	"res://Framework/Implementation/Entity/attribute_connector.gd"
+	"res://Framework/Infrastructure/Implementation/Entity/attribute_connector.gd"
 )
 
 const EffectExecutor = preload(
-	"res://Framework/Implementation/Gameplay/effect_executor.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/effect_executor.gd"
 )
 
 const ActionExecutor = preload(
-	"res://Framework/Implementation/Gameplay/action_executor.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/action_executor.gd"
 )
 
 const InteractionExecutor = preload(
-	"res://Framework/Implementation/Gameplay/interaction_executor.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/interaction_executor.gd"
 )
 
 var _definitions: Dictionary[StringName, EntityDefinition] = {}

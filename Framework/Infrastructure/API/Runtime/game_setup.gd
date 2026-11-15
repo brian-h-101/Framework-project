@@ -1,7 +1,7 @@
 extends RefCounted
 
 const GameRuntime = preload(
-	"res://Framework/API/Runtime/game_runtime.gd"
+	"res://Framework/Infrastructure/API/Runtime/game_runtime.gd"
 )
 
 

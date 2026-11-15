@@ -7,7 +7,7 @@ signal attribute_written(
 )
 
 const RuntimeCore = preload(
-	"res://Framework/Implementation/Runtime/runtime_core.gd"
+	"res://Framework/Infrastructure/Implementation/Runtime/runtime_core.gd"
 )
 
 var _runtime: RuntimeCore

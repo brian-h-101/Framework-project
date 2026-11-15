@@ -7,10 +7,10 @@ signal attribute_written(
 )
 
 const RuntimeCore = preload(
-	"res://Framework/Implementation/Runtime/runtime_core.gd"
+	"res://Framework/Infrastructure/Implementation/Runtime/runtime_core.gd"
 )
 const WorldBridgeCore = preload(
-	"res://Framework/Implementation/Bootstrap/world_bridge_core.gd"
+	"res://Framework/Infrastructure/Implementation/Bootstrap/world_bridge_core.gd"
 )
 
 var _core: WorldBridgeCore

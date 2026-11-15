@@ -1,17 +1,17 @@
 extends RefCounted
 
 const GameRuntime = preload(
-	"res://Framework/API/Runtime/game_runtime.gd"
+	"res://Framework/Infrastructure/API/Runtime/game_runtime.gd"
 )
 const GameSetup = preload(
-	"res://Framework/API/Runtime/game_setup.gd"
+	"res://Framework/Infrastructure/API/Runtime/game_setup.gd"
 )
 const RuntimeCore = preload(
-	"res://Framework/Implementation/Runtime/runtime_core.gd"
+	"res://Framework/Infrastructure/Implementation/Runtime/runtime_core.gd"
 )
 
 const WorldBridge = preload(
-	"res://Framework/API/Bootstrap/world_bridge.gd"
+	"res://Framework/Infrastructure/API/Bootstrap/world_bridge.gd"
 )
 
 var runtime: GameRuntime

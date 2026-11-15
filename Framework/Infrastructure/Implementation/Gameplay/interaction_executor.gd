@@ -1,10 +1,10 @@
 extends RefCounted
 
 const AttributeConnector = preload(
-	"res://Framework/Implementation/Entity/attribute_connector.gd"
+	"res://Framework/Infrastructure/Implementation/Entity/attribute_connector.gd"
 )
 const ActionExecutor = preload(
-	"res://Framework/Implementation/Gameplay/action_executor.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/action_executor.gd"
 )
 
 var _connector: AttributeConnector

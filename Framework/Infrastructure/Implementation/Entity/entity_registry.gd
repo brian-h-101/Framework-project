@@ -7,7 +7,7 @@ signal attribute_written(
 )
 
 const EntityDefinition = preload(
-	"res://Framework/Implementation/Entity/entity_definition.gd"
+	"res://Framework/Infrastructure/Implementation/Entity/entity_definition.gd"
 )
 
 var _next_id: int = 1

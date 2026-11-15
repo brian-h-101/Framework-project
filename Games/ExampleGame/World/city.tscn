@@ -1,0 +1,74 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://Framework/Env/Presentation/health_display.gd" id="1_health"]
+[ext_resource type="Script" path="res://Framework/Env/Input/interaction_input.gd" id="2_input"]
+[node name="City" type="Node2D"]
+
+[node name="Ground" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, 0, 1280, 0, 1280, 720, 0, 720)
+color = Color(0.18, 0.24, 0.2, 1)
+
+[node name="Title" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 240.0
+offset_bottom = 72.0
+theme_override_font_sizes/font_size = 32
+text = "City"
+
+[node name="Player" type="Node2D" parent="."]
+position = Vector2(320, 360)
+metadata/entity_key = "player"
+
+[node name="Body" type="Polygon2D" parent="Player"]
+polygon = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+color = Color(0.2, 0.6, 1, 1)
+
+[node name="Name" type="Label" parent="Player"]
+offset_left = -24.0
+offset_top = 24.0
+offset_right = 100.0
+offset_bottom = 52.0
+text = "Player"
+
+[node name="Health" type="Label" parent="Player"]
+offset_left = -32.0
+offset_top = 52.0
+offset_right = 160.0
+offset_bottom = 80.0
+text = "Health: ..."
+script = ExtResource("1_health")
+
+[node name="InteractionInput" type="Node" parent="Player"]
+script = ExtResource("2_input")
+target_path = NodePath("../../Enemy")
+
+[node name="Enemy" type="Node2D" parent="."]
+position = Vector2(640, 360)
+metadata/entity_key = "enemy"
+
+[node name="Body" type="Polygon2D" parent="Enemy"]
+polygon = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+color = Color(0.9, 0.25, 0.2, 1)
+
+[node name="Name" type="Label" parent="Enemy"]
+offset_left = -24.0
+offset_top = 24.0
+offset_right = 100.0
+offset_bottom = 52.0
+text = "Enemy"
+
+[node name="Health" type="Label" parent="Enemy"]
+offset_left = -32.0
+offset_top = 52.0
+offset_right = 160.0
+offset_bottom = 80.0
+text = "Health: ..."
+script = ExtResource("1_health")
+
+[node name="Controls" type="Label" parent="."]
+offset_left = 24.0
+offset_top = 80.0
+offset_right = 500.0
+offset_bottom = 108.0
+text = "Space: Strike enemy"
