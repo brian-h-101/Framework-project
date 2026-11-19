@@ -8,8 +8,8 @@ id = &"actor_strength"
 requirement = {
 "container": &"strength",
 "entity": &"actor",
-"message": "Strike requires at least 10 strength.",
+"message": "Strike requires at least 20 strength.",
 "operator": ">=",
 "path": ["current"],
-"value": 10
+"value": 20
 }

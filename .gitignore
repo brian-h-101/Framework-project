@@ -1,3 +1,13 @@
-# Godot 4+ specific ignores
-.godot/
-/android/
+# Godot generated cache
+**/.godot/
+
+# JavaScript dependencies and compiled output
+**/node_modules/
+**/out/
+
+# Generated extension packages and logs
+*.vsix
+*.log
+
+# Generated authoring previews
+/Tools/Authoring/Previews/
