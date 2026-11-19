@@ -12,7 +12,7 @@ func _initialize() -> void:
 
 
 func _start_session() -> void:
-	var started := _host.start(root)
+	var started := _host.start_configured(root)
 
 	if not started.ok:
 		push_error(started.error)

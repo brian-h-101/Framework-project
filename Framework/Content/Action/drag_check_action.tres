@@ -1,0 +1,14 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd" id="1_action"]
+
+[resource]
+script = ExtResource("1_action")
+id = &"drag_check_action"
+effects = Array[Dictionary]([{
+	"operation": &"add",
+	"entity": &"target",
+	"container": &"health",
+	"path": ["current"],
+	"value_from": &"amount"
+}])

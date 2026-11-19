@@ -3,7 +3,7 @@ extends RefCounted
 
 static func defaults() -> Dictionary:
 	return {
-		"initial_map": "res://Games/ExampleGame/World/city.tscn",
+		"initial_map": "res://Games/ExampleGame/World/city_recreated.tscn",
 		"entities": {
 			&"player": {
 				"definition": &"player",

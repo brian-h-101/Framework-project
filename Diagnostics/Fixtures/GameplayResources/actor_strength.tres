@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/condition_resource.gd" id="1_condition"]
+
+[resource]
+script = ExtResource("1_condition")
+id = &"actor_strength"
+requirement = {
+	"entity": &"actor",
+	"container": &"strength",
+	"path": ["current"],
+	"operator": ">=",
+	"value": 10,
+	"message": "Strike requires at least 10 strength."
+}

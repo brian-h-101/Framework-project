@@ -1,14 +1,11 @@
 extends RefCounted
 
-const GameRuntime = preload("res://Framework/Infrastructure/API/Runtime/game_runtime.gd")
-const PlayerContent = preload(
-	"res://Framework/Content/Authored/Entity/Player/player.gd"
-)
-const EnemyContent = preload(
-	"res://Framework/Content/Authored/Entity/Enemy/enemy.gd"
+const ContentDiscovery = preload(
+	"res://Framework/Env/Setup/content_discovery.gd"
 )
 
 
-static func define(game: GameRuntime) -> void:
-	PlayerContent.define(game)
-	EnemyContent.define(game)
+static func definitions() -> Dictionary:
+	return ContentDiscovery.entity_definitions_in(
+		"res://Framework/Content/Presentation/Entity"
+	)

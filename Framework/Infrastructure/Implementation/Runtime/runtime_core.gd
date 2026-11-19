@@ -28,7 +28,12 @@ const InteractionExecutor = preload(
 	"res://Framework/Infrastructure/Implementation/Gameplay/interaction_executor.gd"
 )
 
+const SessionClock = preload(
+	"res://Framework/Infrastructure/Implementation/Runtime/session_clock.gd"
+)
+
 var _definitions: Dictionary[StringName, EntityDefinition] = {}
+var _entity_definition_ids: Dictionary[int, StringName] = {}
 var _actions: Dictionary[StringName, Dictionary] = {}
 var _interactions: Dictionary[StringName, Dictionary] = {}
 
@@ -42,6 +47,7 @@ var _interaction_executor := InteractionExecutor.new(
 	connector, _action_executor
 )
 var _closed: bool = false
+var _clock: SessionClock
 
 func define_attributes(
 	definition_id: StringName,
@@ -57,8 +63,11 @@ func define_attributes(
 
 	_definitions[definition.id] = definition
 
-func _init() -> void:
+func _init(clock_definition: Dictionary = {}) -> void:
 	_registry.attribute_written.connect(_on_registry_attribute_written)
+
+	if not clock_definition.is_empty():
+		_clock = SessionClock.new(clock_definition)
 
 func close() -> void:
 	if _closed:
@@ -70,6 +79,7 @@ func close() -> void:
 		_registry.attribute_written.disconnect(_on_registry_attribute_written)
 
 	_definitions.clear()
+	_entity_definition_ids.clear()
 	_actions.clear()
 	_interactions.clear()
 
@@ -78,6 +88,7 @@ func close() -> void:
 	_effect_executor = null
 	connector = null
 	_registry = null
+	_clock = null
 
 func _on_registry_attribute_written(
 	entity_id: int,
@@ -139,10 +150,26 @@ func spawn(
 	definition_id: StringName,
 	overrides: Dictionary[StringName, Dictionary] = {}
 ) -> int:
-	if _closed:
+	if not has_definition(definition_id):
 		return 0
 
-	return _registry.create_entity(_definitions[definition_id], overrides)
+	var entity_id := _registry.create_entity(
+		_definitions[definition_id], overrides
+	)
+	_entity_definition_ids[entity_id] = definition_id
+
+	return entity_id
+
+
+func has_definition(definition_id: StringName) -> bool:
+	return not _closed and _definitions.has(definition_id)
+
+
+func definition_id_for(entity_id: int) -> StringName:
+	if _closed:
+		return &""
+
+	return _entity_definition_ids.get(entity_id, &"")
 
 
 func has_entity(entity_id: int) -> bool:
@@ -150,6 +177,242 @@ func has_entity(entity_id: int) -> bool:
 		return false
 
 	return _registry.has_entity(entity_id)
+
+func snapshot_entity(entity_id: int) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	var containers_result := _registry.snapshot_containers(entity_id)
+	if not containers_result["ok"]:
+		return containers_result
+
+	return {
+		"ok": true,
+		"value": {
+			"definition": definition_id_for(entity_id),
+			"containers": containers_result["value"],
+		},
+		"error": "",
+	}
+
+func snapshot_entities(
+	entity_ids: Dictionary[StringName, int]
+) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	var records: Dictionary[StringName, Dictionary] = {}
+	var seen_ids: Dictionary[int, StringName] = {}
+	var entity_keys: Array = entity_ids.keys()
+	entity_keys.sort()
+
+	for entity_key in entity_keys:
+		if entity_key == &"":
+			return _failure("Entity key cannot be empty.")
+
+		var entity_id: int = entity_ids[entity_key]
+		if seen_ids.has(entity_id):
+			return _failure(
+				"Entity %s is assigned to both '%s' and '%s'."
+				% [entity_id, seen_ids[entity_id], entity_key]
+			)
+
+		var captured := snapshot_entity(entity_id)
+		if not captured["ok"]:
+			return _failure(
+				"Cannot capture entity '%s': %s"
+				% [entity_key, captured["error"]]
+			)
+
+		records[entity_key] = captured["value"]
+		seen_ids[entity_id] = entity_key
+
+	return {
+		"ok": true,
+		"value": records,
+		"error": "",
+	}
+
+func restore_entity(snapshot: Dictionary) -> Dictionary:
+	var prepared := _prepare_entity_snapshot(snapshot)
+	if not prepared["ok"]:
+		return prepared
+
+	var data: Dictionary = prepared["value"]
+	var definition_id: StringName = data["definition"]
+	var entity_id := _registry.create_from_containers(data["containers"])
+	_entity_definition_ids[entity_id] = definition_id
+
+	return {
+		"ok": true,
+		"value": entity_id,
+		"error": "",
+	}
+
+func restore_entities(records: Dictionary) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	if not _entity_definition_ids.is_empty():
+		return _failure(
+			"Collection restoration requires a runtime with no entities."
+		)
+
+	var prepared_records: Dictionary[StringName, Dictionary] = {}
+
+	for saved_key in records:
+		if typeof(saved_key) not in [TYPE_STRING, TYPE_STRING_NAME]:
+			return _failure("Session entity keys must be text.")
+
+		var entity_key := StringName(String(saved_key))
+		if entity_key == &"":
+			return _failure("Entity key cannot be empty.")
+
+		if prepared_records.has(entity_key):
+			return _failure("Duplicate entity key: %s" % entity_key)
+
+		if not records[saved_key] is Dictionary:
+			return _failure(
+				"Entity record must be a dictionary: %s" % entity_key
+			)
+
+		var record: Dictionary = records[saved_key]
+		var prepared := _prepare_entity_snapshot(record)
+		if not prepared["ok"]:
+			return _failure(
+				"Cannot restore entity '%s': %s"
+				% [entity_key, prepared["error"]]
+			)
+
+		prepared_records[entity_key] = prepared["value"]
+
+	var entity_keys: Array = prepared_records.keys()
+	entity_keys.sort()
+
+	var entity_ids: Dictionary[StringName, int] = {}
+	for entity_key in entity_keys:
+		var data: Dictionary = prepared_records[entity_key]
+		var definition_id: StringName = data["definition"]
+		var entity_id := _registry.create_from_containers(data["containers"])
+
+		_entity_definition_ids[entity_id] = definition_id
+		entity_ids[entity_key] = entity_id
+
+	return {
+		"ok": true,
+		"value": entity_ids,
+		"error": "",
+	}
+
+func _prepare_entity_snapshot(snapshot: Dictionary) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	var saved_definition: Variant = snapshot.get("definition")
+	if typeof(saved_definition) not in [TYPE_STRING, TYPE_STRING_NAME]:
+		return _failure("Snapshot requires a text definition ID.")
+
+	var definition_id := StringName(String(saved_definition))
+	if not has_definition(definition_id):
+		return _failure("Unknown entity definition: %s" % definition_id)
+
+	var saved_containers: Variant = snapshot.get("containers")
+	if not saved_containers is Dictionary:
+		return _failure("Snapshot requires a containers dictionary.")
+
+	var containers: Dictionary[StringName, Dictionary] = {}
+	for container_id in saved_containers:
+		if typeof(container_id) not in [TYPE_STRING, TYPE_STRING_NAME]:
+			return _failure("Snapshot container IDs must be text.")
+
+		if not saved_containers[container_id] is Dictionary:
+			return _failure(
+				"Snapshot container '%s' must hold a dictionary."
+				% container_id
+			)
+
+		var attributes: Dictionary = saved_containers[container_id]
+		for attribute_name in attributes:
+			if typeof(attribute_name) not in [TYPE_STRING, TYPE_STRING_NAME]:
+				return _failure(
+					"Snapshot attribute names must be text: %s"
+					% container_id
+				)
+
+		containers[StringName(String(container_id))] = attributes
+
+	return {
+		"ok": true,
+		"value": {
+			"definition": definition_id,
+			"containers": containers,
+		},
+		"error": "",
+	}
+
+func add_container(
+	entity_id: int,
+	container_id: StringName,
+	attributes: Dictionary = {}
+) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	if not _registry.has_entity(entity_id):
+		return _failure("Unknown entity: %s" % entity_id)
+
+	if _registry.has_container(entity_id, container_id):
+		return _failure(
+			"Entity %s already has container: %s"
+			% [entity_id, container_id]
+		)
+
+	if not _registry.add_container(entity_id, container_id, attributes):
+		return _failure("The container could not be added.")
+
+	return {
+		"ok": true,
+		"value": true,
+		"error": "",
+	}
+
+func add_attribute(
+	entity_id: int,
+	container_id: StringName,
+	attribute_name: StringName,
+	value: Variant
+) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	if not _registry.has_entity(entity_id):
+		return _failure("Unknown entity: %s" % entity_id)
+
+	if not _registry.has_container(entity_id, container_id):
+		return _failure(
+			"Entity %s has no container: %s"
+			% [entity_id, container_id]
+		)
+
+	if _registry.has_value(entity_id, container_id, attribute_name):
+		return _failure(
+			"Entity %s already has attribute: %s/%s"
+			% [entity_id, container_id, attribute_name]
+		)
+
+	if not _registry.add_attribute(
+		entity_id,
+		container_id,
+		attribute_name,
+		value
+	):
+		return _failure("The attribute could not be added.")
+
+	return {
+		"ok": true,
+		"value": true,
+		"error": "",
+	}
 
 func read_attribute(
 	entity_id: int,
@@ -211,6 +474,68 @@ func print_entities() -> void:
 		return
 
 	_registry.print_entities()
+
+func read_time() -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	if _clock == null:
+		return _failure("Session clock is not configured.")
+
+	return {
+		"ok": true,
+		"value": {
+			"day": _clock.get_day_number(),
+			"hour": _clock.get_hour(),
+			"day_fraction": _clock.get_day_fraction(),
+		},
+		"error": "",
+	}
+
+
+func advance_time(delta_seconds: float) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	if _clock == null:
+		return _failure("Session clock is not configured.")
+
+	if not is_finite(delta_seconds) or delta_seconds < 0.0:
+		return _failure("Time step must be finite and at least zero.")
+
+	_clock.advance(delta_seconds)
+	return read_time()
+
+func snapshot_time() -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	if _clock == null:
+		return {
+			"ok": true,
+			"value": null,
+			"error": "",
+		}
+
+	return {
+		"ok": true,
+		"value": _clock.snapshot_state(),
+		"error": "",
+	}
+
+
+func restore_time(snapshot: Dictionary) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	if _clock == null:
+		return _failure("Session clock is not configured.")
+
+	var restored := _clock.restore_state(snapshot)
+	if not restored["ok"]:
+		return restored
+
+	return read_time()
 
 func _failure(message: String) -> Dictionary:
 	return {

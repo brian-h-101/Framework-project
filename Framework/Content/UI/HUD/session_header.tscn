@@ -1,0 +1,19 @@
+[gd_scene format=3]
+
+[node name="SessionHeader" type="VBoxContainer"]
+use_parent_material = true
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="Title" type="Label" parent="."]
+use_parent_material = true
+layout_mode = 2
+mouse_filter = 2
+theme_override_font_sizes/font_size = 32
+text = "Game Session"
+
+[node name="Controls" type="Label" parent="."]
+use_parent_material = true
+layout_mode = 2
+mouse_filter = 2
+text = "Move: WASD / arrow keys\nSpace: Strike enemy"

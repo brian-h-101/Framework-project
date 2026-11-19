@@ -1,14 +1,18 @@
 extends RefCounted
 
+const ContentComposition = preload(
+	"res://Framework/Content/Authored/Entity/Shared/content_composition.gd"
+)
+const Health = preload(
+	"res://Framework/Content/Authored/Entity/Attributes/Statistics/health.gd"
+)
+const Speed = preload(
+	"res://Framework/Content/Authored/Entity/Attributes/Statistics/speed.gd"
+)
+
 
 static func defaults() -> Dictionary[StringName, Dictionary]:
-	return {
-		&"health": {
-			"current": 100,
-			"maximum": 100,
-		},
-		&"speed": {
-			"current": 20,
-			"maximum": 50,
-		},
-	}
+	return ContentComposition.combine([
+		Health.defaults(),
+		Speed.defaults(),
+	])

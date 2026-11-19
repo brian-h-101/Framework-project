@@ -53,9 +53,45 @@ func spawn(
 	return _core.spawn(definition_id, overrides)
 
 
+func has_definition(definition_id: StringName) -> bool:
+	return _core.has_definition(definition_id)
+
+
+func definition_id_for(entity_id: int) -> StringName:
+	return _core.definition_id_for(entity_id)
+
+
 func has_entity(entity_id: int) -> bool:
 	return _core.has_entity(entity_id)
 
+func snapshot_entity(entity_id: int) -> Dictionary:
+	return _core.snapshot_entity(entity_id)
+
+func snapshot_entities(
+	entity_ids: Dictionary[StringName, int]
+) -> Dictionary:
+	return _core.snapshot_entities(entity_ids)
+
+func restore_entity(snapshot: Dictionary) -> Dictionary:
+	return _core.restore_entity(snapshot)
+
+func restore_entities(records: Dictionary) -> Dictionary:
+	return _core.restore_entities(records)
+
+func add_container(
+	entity_id: int,
+	container_id: StringName,
+	attributes: Dictionary = {}
+) -> Dictionary:
+	return _core.add_container(entity_id, container_id, attributes)
+
+func add_attribute(
+	entity_id: int,
+	container_id: StringName,
+	attribute_name: StringName,
+	value: Variant
+) -> Dictionary:
+	return _core.add_attribute(entity_id, container_id, attribute_name, value)
 
 func read_attribute(
 	entity_id: int,
@@ -103,6 +139,20 @@ func compare_attributes(
 func print_entities() -> void:
 	_core.print_entities()
 
+
+func read_time() -> Dictionary:
+	return _core.read_time()
+
+
+func advance_time(delta_seconds: float) -> Dictionary:
+	return _core.advance_time(delta_seconds)
+
+func snapshot_time() -> Dictionary:
+	return _core.snapshot_time()
+
+
+func restore_time(snapshot: Dictionary) -> Dictionary:
+	return _core.restore_time(snapshot)
 
 func _on_core_attribute_written(
 	entity_id: int,

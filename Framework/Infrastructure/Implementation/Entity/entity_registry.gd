@@ -32,6 +32,15 @@ func create_entity(
 	_entities[entity_id] = data
 	return entity_id
 
+func create_from_containers(containers: Dictionary) -> int:
+	var data: Dictionary = containers.duplicate(true)
+
+	var entity_id := _next_id
+	_next_id += 1
+	_entities[entity_id] = data
+
+	return entity_id
+
 func has_entity(entity_id: int) -> bool:
 	return _entities.has(entity_id)
 
@@ -45,6 +54,42 @@ func has_container(
 		and _entities[entity_id].has(container_id)
 	)
 
+func snapshot_containers(entity_id: int) -> Dictionary:
+	if not has_entity(entity_id):
+		return {
+			"ok": false,
+			"value": null,
+			"error": "Unknown entity: %s" % entity_id,
+		}
+
+	return {
+		"ok": true,
+		"value": _entities[entity_id].duplicate(true),
+		"error": "",
+	}
+
+func add_container(
+	entity_id: int,
+	container_id: StringName,
+	attributes: Dictionary = {}
+) -> bool:
+	if not has_entity(entity_id):
+		return false
+
+	if has_container(entity_id, container_id):
+		return false
+
+	var stored_attributes: Dictionary = attributes.duplicate(true)
+	_entities[entity_id][container_id] = stored_attributes
+
+	for attribute_name in stored_attributes:
+		attribute_written.emit(
+			entity_id,
+			container_id,
+			StringName(String(attribute_name))
+		)
+
+	return true
 
 func has_value(
 	entity_id: int,
@@ -56,6 +101,25 @@ func has_value(
 		and _entities[entity_id][container_id].has(String(attribute_name))
 	)
 
+func add_attribute(
+	entity_id: int,
+	container_id: StringName,
+	attribute_name: StringName,
+	value: Variant
+) -> bool:
+	if not has_container(entity_id, container_id):
+		return false
+
+	if has_value(entity_id, container_id, attribute_name):
+		return false
+
+	var stored_value: Variant = value
+	if value is Dictionary or value is Array:
+		stored_value = value.duplicate(true)
+
+	_entities[entity_id][container_id][String(attribute_name)] = stored_value
+	attribute_written.emit(entity_id, container_id, attribute_name)
+	return true
 
 func get_value(
 	entity_id: int,

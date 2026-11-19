@@ -1,5 +1,8 @@
 extends RefCounted
 
+signal entity_bound(entity_id: int, world_node: Node)
+signal entity_unbound(entity_id: int)
+
 signal attribute_written(
 	world_node: Node,
 	container_id: StringName,
@@ -19,12 +22,20 @@ var _core: WorldBridgeCore
 func _init(runtime_core: RuntimeCore) -> void:
 	_core = WorldBridgeCore.new(runtime_core)
 	_core.attribute_written.connect(_on_core_attribute_written)
+	_core.entity_bound.connect(_on_core_entity_bound)
+	_core.entity_unbound.connect(_on_core_entity_unbound)
 
 func close() -> void:
+	_core.close()
+
+	if _core.entity_bound.is_connected(_on_core_entity_bound):
+		_core.entity_bound.disconnect(_on_core_entity_bound)
+
+	if _core.entity_unbound.is_connected(_on_core_entity_unbound):
+		_core.entity_unbound.disconnect(_on_core_entity_unbound)
+
 	if _core.attribute_written.is_connected(_on_core_attribute_written):
 		_core.attribute_written.disconnect(_on_core_attribute_written)
-
-	_core.close()
 
 func bind_entity(entity_id: int, world_node: Node) -> Dictionary:
 	return _core.bind_entity(entity_id, world_node)
@@ -64,3 +75,13 @@ func _on_core_attribute_written(
 	attribute_name: StringName
 ) -> void:
 	attribute_written.emit(world_node, container_id, attribute_name)
+
+func bound_entity_ids() -> Array[int]:
+	return _core.bound_entity_ids()
+
+func _on_core_entity_bound(entity_id: int, world_node: Node) -> void:
+	entity_bound.emit(entity_id, world_node)
+
+
+func _on_core_entity_unbound(entity_id: int) -> void:
+	entity_unbound.emit(entity_id)

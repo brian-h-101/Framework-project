@@ -1,5 +1,8 @@
 extends RefCounted
 
+signal entity_bound(entity_id: int, world_node: Node)
+signal entity_unbound(entity_id: int)
+
 signal attribute_written(
 	world_node: Node,
 	container_id: StringName,
@@ -27,7 +30,9 @@ func close() -> void:
 	if _runtime.attribute_written.is_connected(_on_runtime_attribute_written):
 		_runtime.attribute_written.disconnect(_on_runtime_attribute_written)
 
-	_nodes.clear()
+	for entity_id in _nodes.keys():
+		unbind_entity(entity_id)
+
 	_runtime = null
 
 func bind_entity(entity_id: int, world_node: Node) -> Dictionary:
@@ -48,18 +53,22 @@ func bind_entity(entity_id: int, world_node: Node) -> Dictionary:
 		return _failure("World node is already bound.")
 
 	_nodes[entity_id] = weakref(world_node)
+	entity_bound.emit(entity_id, world_node)
 
 	return {"ok": true, "value": entity_id, "error": ""}
 
 
 func node_for(entity_id: int) -> Node:
+	if _closed:
+		return null
+
 	var node_ref: WeakRef = _nodes.get(entity_id)
 	if node_ref == null:
 		return null
 
 	var world_node := node_ref.get_ref() as Node
 	if world_node == null:
-		_nodes.erase(entity_id)
+		unbind_entity(entity_id)
 
 	return world_node
 
@@ -76,7 +85,11 @@ func entity_for(world_node: Node) -> int:
 
 
 func unbind_entity(entity_id: int) -> bool:
-	return _nodes.erase(entity_id)
+	if not _nodes.erase(entity_id):
+		return false
+
+	entity_unbound.emit(entity_id)
+	return true
 
 func read_attribute(
 	world_node: Node,
@@ -124,6 +137,19 @@ func _on_runtime_attribute_written(
 		return
 
 	attribute_written.emit(world_node, container_id, attribute_name)
+
+func bound_entity_ids() -> Array[int]:
+	var entity_ids: Array[int] = []
+
+	if _closed:
+		return entity_ids
+
+	for entity_id in _nodes.keys():
+		if node_for(entity_id) != null:
+			entity_ids.append(entity_id)
+
+	entity_ids.sort()
+	return entity_ids
 
 func _failure(message: String) -> Dictionary:
 	return {"ok": false, "value": null, "error": message}

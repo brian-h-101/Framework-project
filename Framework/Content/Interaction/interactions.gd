@@ -1,12 +1,15 @@
-# declares which interactions Player may invoke.
 extends RefCounted
 
-const Strike = preload(
-	"res://Framework/Content/Interaction/strike.gd"
+const ResourceDefinitionDiscovery = preload(
+	"res://Framework/Env/Setup/resource_definition_discovery.gd"
+)
+const InteractionResource = preload(
+	"res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd"
 )
 
 
-static func definitions() -> Array[Dictionary]:
-	return [
-		Strike.definition(),
-	]
+static func definitions() -> Dictionary:
+	return ResourceDefinitionDiscovery.definitions_in(
+		"res://Framework/Content/Interaction",
+		InteractionResource
+	)

@@ -5,11 +5,14 @@ const GameRuntime = preload(
 )
 
 
-func register_content(_runtime: GameRuntime) -> void:
-	pass
-
+func register_content(_runtime: GameRuntime) -> Dictionary:
+	return {"ok": true, "value": true, "error": ""}
 
 func create_entities(
 	_runtime: GameRuntime
 ) -> Dictionary[StringName, int]:
+	return {}
+
+
+func get_clock_definition() -> Dictionary:
 	return {}

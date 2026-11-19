@@ -1,0 +1,6 @@
+[gd_scene format=3]
+
+[node name="MissingSpatialRoot" type="Node2D"]
+
+[node name="Player" type="Node" parent="."]
+metadata/entity_key = &"player"

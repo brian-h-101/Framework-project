@@ -26,13 +26,105 @@ func start(setup: GameSetup) -> Dictionary:
 			"error": "Game session has already started.",
 		}
 
-	var core := RuntimeCore.new()
+	var core := RuntimeCore.new(setup.get_clock_definition())
 	runtime = GameRuntime.new(core)
-	setup.register_content(runtime)
+
+	var registered := setup.register_content(runtime)
+
+	if not registered["ok"]:
+		stop()
+		return registered
+
 	entity_ids = setup.create_entities(runtime)
 	world_bridge = WorldBridge.new(core)
 
 	return {"ok": true, "value": true, "error": ""}
+
+func restore_session(
+	setup: GameSetup,
+	snapshot: Dictionary
+) -> Dictionary:
+	if runtime != null:
+		return {
+			"ok": false,
+			"value": null,
+			"error": "Game session has already started.",
+		}
+
+	var saved_entities: Variant = snapshot.get("entities")
+	if not saved_entities is Dictionary:
+		return {
+			"ok": false,
+			"value": null,
+			"error": "Session snapshot requires an entities dictionary.",
+		}
+
+	var saved_clock: Variant = snapshot.get("clock")
+	if saved_clock != null and not (saved_clock is Dictionary):
+		return {
+			"ok": false,
+			"value": null,
+			"error": "Session snapshot clock must be a dictionary.",
+		}
+
+	var core := RuntimeCore.new(setup.get_clock_definition())
+	runtime = GameRuntime.new(core)
+
+	var registered := setup.register_content(runtime)
+	if not registered["ok"]:
+		stop()
+		return registered
+
+	if saved_clock != null:
+		var clock_record: Dictionary = saved_clock
+		var clock_restored := runtime.restore_time(clock_record)
+		if not clock_restored["ok"]:
+			stop()
+			return clock_restored
+
+	var records: Dictionary = saved_entities
+	var restored := runtime.restore_entities(records)
+	if not restored["ok"]:
+		stop()
+		return restored
+
+	entity_ids = restored["value"]
+	world_bridge = WorldBridge.new(core)
+
+	return {
+		"ok": true,
+		"value": true,
+		"error": "",
+	}
+
+func snapshot_session() -> Dictionary:
+	if runtime == null:
+		return {
+			"ok": false,
+			"value": null,
+			"error": "Game session is not running.",
+		}
+
+	var captured := runtime.snapshot_entities(entity_ids)
+	if not captured["ok"]:
+		return captured
+
+	var captured_clock := runtime.snapshot_time()
+	if not captured_clock["ok"]:
+		return captured_clock
+
+	var snapshot: Dictionary = {
+		"entities": captured["value"],
+	}
+
+	if captured_clock["value"] != null:
+		snapshot["clock"] = captured_clock["value"]
+
+	return {
+		"ok": true,
+		"value": snapshot,
+		"error": "",
+	}
 
 func stop() -> void:
 	if world_bridge != null:

@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[node name="IronSword" type="Node2D" unique_id=1942091868]
+metadata/entity_definition = &"iron_sword"
+
+[node name="View2D" type="Node2D" parent="." unique_id=1889818623]
+metadata/entity_spatial_root = true
+
+[node name="Body" type="Polygon2D" parent="View2D" unique_id=652261616]
+color = Color(0.75, 0.8, 0.85, 1)
+polygon = PackedVector2Array(-6, -20, 6, -20, 6, 20, -6, 20)
+metadata/casts_shadow = true
+
+[node name="StatusAnchor" type="Marker2D" parent="View2D" unique_id=2101316625]
+metadata/ui_anchor_role = &"status"
+
+[node name="TargetPoint" type="Marker2D" parent="View2D" unique_id=837803348]
+metadata/interaction_target = true
