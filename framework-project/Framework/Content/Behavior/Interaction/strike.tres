@@ -1,0 +1,14 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd" id="1_interaction"]
+[ext_resource type="Resource" path="res://Framework/Content/Behavior/Action/change_health.tres" id="2_action"]
+[ext_resource type="Resource" path="res://Framework/Content/Behavior/Condition/can_strike.tres" id="3_requirements"]
+
+[resource]
+script = ExtResource("1_interaction")
+id = &"strike"
+action = ExtResource("2_action")
+requirements = ExtResource("3_requirements")
+arguments = {
+	&"amount": -10
+}

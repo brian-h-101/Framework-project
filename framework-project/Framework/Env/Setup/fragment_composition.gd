@@ -1,103 +1,68 @@
 extends RefCounted
 
+const ContainerFragmentResource = preload(
+	"res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd"
+)
 const ContentComposition = preload(
-	"res://Framework/Content/Authored/Entity/Shared/content_composition.gd"
+	"res://Framework/Env/Setup/content_composition.gd"
 )
 
 
-static func compose_in(
-	folder_path: String,
-	base: Dictionary = {}
-) -> Dictionary:
+static func compose_in(folder_path: String, base: Dictionary = {}) -> Dictionary:
 	if not DirAccess.dir_exists_absolute(folder_path):
-		return _failure(
-			"Fragment folder does not exist: %s" % folder_path
-		)
-
+		return _failure("Fragment folder does not exist: %s" % folder_path)
 	return compose_paths(_fragment_paths_in(folder_path), base)
 
 
-# Explicit selections retain their authored order.
 static func compose_paths(
-	script_paths: PackedStringArray,
+	resource_paths: PackedStringArray,
 	base: Dictionary = {}
 ) -> Dictionary:
+	var fragments: Array[ContainerFragmentResource] = []
+	for resource_path in resource_paths:
+		if resource_path.get_extension() != "tres":
+			return _failure("Expected a .tres fragment resource: %s" % resource_path)
+		if not ResourceLoader.exists(resource_path):
+			return _failure("Fragment resource does not exist: %s" % resource_path)
+		var fragment: Resource = ResourceLoader.load(resource_path)
+		if not fragment is ContainerFragmentResource:
+			return _failure("Expected a container fragment resource: %s" % resource_path)
+		fragments.append(fragment as ContainerFragmentResource)
+	return compose_resources(fragments, base)
+
+
+static func compose_resources(
+	fragments: Array[ContainerFragmentResource],
+	base: Dictionary = {}
+) -> Dictionary:
+	var base_error := ContainerFragmentResource.container_error(base)
+	if not base_error.is_empty():
+		return _failure("Invalid composition base: %s" % base_error)
 	var parts: Array[Dictionary] = [base]
-
-	for script_path in script_paths:
-		if not ResourceLoader.exists(script_path):
-			return _failure("Fragment script does not exist: %s" % script_path)
-
-		var content_script := ResourceLoader.load(
-			script_path,
-			"Script"
-		) as Script
-
-		if content_script == null:
+	for index in fragments.size():
+		var fragment := fragments[index]
+		if fragment == null:
+			return _failure("Missing container fragment resource at index %d." % index)
+		var converted := fragment.to_containers()
+		if not converted["ok"]:
 			return _failure(
-				"Could not load fragment script: %s" % script_path
+				"Invalid fragment %s: %s" % [fragment.resource_path, converted["error"]]
 			)
-
-		if not content_script.can_instantiate():
-			return _failure(
-				"Fragment script could not compile: %s" % script_path
-			)
-
-		if not content_script.has_script_method(&"defaults"):
-			continue
-
-		if not _has_static_defaults(content_script):
-			return _failure(
-				"defaults() must be static: %s" % script_path
-			)
-
-		var authored: Variant = content_script.call(&"defaults")
-
-		if not authored is Dictionary:
-			return _failure(
-				"defaults() must return a Dictionary: %s"
-				% script_path
-			)
-
-		parts.append(authored)
-
-	return {
-		"ok": true,
-		"value": ContentComposition.combine(parts),
-		"error": "",
-	}
+		parts.append(converted["value"])
+	return {"ok": true, "value": ContentComposition.combine(parts), "error": ""}
 
 
-static func _fragment_paths_in(
-	folder_path: String
-) -> PackedStringArray:
-	var script_paths := PackedStringArray()
-
+static func _fragment_paths_in(folder_path: String) -> PackedStringArray:
+	var resource_paths := PackedStringArray()
 	for folder_entry in ResourceLoader.list_directory(folder_path):
 		if not folder_entry.ends_with("/"):
 			continue
-
 		var child_folder := folder_path.path_join(folder_entry)
-
-		for script_entry in ResourceLoader.list_directory(child_folder):
-			if (
-				script_entry.ends_with("/")
-				or script_entry.get_extension() != "gd"
-			):
-				continue
-
-			script_paths.append(child_folder.path_join(script_entry))
-
-	script_paths.sort()
-	return script_paths
-
-
-static func _has_static_defaults(content_script: Script) -> bool:
-	for method in content_script.get_script_method_list():
-		if StringName(method["name"]) == &"defaults":
-			return (int(method["flags"]) & METHOD_FLAG_STATIC) != 0
-
-	return false
+		for resource_entry in ResourceLoader.list_directory(child_folder):
+			if not resource_entry.ends_with("/") and resource_entry.get_extension() == "tres":
+				resource_paths.append(child_folder.path_join(resource_entry))
+	resource_paths.sort()
+	return resource_paths
 
 
 static func _failure(message: String) -> Dictionary:

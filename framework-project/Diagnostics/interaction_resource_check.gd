@@ -10,7 +10,7 @@ const ExistingInteraction = preload(
 
 func _initialize() -> void:
 	var interaction := ResourceLoader.load(
-		"res://Framework/Content/Interaction/strike.tres"
+		"res://Framework/Content/Behavior/Interaction/strike.tres"
 	) as InteractionResource
 
 	if interaction == null:
@@ -21,17 +21,17 @@ func _initialize() -> void:
 	var action_linked: bool = (
 		interaction.action != null
 		and interaction.action.resource_path
-		== "res://Framework/Content/Action/change_health.tres"
+		== "res://Framework/Content/Behavior/Action/change_health.tres"
 	)
 
 	var requirements_linked: bool = (
 		interaction.requirements != null
 		and interaction.requirements.resource_path
-		== "res://Framework/Content/Condition/can_strike.tres"
+		== "res://Framework/Content/Behavior/Condition/can_strike.tres"
 		and interaction.requirements.conditions.size() == 1
 		and interaction.requirements.conditions[0] != null
 		and interaction.requirements.conditions[0].resource_path
-		== "res://Framework/Content/Condition/actor_strength.tres"
+		== "res://Framework/Content/Behavior/Condition/actor_strength.tres"
 	)
 
 	print("[interaction-resource] Action reference resolves: ", action_linked)

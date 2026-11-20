@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://Framework/Env/Movement/movement_2d.gd" id="1_4s44f"]
-[ext_resource type="Script" path="res://Framework/Content/Configuration/Movement/player_movement.gd" id="2_ep4mm"]
+[ext_resource type="Resource" path="res://Framework/Content/Configuration/Movement/player_movement.tres" id="2_ep4mm"]
 [ext_resource type="PackedScene" path="res://Framework/Content/Camera/player_camera_2d.tscn" id="3_i0ukr"]
 [ext_resource type="Script" path="res://Framework/Env/Input/interaction_input.gd" id="4_ecl34"]
 

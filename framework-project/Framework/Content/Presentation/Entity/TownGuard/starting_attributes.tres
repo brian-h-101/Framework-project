@@ -1,0 +1,24 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/starting_attributes_resource.gd" id="1_schema"]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd" id="2_fragment_type"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Identity/identity.tres" id="fragment_01"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Statistics/health.tres" id="fragment_02"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Statistics/speed.tres" id="fragment_03"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Interactions/interactions.tres" id="fragment_04"]
+
+[resource]
+script = ExtResource("1_schema")
+id = &"town_guard"
+fragments = Array[ExtResource("2_fragment_type")]([
+	ExtResource("fragment_01"),
+	ExtResource("fragment_02"),
+	ExtResource("fragment_03"),
+	ExtResource("fragment_04"),
+])
+overrides = {
+	&"identity": {
+		"name": "TownGuard"
+	}
+}

@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd" id="1_schema"]
+
+[resource]
+script = ExtResource("1_schema")
+containers = {
+	&"transformation": {
+		"active": false,
+		"available_form_ids": [],
+		"cooldown_remaining": 0,
+		"current_form_id": "",
+		"previous_form_id": ""
+	}
+}

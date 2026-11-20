@@ -1,0 +1,8 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/session_persistence_resource.gd" id="1_ita2x"]
+
+[resource]
+script = ExtResource("1_ita2x")
+startup_mode = &"restore"
+save_path = "user://Saves/slot_01.fws"

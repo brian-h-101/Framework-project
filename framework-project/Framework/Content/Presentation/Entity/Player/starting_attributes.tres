@@ -1,0 +1,490 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/starting_attributes_resource.gd" id="1_schema"]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd" id="2_fragment_type"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Abilities/precognition.tres" id="fragment_01"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Identity/identity.tres" id="fragment_02"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Morality/morality.tres" id="fragment_03"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Needs/needs.tres" id="fragment_04"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Personality/personality.tres" id="fragment_05"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/PhysicalFeatures/physical_features.tres" id="fragment_06"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Progression/progression.tres" id="fragment_07"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Skills/skills.tres" id="fragment_08"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Statistics/health.tres" id="fragment_09"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Statistics/speed.tres" id="fragment_10"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Supernatural/supernatural.tres" id="fragment_11"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Attributes/Talents/talents.tres" id="fragment_12"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/BodyPart/Anatomy/anatomy.tres" id="fragment_13"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/BodyPart/Forms/forms.tres" id="fragment_14"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/BodyPart/Illness/illness.tres" id="fragment_15"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/BodyPart/Injuries/injuries.tres" id="fragment_16"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/BodyPart/Intrusions/intrusions.tres" id="fragment_17"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/BodyPart/Treatments/treatments.tres" id="fragment_18"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Container/Crafting/crafting.tres" id="fragment_19"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Container/Equipment/equipment.tres" id="fragment_20"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Container/Ownership/ownership.tres" id="fragment_21"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Container/PersonalFinance/personal_finance.tres" id="fragment_22"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Container/Property/property.tres" id="fragment_23"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Container/Residency/residency.tres" id="fragment_24"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Container/Wallet/wallet.tres" id="fragment_25"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Container/inventory.tres" id="fragment_26"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Interactions/interactions.tres" id="fragment_27"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/Crime/crime.tres" id="fragment_28"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/DialogueReferences/dialogue_references.tres" id="fragment_29"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/Evidence/evidence.tres" id="fragment_30"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/Factions/factions.tres" id="fragment_31"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/Flags/flags.tres" id="fragment_32"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/Investigation/investigation.tres" id="fragment_33"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/Journal/journal.tres" id="fragment_34"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/Knowledge/knowledge.tres" id="fragment_35"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/LifeExperience/life_experience.tres" id="fragment_36"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/QuestProgress/quest_progress.tres" id="fragment_37"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/Relationships/relationships.tres" id="fragment_38"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/Narrative/Reputation/reputation.tres" id="fragment_39"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/AI/ai.tres" id="fragment_40"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Activities/activities.tres" id="fragment_41"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Combat/combat.tres" id="fragment_42"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Feeding/feeding.tres" id="fragment_43"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Frenzy/frenzy.tres" id="fragment_44"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/GameplayRecords/gameplay_records.tres" id="fragment_45"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Goals/goals.tres" id="fragment_46"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Hunting/hunting.tres" id="fragment_47"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Obligations/obligations.tres" id="fragment_48"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Perception/perception.tres" id="fragment_49"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Schedules/schedules.tres" id="fragment_50"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Transformation/transformation.tres" id="fragment_51"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/State/Travel/travel.tres" id="fragment_52"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/StatusEffects/ActiveEffects/active_effects.tres" id="fragment_53"]
+[ext_resource type="Resource" path="res://Framework/Content/Authored/Entity/StatusEffects/Modifiers/modifiers.tres" id="fragment_54"]
+
+[resource]
+script = ExtResource("1_schema")
+id = &"player"
+fragments = Array[ExtResource("2_fragment_type")]([
+	ExtResource("fragment_01"),
+	ExtResource("fragment_02"),
+	ExtResource("fragment_03"),
+	ExtResource("fragment_04"),
+	ExtResource("fragment_05"),
+	ExtResource("fragment_06"),
+	ExtResource("fragment_07"),
+	ExtResource("fragment_08"),
+	ExtResource("fragment_09"),
+	ExtResource("fragment_10"),
+	ExtResource("fragment_11"),
+	ExtResource("fragment_12"),
+	ExtResource("fragment_13"),
+	ExtResource("fragment_14"),
+	ExtResource("fragment_15"),
+	ExtResource("fragment_16"),
+	ExtResource("fragment_17"),
+	ExtResource("fragment_18"),
+	ExtResource("fragment_19"),
+	ExtResource("fragment_20"),
+	ExtResource("fragment_21"),
+	ExtResource("fragment_22"),
+	ExtResource("fragment_23"),
+	ExtResource("fragment_24"),
+	ExtResource("fragment_25"),
+	ExtResource("fragment_26"),
+	ExtResource("fragment_27"),
+	ExtResource("fragment_28"),
+	ExtResource("fragment_29"),
+	ExtResource("fragment_30"),
+	ExtResource("fragment_31"),
+	ExtResource("fragment_32"),
+	ExtResource("fragment_33"),
+	ExtResource("fragment_34"),
+	ExtResource("fragment_35"),
+	ExtResource("fragment_36"),
+	ExtResource("fragment_37"),
+	ExtResource("fragment_38"),
+	ExtResource("fragment_39"),
+	ExtResource("fragment_40"),
+	ExtResource("fragment_41"),
+	ExtResource("fragment_42"),
+	ExtResource("fragment_43"),
+	ExtResource("fragment_44"),
+	ExtResource("fragment_45"),
+	ExtResource("fragment_46"),
+	ExtResource("fragment_47"),
+	ExtResource("fragment_48"),
+	ExtResource("fragment_49"),
+	ExtResource("fragment_50"),
+	ExtResource("fragment_51"),
+	ExtResource("fragment_52"),
+	ExtResource("fragment_53"),
+	ExtResource("fragment_54"),
+])
+overrides = {
+	&"abilities": {
+		"precognition": 5
+	},
+	&"activity": {
+		"current": "idle"
+	},
+	&"ai": {
+		"behavior_profile": "manual",
+		"controller": "player"
+	},
+	&"anatomy": {
+		"body_plan": "humanoid",
+		"dominant_hand": "right",
+		"parts": ["head", "torso", "left_arm", "right_arm", "left_hand", "right_hand", "left_leg", "right_leg"]
+	},
+	&"combat": {
+		"armor": 1,
+		"attack_cost": 1,
+		"damage": 6,
+		"range": 1,
+		"team_id": "travelers"
+	},
+	&"crafting": {
+		"known_recipe_ids": ["simple_bandage"],
+		"recipes": {
+			"simple_bandage": {
+				"duration_ticks": 2,
+				"ingredients": {
+					"cloth": 2
+				},
+				"outputs": {
+					"bandage": 1
+				}
+			}
+		},
+		"station_id": "workbench"
+	},
+	&"crime": {
+		"jurisdiction_id": "village"
+	},
+	&"dialogue_references": {
+		"default_dialogue_id": "player_intro",
+		"known_dialogue_ids": ["player_intro"]
+	},
+	&"equipment": {
+		"allowed_slot_types": ["hand", "body"],
+		"slots": {
+			"body": null,
+			"main_hand": null,
+			"off_hand": null
+		}
+	},
+	&"evidence": {
+		"discovered": {
+			"torn_note": {
+				"confidence": 0.5,
+				"source": "old_bridge"
+			}
+		}
+	},
+	&"factions": {
+		"memberships": {
+			"villagers": {
+				"rank": "outsider",
+				"standing": 5
+			}
+		}
+	},
+	&"feeding": {
+		"diet": "omnivore",
+		"preferred_food_ids": ["ration"],
+		"satiation": 90
+	},
+	&"forms": {
+		"definitions": {
+			"human": {
+				"body_plan": "humanoid",
+				"display_name": "Human"
+			},
+			"wolf": {
+				"body_plan": "quadruped",
+				"display_name": "Wolf"
+			}
+		},
+		"unlocked_ids": ["human"]
+	},
+	&"frenzy": {
+		"recovery_per_tick": 5,
+		"threshold": 100
+	},
+	&"gameplay_records": {
+		"counters": {
+			"encounters_won": 0,
+			"items_collected": 0,
+			"locations_discovered": 1
+		}
+	},
+	&"goals": {
+		"active_goal_id": "explore",
+		"priorities": {
+			"explore": 10,
+			"rest": 5
+		},
+		"progress": {
+			"explore": 0
+		}
+	},
+	&"health": {
+		"current": 150,
+		"maximum": 150
+	},
+	&"hunting": {
+		"last_attempt_tick": -1,
+		"preferred_region_ids": ["woodland"],
+		"target_species": "game_animal"
+	},
+	&"identity": {
+		"name": "Player"
+	},
+	&"illness": {
+		"history": [{
+			"id": "winter_cold",
+			"recovered": true
+		}]
+	},
+	&"injuries": {
+		"active": [{
+			"body_part": "left_arm",
+			"id": "minor_bruise",
+			"severity": 1,
+			"treated": false
+		}]
+	},
+	&"interactions": {
+		"available": [&"strike"]
+	},
+	&"inventory": {
+		"capacity": 10
+	},
+	&"investigation": {
+		"active_case_id": "missing_supplies",
+		"leads": {
+			"old_bridge": {
+				"evidence_ids": ["torn_note"],
+				"status": "unexamined"
+			}
+		}
+	},
+	&"journal": {
+		"entries": [{
+			"id": "arrival",
+			"text": "Reached the village.",
+			"tick": 0,
+			"title": "Arrival"
+		}]
+	},
+	&"knowledge": {
+		"facts": {
+			"bridge_damaged": true
+		},
+		"learned_from": {
+			"bridge_damaged": "observation"
+		}
+	},
+	&"life_experience": {
+		"background": "traveler",
+		"education": ["basic_literacy"],
+		"employment": [{
+			"role": "courier",
+			"years": 2
+		}],
+		"milestones": ["first_journey"]
+	},
+	&"modifiers": {
+		"active": [{
+			"id": "alert_awareness",
+			"operation": "add",
+			"source_effect_id": "alert",
+			"target_attribute": "awareness",
+			"target_container": "perception",
+			"value": 5
+		}]
+	},
+	&"morality": {
+		"compassion": 75,
+		"integrity": 70,
+		"outlook": "compassionate"
+	},
+	&"narrative": {
+		"accepted_quest": false,
+		"discovered_cave": false,
+		"met_guard": false
+	},
+	&"needs": {
+		"fatigue": {
+			"current": 15,
+			"maximum": 100
+		},
+		"hunger": {
+			"current": 10,
+			"maximum": 100
+		},
+		"thirst": {
+			"current": 5,
+			"maximum": 100
+		}
+	},
+	&"obligations": {
+		"entries": [{
+			"amount": 2,
+			"currency": "coin",
+			"due_tick": 24,
+			"id": "daily_upkeep",
+			"repeat_every_ticks": 24,
+			"status": "pending"
+		}]
+	},
+	&"ownership": {
+		"can_transfer": true
+	},
+	&"perception": {
+		"awareness": 30,
+		"concealment": 10,
+		"hearing_range": 5,
+		"sight_range": 8
+	},
+	&"personal_finance": {
+		"accounts": {
+			"savings": {
+				"balance": 100,
+				"currency": "coin"
+			}
+		},
+		"income_per_day": 10,
+		"upkeep_per_day": 2
+	},
+	&"personality": {
+		"aggression": 20,
+		"courage": 65,
+		"curiosity": 80,
+		"empathy": 70
+	},
+	&"physical_features": {
+		"age": 28,
+		"eye_color": "brown",
+		"height_cm": 175
+	},
+	&"progression": {
+		"level": 1,
+		"next_level_experience": 100,
+		"unspent_points": 3
+	},
+	&"property": {
+		"owned": [{
+			"id": "village_room",
+			"share": 1,
+			"type": "room"
+		}]
+	},
+	&"quest_progress": {
+		"quests": {
+			"delivery": {
+				"objectives": {
+					"supplies_delivered": 0
+				},
+				"reward_claimed": false,
+				"stage": "not_started"
+			}
+		}
+	},
+	&"relationships": {
+		"records": {
+			"village_guard": {
+				"affinity": 0,
+				"trust": 0
+			}
+		}
+	},
+	&"reputation": {
+		"standings": {
+			"outpost": -5,
+			"village": 0
+		}
+	},
+	&"residency": {
+		"permitted_zones": ["village"],
+		"residence_id": "village_room",
+		"status": "resident"
+	},
+	&"schedule": {
+		"period_ticks": 24,
+		"stops": [{
+			"activity": "idle",
+			"location_id": "village_square",
+			"start_tick": 0
+		}, {
+			"activity": "exploring",
+			"location_id": "old_bridge",
+			"start_tick": 8
+		}, {
+			"activity": "resting",
+			"location_id": "village_room",
+			"start_tick": 16
+		}]
+	},
+	&"skills": {
+		"medicine": {
+			"experience": 0,
+			"rank": 1
+		},
+		"stealth": {
+			"experience": 10,
+			"rank": 1
+		},
+		"survival": {
+			"experience": 25,
+			"rank": 2
+		}
+	},
+	&"status_effects": {
+		"active": [{
+			"id": "alert",
+			"remaining_ticks": 3,
+			"source": "initial_state",
+			"stacks": 1
+		}]
+	},
+	&"supernatural": {
+		"origin": "latent_psychic",
+		"resource": {
+			"current": 10,
+			"id": "focus",
+			"maximum": 10
+		},
+		"traits": ["premonition"]
+	},
+	&"talents": {
+		"known": ["observant"],
+		"ranks": {
+			"observant": 1
+		},
+		"unspent_points": 1
+	},
+	&"transformation": {
+		"available_form_ids": ["human"],
+		"current_form_id": "human"
+	},
+	&"travel": {
+		"current_location_id": "village_square",
+		"known_location_ids": ["village_square"]
+	},
+	&"treatments": {
+		"known": {
+			"bandage": {
+				"duration_ticks": 3,
+				"healing_per_tick": 1,
+				"target": "wound"
+			},
+			"rest": {
+				"duration_ticks": 4,
+				"recovery_per_tick": 2,
+				"target": "fatigue"
+			}
+		}
+	},
+	&"wallet": {
+		"balance": 25,
+		"currency": "coin"
+	}
+}

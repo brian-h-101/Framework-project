@@ -1,0 +1,18 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/displays_resource.gd" id="1_or48g"]
+
+[resource]
+script = ExtResource("1_or48g")
+fields = Array[Dictionary]([{
+	"container": &"identity",
+	"format": "%s",
+	"id": &"name",
+	"path": ["name"]
+}, {
+	"container": &"health",
+	"format": "Health: %s",
+	"id": &"health",
+	"optional": true,
+	"path": ["current"]
+}])

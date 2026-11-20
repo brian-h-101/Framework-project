@@ -4,12 +4,12 @@ const SessionClock = preload(
 	"res://Framework/Infrastructure/Implementation/Runtime/session_clock.gd"
 )
 const WorldTime = preload(
-	"res://Framework/Content/Configuration/Session/world_time.gd"
+	"res://Framework/Content/Configuration/Session/world_time.tres"
 )
 
 
 func _initialize() -> void:
-	var clock := SessionClock.new(WorldTime.defaults())
+	var clock := SessionClock.new(WorldTime.to_definition())
 
 	print("[clock] Starting hour: ", clock.get_hour())
 	var passed := is_equal_approx(clock.get_hour(), 8.0)
@@ -34,7 +34,7 @@ func _initialize() -> void:
 	var saved_state := clock.snapshot_state()
 	print("[clock] Saved state: ", saved_state)
 
-	var receiving_clock := SessionClock.new(WorldTime.defaults())
+	var receiving_clock := SessionClock.new(WorldTime.to_definition())
 	var restored := receiving_clock.restore_state(saved_state)
 
 	var restored_ok: bool = (

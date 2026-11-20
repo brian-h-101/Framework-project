@@ -1,0 +1,7 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/starting_attributes_resource.gd" id="1_schema"]
+
+[resource]
+script = ExtResource("1_schema")
+id = &"presentation_should_not_register"

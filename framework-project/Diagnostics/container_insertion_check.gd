@@ -7,7 +7,7 @@ const EnvironmentSetup = preload(
 	"res://Framework/Env/Setup/game_setup.gd"
 )
 const Inventory = preload(
-	"res://Framework/Content/Authored/Entity/Container/inventory.gd"
+	"res://Framework/Content/Authored/Entity/Container/inventory.tres"
 )
 
 var _entry := GameEntry.new()
@@ -37,7 +37,7 @@ func _initialize() -> void:
 				notified.append(attribute_name)
 	)
 
-	var inventory: Dictionary = Inventory.defaults()[&"inventory"]
+	var inventory: Dictionary = Inventory.to_containers()["value"][&"inventory"]
 	inventory["capacity"] = 6
 	inventory["items"]["ration"] = 1
 
@@ -104,7 +104,7 @@ func _initialize() -> void:
 		fresh_guard_id > 0 and not fresh_inventory["ok"]
 	))
 	_expect("Shared inventory defaults remain unchanged", (
-		Inventory.defaults()[&"inventory"] == {"capacity": 0, "items": {}}
+		Inventory.to_containers()["value"][&"inventory"] == {"capacity": 0, "items": {}}
 	))
 
 	var unknown := runtime.add_container(0, &"inventory", {})

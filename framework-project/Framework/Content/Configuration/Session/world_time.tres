@@ -1,0 +1,8 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/world_time_resource.gd" id="1_pwgpr"]
+
+[resource]
+script = ExtResource("1_pwgpr")
+seconds_per_day = 120.0
+starting_hour = 8.0

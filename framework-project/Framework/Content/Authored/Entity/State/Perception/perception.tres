@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd" id="1_schema"]
+
+[resource]
+script = ExtResource("1_schema")
+containers = {
+	&"perception": {
+		"awareness": 0,
+		"concealment": 0,
+		"hearing_range": 0,
+		"sight_range": 0,
+		"visible_entity_ids": []
+	}
+}

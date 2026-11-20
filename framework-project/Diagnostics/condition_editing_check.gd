@@ -1,16 +1,16 @@
 extends SceneTree
 
 const ConditionEditing = preload(
-	"res://Framework/Env/Authoring/condition_editing.gd"
+	"res://Framework/Env/Authoring/Resources/condition_editing.gd"
 )
 const ConditionResource = preload(
 	"res://Framework/Infrastructure/API/Gameplay/Resources/condition_resource.gd"
 )
 
-const GROUP_PATH := "res://Framework/Content/Condition/can_strike.tres"
+const GROUP_PATH := "res://Framework/Content/Behavior/Condition/can_strike.tres"
 
 const SOURCE_PATHS := [
-	"res://Framework/Content/Condition/actor_strength.tres",
+	"res://Framework/Content/Behavior/Condition/actor_strength.tres",
 	GROUP_PATH,
 ]
 

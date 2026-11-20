@@ -1,6 +1,8 @@
 extends TileMapLayer
 
-@export var content: Script
+const Configuration = preload("res://Framework/Env/Configuration/Resources/ground_resource.gd")
+
+@export var content: Configuration
 
 
 func _ready() -> void:
@@ -8,7 +10,11 @@ func _ready() -> void:
 		push_error("TileMapLayer has no content definition.")
 		return
 
-	var definition: Dictionary = content.call(&"defaults")
+	var checked := content.read()
+	if not checked["ok"]:
+		push_error(checked["error"])
+		return
+	var definition: Dictionary = checked["value"]
 	_build(definition)
 
 

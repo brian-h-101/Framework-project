@@ -5,13 +5,13 @@ const PresetData = preload(
 )
 
 const PlayerAttributes = preload(
-	"res://Framework/Content/Presentation/Entity/Player/starting_attributes.gd"
+	"res://Framework/Content/Presentation/Entity/Player/starting_attributes.tres"
 )
 const PlayerBaseline = preload(
 	"res://Diagnostics/Fixtures/player_attributes_baseline.gd"
 )
 const EnemyAttributes = preload(
-	"res://Framework/Content/Presentation/Entity/Enemy/starting_attributes.gd"
+	"res://Framework/Content/Presentation/Entity/Enemy/starting_attributes.tres"
 )
 const EnemyBaseline = preload(
 	"res://Diagnostics/Fixtures/enemy_attributes_baseline.gd"
@@ -20,19 +20,19 @@ const ContentDiscovery = preload(
 	"res://Framework/Env/Setup/content_discovery.gd"
 )
 const Precognition = preload(
-	"res://Framework/Content/Authored/Entity/Attributes/Abilities/precognition.gd"
+	"res://Framework/Content/Authored/Entity/Attributes/Abilities/precognition.tres"
 )
 const Reflex = preload(
-	"res://Framework/Content/Authored/Entity/Attributes/Abilities/reflex.gd"
+	"res://Framework/Content/Authored/Entity/Attributes/Abilities/reflex.tres"
 )
 const Health = preload(
-	"res://Framework/Content/Authored/Entity/Attributes/Statistics/health.gd"
+	"res://Framework/Content/Authored/Entity/Attributes/Statistics/health.tres"
 )
 const Speed = preload(
-	"res://Framework/Content/Authored/Entity/Attributes/Statistics/speed.gd"
+	"res://Framework/Content/Authored/Entity/Attributes/Statistics/speed.tres"
 )
 const TownGuardAttributes = preload(
-	"res://Framework/Content/Presentation/Entity/TownGuard/starting_attributes.gd"
+	"res://Framework/Content/Presentation/Entity/TownGuard/starting_attributes.tres"
 )
 
 
@@ -77,8 +77,8 @@ func _initialize() -> void:
 	)
 
 	var shared_statistics_unchanged: bool = (
-		Health.defaults()[&"health"] == {"current": 100, "maximum": 100}
-		and Speed.defaults()[&"speed"] == {"current": 20, "maximum": 50}
+		Health.to_containers()["value"][&"health"] == {"current": 100, "maximum": 100}
+		and Speed.to_containers()["value"][&"speed"] == {"current": 20, "maximum": 50}
 	)
 
 	var ability_selections_preserved: bool = (
@@ -87,8 +87,8 @@ func _initialize() -> void:
 	)
 
 	var shared_defaults_unchanged: bool = (
-		Precognition.defaults()[&"abilities"] == {"precognition": 0}
-		and Reflex.defaults()[&"abilities"] == {"reflex": 0}
+		Precognition.to_containers()["value"][&"abilities"] == {"precognition": 0}
+		and Reflex.to_containers()["value"][&"abilities"] == {"reflex": 0}
 	)
 
 	var rejected := ContentDiscovery.definitions_in(

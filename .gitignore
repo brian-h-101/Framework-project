@@ -8,6 +8,3 @@
 # Generated extension packages and logs
 *.vsix
 *.log
-
-# Generated authoring previews
-/Tools/Authoring/Previews/

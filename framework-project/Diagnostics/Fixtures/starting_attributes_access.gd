@@ -6,11 +6,11 @@ const Baseline = preload(
 
 
 static func category(
-	preset: Script,
+	preset: Resource,
 	preset_id: StringName,
 	category_name: String
 ) -> Dictionary:
-	var definition: Dictionary = preset.call(&"definition")
+	var definition: Dictionary = preset.call(&"to_definition")
 	if definition.get("ok", true) == false:
 		return definition
 

@@ -5,13 +5,13 @@ const PresetData = preload(
 )
 
 const PlayerNarrative = preload(
-	"res://Framework/Content/Presentation/Entity/Player/starting_attributes.gd"
+	"res://Framework/Content/Presentation/Entity/Player/starting_attributes.tres"
 )
 const PlayerBaseline = preload(
 	"res://Diagnostics/Fixtures/player_narrative_baseline.gd"
 )
 const EnemyNarrative = preload(
-	"res://Framework/Content/Presentation/Entity/Enemy/starting_attributes.gd"
+	"res://Framework/Content/Presentation/Entity/Enemy/starting_attributes.tres"
 )
 const EnemyBaseline = preload(
 	"res://Diagnostics/Fixtures/enemy_narrative_baseline.gd"

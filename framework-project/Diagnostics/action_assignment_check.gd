@@ -1,7 +1,7 @@
 extends SceneTree
 
 const ConditionAssignment = preload(
-	"res://Framework/Env/Authoring/condition_assignment.gd"
+	"res://Framework/Env/Authoring/Resources/condition_assignment.gd"
 )
 const InteractionResource = preload(
 	"res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd"
@@ -13,14 +13,14 @@ const ActionResource = preload(
 	"res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd"
 )
 
-const ACTION_PATH := "res://Framework/Content/Action/change_health.tres"
-const GROUP_PATH := "res://Framework/Content/Condition/can_strike.tres"
+const ACTION_PATH := "res://Framework/Content/Behavior/Action/change_health.tres"
+const GROUP_PATH := "res://Framework/Content/Behavior/Condition/can_strike.tres"
 
 const SOURCE_PATHS := [
 	ACTION_PATH,
 	GROUP_PATH,
-	"res://Framework/Content/Condition/actor_strength.tres",
-	"res://Framework/Content/Interaction/strike.tres",
+	"res://Framework/Content/Behavior/Condition/actor_strength.tres",
+	"res://Framework/Content/Behavior/Interaction/strike.tres",
 ]
 
 const TEST_ROOT := "res://.godot/diagnostics/action_assignment_"

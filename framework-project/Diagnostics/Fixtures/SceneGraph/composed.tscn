@@ -1,0 +1,18 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Diagnostics/Fixtures/SceneGraph/base.tscn" id="1_base"]
+[ext_resource type="Script" path="res://Diagnostics/Fixtures/SceneGraph/node_init_probe.gd" id="2_probe"]
+
+[node name="RepeatedInstances" type="Node2D"]
+script = ExtResource("2_probe")
+
+[node name="Left" parent="." instance=ExtResource("1_base")]
+
+[node name="Right" parent="." instance=ExtResource("1_base")]
+
+[node name="Overridden" parent="Left"]
+position = Vector2(10, 5)
+
+[node name="Inserted" type="Marker2D" parent="Left" index="1"]
+
+[editable path="Left"]

@@ -4,7 +4,9 @@ const WorldBridge = preload(
 	"res://Framework/Infrastructure/API/Bootstrap/world_bridge.gd"
 )
 
-@export var content: Script
+const Configuration = preload("res://Framework/Env/Configuration/Resources/movement_resource.gd")
+
+@export var content: Configuration
 
 var _bridge: WorldBridge
 var _entity_node: Node
@@ -22,7 +24,12 @@ func _ready() -> void:
 		set_physics_process(false)
 		return
 
-	_definition = content.call(&"defaults")
+	var checked := content.read()
+	if not checked["ok"]:
+		push_error(checked["error"])
+		set_physics_process(false)
+		return
+	_definition = checked["value"]
 	motion_mode = MOTION_MODE_FLOATING
 
 

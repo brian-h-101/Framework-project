@@ -1,13 +1,13 @@
 extends SceneTree
 
 const ActionContent = preload(
-	"res://Framework/Content/Action/actions.gd"
+	"res://Framework/Content/Behavior/Action/actions.gd"
 )
 const InteractionContent = preload(
-	"res://Framework/Content/Interaction/interactions.gd"
+	"res://Framework/Content/Behavior/Interaction/interactions.gd"
 )
 const EntityContent = preload(
-	"res://Framework/Content/Authored/Entity/entities.gd"
+	"res://Framework/Env/Setup/entity_definitions.gd"
 )
 
 func _initialize() -> void:
@@ -49,7 +49,7 @@ func _initialize() -> void:
 				passed
 				and discovered_ids.has(&"change_health")
 				and source_path
-				== "res://Framework/Content/Action/change_health.tres"
+				== "res://Framework/Content/Behavior/Action/change_health.tres"
 			)
 		else:
 			var interaction_source_path: String = result["sources"].get(
@@ -66,7 +66,7 @@ func _initialize() -> void:
 				passed
 				and discovered_ids.has(&"strike")
 				and interaction_source_path
-				== "res://Framework/Content/Interaction/strike.tres"
+				== "res://Framework/Content/Behavior/Interaction/strike.tres"
 			)
 
 	var entity_result := EntityContent.definitions()

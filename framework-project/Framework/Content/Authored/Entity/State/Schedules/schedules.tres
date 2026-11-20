@@ -1,0 +1,14 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd" id="1_schema"]
+
+[resource]
+script = ExtResource("1_schema")
+containers = {
+	&"schedule": {
+		"current_stop_index": 0,
+		"last_processed_tick": 0,
+		"period_ticks": 0,
+		"stops": []
+	}
+}

@@ -10,13 +10,13 @@ const MapCoordinator = preload(
 	"res://Framework/Env/Map/map_coordinator.gd"
 )
 const Controls = preload(
-	"res://Framework/Content/Configuration/Input/controls.gd"
+	"res://Framework/Content/Configuration/Input/controls.tres"
 )
 const InputConfiguration = preload(
 	"res://Framework/Env/Input/input_configuration.gd"
 )
 const Displays = preload(
-	"res://Framework/Content/Configuration/Presentation/displays.gd"
+	"res://Framework/Content/Configuration/Presentation/displays.tres"
 )
 const SessionDriver = preload(
 	"res://Framework/Env/Session/session_driver.gd"
@@ -31,7 +31,7 @@ const SessionInput = preload(
 	"res://Framework/Env/Input/session_input.gd"
 )
 const SessionPersistence = preload(
-	"res://Framework/Content/Configuration/Persistence/session_persistence.gd"
+	"res://Framework/Content/Configuration/Persistence/session_persistence.tres"
 )
 var entry := GameEntry.new()
 var maps: MapCoordinator
@@ -40,7 +40,10 @@ var _driver: SessionDriver
 var _session_input: SessionInput
 
 func start_configured(map_parent: Node) -> Dictionary:
-	var settings := SessionPersistence.defaults()
+	var checked := SessionPersistence.read()
+	if not checked["ok"]:
+		return checked
+	var settings: Dictionary = checked["value"]
 	var startup_mode := StringName(settings["startup_mode"])
 
 	match startup_mode:
@@ -183,9 +186,14 @@ func _start_environment(
 	var starting_clock := entry.runtime.snapshot_time()
 	if starting_clock["ok"] and starting_clock["value"] != null:
 		print("[clock] Session start: ", starting_clock["value"])
-	var controls := Controls.defaults()
+	var controls_result := Controls.read()
+	var displays_result := Displays.read()
+	if not controls_result["ok"] or not displays_result["ok"]:
+		stop()
+		return controls_result if not controls_result["ok"] else displays_result
+	var controls: Dictionary[StringName, Dictionary] = controls_result["value"]
+	var displays: Dictionary[StringName, Dictionary] = displays_result["value"]
 	InputConfiguration.apply(controls)
-	var displays := Displays.defaults()
 
 	maps = MapCoordinator.new(
 		map_parent,
@@ -246,7 +254,11 @@ func _start_environment(
 func _on_session_command_requested(command_id: StringName) -> void:
 	match command_id:
 		&"save_session":
-			var settings := SessionPersistence.defaults()
+			var checked := SessionPersistence.read()
+			if not checked["ok"]:
+				print("[session] %s: %s" % [command_id, checked])
+				return
+			var settings: Dictionary = checked["value"]
 			var result := save_session(String(settings["save_path"]))
 			print("[session] %s: %s" % [command_id, result])
 		_:

@@ -1,7 +1,7 @@
 extends SceneTree
 
 const Controls = preload(
-	"res://Framework/Content/Configuration/Input/controls.gd"
+	"res://Framework/Content/Configuration/Input/controls.tres"
 )
 const InputConfiguration = preload(
 	"res://Framework/Env/Input/input_configuration.gd"
@@ -9,7 +9,7 @@ const InputConfiguration = preload(
 
 
 func _initialize() -> void:
-	var controls := Controls.defaults()
+	var controls := Controls.to_definition()
 
 	if InputMap.has_action(&"primary_interaction"):
 		InputMap.erase_action(&"primary_interaction")

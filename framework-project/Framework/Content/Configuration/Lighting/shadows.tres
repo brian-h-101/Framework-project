@@ -1,0 +1,15 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/shadows_resource.gd" id="1_t40oi"]
+
+[resource]
+script = ExtResource("1_t40oi")
+shadow_enabled = true
+density = 0.45
+debug_sdf = false
+debug_shadow_mask = false
+debug_shadow_channels = false
+sdf_scale = 2
+length_px = 160.0
+fade_px = 64.0
+softness_px = 12.0

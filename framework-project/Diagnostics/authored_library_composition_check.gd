@@ -78,13 +78,13 @@ func _chest_definition() -> Dictionary:
 	return StartingAttributes.define(
 		&"library_chest_probe",
 		[
-			"Entity/Attributes/Identity/identity.gd",
-			"Entity/Container/inventory.gd",
-			"Items/Attributes/Physical/physical.gd",
-			"Items/Attributes/Value/value.gd",
-			"Items/State/Condition/condition.gd",
-			"Objects/Attributes/Structure/structure.gd",
-			"Objects/State/Access/access.gd",
+			preload("res://Framework/Content/Authored/Entity/Attributes/Identity/identity.tres"),
+			preload("res://Framework/Content/Authored/Entity/Container/inventory.tres"),
+			preload("res://Framework/Content/Authored/Items/Attributes/Physical/physical.tres"),
+			preload("res://Framework/Content/Authored/Items/Attributes/Value/value.tres"),
+			preload("res://Framework/Content/Authored/Items/State/Condition/condition.tres"),
+			preload("res://Framework/Content/Authored/Objects/Attributes/Structure/structure.tres"),
+			preload("res://Framework/Content/Authored/Objects/State/Access/access.tres"),
 		],
 		{
 			&"identity": {

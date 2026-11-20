@@ -1,0 +1,106 @@
+extends SceneTree
+
+const StartingAttributesResource = preload(
+	"res://Framework/Infrastructure/API/Entity/Resources/starting_attributes_resource.gd"
+)
+const Presentation2DResource = preload(
+	"res://Framework/Env/Presentation/Resources/presentation_2d_resource.gd"
+)
+const StartingContent = preload(
+	"res://Framework/Env/Setup/starting_definitions.gd"
+)
+const ContainerFragmentResource = preload(
+	"res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd"
+)
+
+const PROFILES := {
+	"Entity/Enemy": &"enemy",
+	"Entity/Player": &"player",
+	"Entity/TownGuard": &"town_guard",
+	"Items/IronSword": &"iron_sword",
+	"Objects/WoodenChest": &"wooden_chest",
+}
+
+var _passed := true
+
+
+func _initialize() -> void:
+	var discovered := StartingContent.definitions()
+	_check("Starting resources are discovered", discovered["ok"])
+	if not discovered["ok"]:
+		print(discovered)
+		quit(1)
+		return
+	_check("All five presets remain available", discovered["value"].size() == PROFILES.size())
+
+	for relative_folder: String in PROFILES:
+		var folder := "res://Framework/Content/Presentation/".path_join(relative_folder)
+		var preset_path := folder.path_join("starting_attributes.tres")
+		var preset := load(preset_path) as StartingAttributesResource
+		var profile := load(folder.path_join("presentation.tres")) as Presentation2DResource
+		_check("Resource types load: %s" % relative_folder, preset != null and profile != null)
+		if preset == null or profile == null:
+			continue
+		var expected_id: StringName = PROFILES[relative_folder]
+		_check("Fragment references use the resource schema: %s" % expected_id,
+			preset.fragments.get_typed_script() == ContainerFragmentResource)
+		_check("ID and source preserved: %s" % expected_id, (
+			preset.id == expected_id
+			and discovered["sources"].get(expected_id, "") == preset_path
+		))
+		var overrides_before := var_to_bytes(preset.overrides)
+		var first := preset.to_definition()
+		var second := preset.to_definition()
+		var original_name: String = second["containers"][&"identity"]["name"]
+		first["containers"][&"identity"]["name"] = "Changed only in this conversion"
+		_check("Conversions own their containers: %s" % expected_id, (
+			second["containers"][&"identity"]["name"] == original_name
+			and preset.to_definition()["containers"][&"identity"]["name"] == original_name
+			and var_to_bytes(preset.overrides) == overrides_before
+		))
+		_check("Presentation converts: %s" % expected_id, not profile.to_definition().has("error"))
+
+	var nested := StartingAttributesResource.new()
+	nested.id = &"nested_probe"
+	nested.overrides = {&"inventory": {"items": {"medicine": [1, 2]}}}
+	var nested_definition := nested.to_definition()
+	nested_definition["containers"][&"inventory"]["items"]["medicine"].append(3)
+	_check("Nested override arrays stay independent", nested.overrides[&"inventory"]["items"]["medicine"] == [1, 2])
+	_check("Empty IDs are rejected", not StartingAttributesResource.new().to_definition().get("ok", true))
+	nested.overrides = {&"inventory": 1}
+	_check("Malformed override containers are rejected", not nested.to_definition().get("ok", true))
+	nested.overrides = {}
+	nested.fragments = [null]
+	var missing := nested.to_definition()
+	_check("Missing fragment references are rejected", (
+		not missing.get("ok", true)
+		and String(missing.get("error", "")).contains("Missing starting fragment resource")
+	))
+
+	var defaults := Presentation2DResource.new().to_definition()
+	_check("Shared presentation defaults have one resource schema", (
+		defaults["body_size"] == Vector2(32, 32)
+		and defaults["casts_shadow"] == true
+		and defaults["movement_content"] == null
+		and defaults["camera_scene"] == null
+		and defaults["interaction_input"] == false
+	))
+	var invalid := Presentation2DResource.new()
+	invalid.body_size = Vector2(0, 32)
+	_check("Invalid presentation dimensions are rejected", not invalid.to_definition().get("ok", true))
+	var player := load("res://Framework/Content/Presentation/Entity/Player/presentation.tres") as Presentation2DResource
+	_check("Player retains movement, camera and input references", (
+		player != null
+		and player.movement_content != null
+		and player.movement_content.resource_path == "res://Framework/Content/Configuration/Movement/player_movement.tres"
+		and player.camera_scene != null
+		and player.camera_scene.resource_path == "res://Framework/Content/Camera/player_camera_2d.tscn"
+		and player.interaction_input
+	))
+	print("[profile-resource] Checks passed: ", _passed)
+	quit(0 if _passed else 1)
+
+
+func _check(label: String, passed: bool) -> void:
+	print("[profile-resource] ", label, ": ", passed)
+	_passed = _passed and passed

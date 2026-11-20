@@ -5,13 +5,13 @@ const PresetData = preload(
 )
 
 const PlayerContainers = preload(
-	"res://Framework/Content/Presentation/Entity/Player/starting_attributes.gd"
+	"res://Framework/Content/Presentation/Entity/Player/starting_attributes.tres"
 )
 const PlayerBaseline = preload(
 	"res://Diagnostics/Fixtures/player_containers_baseline.gd"
 )
 const EnemyContainers = preload(
-	"res://Framework/Content/Presentation/Entity/Enemy/starting_attributes.gd"
+	"res://Framework/Content/Presentation/Entity/Enemy/starting_attributes.tres"
 )
 const EnemyBaseline = preload(
 	"res://Diagnostics/Fixtures/enemy_containers_baseline.gd"
@@ -23,10 +23,10 @@ const EnvironmentSetup = preload(
 	"res://Framework/Env/Setup/game_setup.gd"
 )
 const TownGuard = preload(
-	"res://Framework/Content/Presentation/Entity/TownGuard/starting_attributes.gd"
+	"res://Framework/Content/Presentation/Entity/TownGuard/starting_attributes.tres"
 )
 const Inventory = preload(
-	"res://Framework/Content/Authored/Entity/Container/inventory.gd"
+	"res://Framework/Content/Authored/Entity/Container/inventory.tres"
 )
 
 var _entry := GameEntry.new()
@@ -54,14 +54,14 @@ func _initialize() -> void:
 	var enemy_actual: Dictionary[StringName, Dictionary] = enemy_result["value"]
 	var enemy_expected := EnemyBaseline.defaults()
 	var enemy_matches: bool = enemy_actual == enemy_expected
-	var guard_definition := TownGuard.definition()
+	var guard_definition := TownGuard.to_definition()
 	var inventory_preserved: bool = (
 		player_actual[&"inventory"] == {"capacity": 10, "items": {}}
 		and enemy_actual[&"inventory"] == {
 			"capacity": 6, "items": {"ration": 1, "cloth": 2}
 		}
 		and not guard_definition["containers"].has(&"inventory")
-		and Inventory.defaults()[&"inventory"] == {"capacity": 0, "items": {}}
+		and Inventory.to_containers()["value"][&"inventory"] == {"capacity": 0, "items": {}}
 	)
 
 	print("[container] Player matches baseline: ", player_matches)

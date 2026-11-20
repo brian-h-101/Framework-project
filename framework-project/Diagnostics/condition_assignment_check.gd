@@ -1,17 +1,17 @@
 extends SceneTree
 
 const ConditionAssignment = preload(
-	"res://Framework/Env/Authoring/condition_assignment.gd"
+	"res://Framework/Env/Authoring/Resources/condition_assignment.gd"
 )
 const ConditionGroupResource = preload(
 	"res://Framework/Infrastructure/API/Gameplay/Resources/condition_group_resource.gd"
 )
 
 const CONDITION_PATH := (
-	"res://Framework/Content/Condition/actor_strength.tres"
+	"res://Framework/Content/Behavior/Condition/actor_strength.tres"
 )
 const PRODUCTION_GROUP_PATH := (
-	"res://Framework/Content/Condition/can_strike.tres"
+	"res://Framework/Content/Behavior/Condition/can_strike.tres"
 )
 const TEST_ROOT := "res://.godot/diagnostics/condition_assignment_"
 const TEST_FILE := "assignment_group.tres"

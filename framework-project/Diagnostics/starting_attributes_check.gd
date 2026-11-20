@@ -1,12 +1,21 @@
 extends SceneTree
 
-const EntityContent = preload("res://Framework/Content/Authored/Entity/entities.gd")
+const EntityContent = preload("res://Framework/Env/Setup/entity_definitions.gd")
 const Baseline = preload("res://Diagnostics/Fixtures/entity_starting_baseline.gd")
 const StartingAttributes = preload("res://Framework/Env/Setup/starting_attributes.gd")
 const ContentDiscovery = preload("res://Framework/Env/Setup/content_discovery.gd")
 const GameEntry = preload("res://Framework/Infrastructure/API/Runtime/game_entry.gd")
 const EnvironmentSetup = preload("res://Framework/Env/Setup/game_setup.gd")
-const Startup = preload("res://Framework/Content/Configuration/Session/startup.gd")
+const Startup = preload("res://Framework/Content/Configuration/Session/startup.tres")
+const ContainerFragmentResource = preload(
+	"res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd"
+)
+const Health = preload(
+	"res://Framework/Content/Authored/Entity/Attributes/Statistics/health.tres"
+)
+const OutsideLibrary = preload(
+	"res://Diagnostics/Fixtures/ContainerFragments/outside_library.tres"
+)
 const BASELINE_IDS: Array[StringName] = [&"enemy", &"player", &"town_guard"]
 
 var _entry := GameEntry.new()
@@ -44,45 +53,41 @@ func _initialize() -> void:
 	)
 	_expect("Discovery ignores presentation definitions", headless_ok)
 
-	var legacy_selection := StartingAttributes.define(
+	var selection := StartingAttributes.define(
 		&"library_probe",
-		["Attributes/Statistics/health.gd"],
+		[Health],
 		{&"health": {"current": 75}}
 	)
-	var qualified_selection := StartingAttributes.define(
-		&"library_probe",
-		["Entity/Attributes/Statistics/health.gd"],
-		{&"health": {"current": 75}}
-	)
-
-	_expect("Library-qualified paths preserve composition and overrides", (
-		legacy_selection.has("containers")
-		and qualified_selection.has("containers")
-		and legacy_selection == qualified_selection
+	_expect("Resource selections preserve composition and overrides", (
+		selection.has("containers")
+		and selection["containers"][&"health"] == {"current": 75, "maximum": 100}
 	))
 
-	var qualified_escape := StartingAttributes.define(
-		&"qualified_escape",
-		["Items/../../Presentation/Entity/Player/starting_attributes.gd"]
+	var outside := StartingAttributes.define(
+		&"outside_library",
+		[OutsideLibrary]
 	)
-	_expect("Library-qualified selections stay inside Authored", (
-		not qualified_escape.get("ok", true)
+	_expect("Selected resources stay inside Authored", (
+		not outside.get("ok", true)
 	))
 
+	var missing_path := "res://Framework/Content/Authored/Entity/Attributes/Missing/missing.tres"
+	var missing_resource := ContainerFragmentResource.new()
+	missing_resource.take_over_path(missing_path)
 	var missing := StartingAttributes.define(
 		&"missing_fragment",
-		["Attributes/Missing/missing.gd"]
+		[missing_resource]
 	)
 	_expect("Missing selected fragments report their path", (
 		not missing.get("ok", true)
-		and String(missing["error"]).contains("Attributes/Missing/missing.gd")
+		and String(missing["error"]).contains(missing_path)
 	))
 
-	var escaped := StartingAttributes.define(
-		&"escaped_fragment",
-		["../../Presentation/Entity/Player/starting_attributes.gd"]
+	var inline := StartingAttributes.define(
+		&"inline_fragment",
+		[ContainerFragmentResource.new()]
 	)
-	_expect("Selections stay inside the shared library", not escaped.get("ok", true))
+	_expect("Starting fragments require external library resources", not inline.get("ok", true))
 
 	var started := _entry.start(EnvironmentSetup.new())
 	if not started["ok"]:
@@ -90,7 +95,7 @@ func _initialize() -> void:
 		quit(1)
 		return
 
-	var specifications: Dictionary = Startup.defaults()["entities"]
+	var specifications: Dictionary = Startup.to_definition()["entities"]
 	for entity_key in specifications:
 		var specification: Dictionary = specifications[entity_key]
 		var expected: Dictionary = (
@@ -152,8 +157,8 @@ func _check_registered_libraries() -> void:
 	_expect("Duplicate IDs across libraries are rejected", (
 		not collision["ok"]
 		and collision_error.contains("Duplicate ID 'iron_sword'")
-		and collision_error.contains("IronSword/starting_attributes.gd")
-		and collision_error.contains("DuplicateSword/starting_attributes.gd")
+		and collision_error.contains("IronSword/starting_attributes.tres")
+		and collision_error.contains("DuplicateSword/starting_attributes.tres")
 	))
 
 	for definition_id: StringName in [&"iron_sword", &"wooden_chest"]:

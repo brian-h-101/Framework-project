@@ -7,18 +7,18 @@ const GameSetup = preload(
 	"res://Framework/Env/Setup/game_setup.gd"
 )
 const ConditionEditing = preload(
-	"res://Framework/Env/Authoring/condition_editing.gd"
+	"res://Framework/Env/Authoring/Resources/condition_editing.gd"
 )
 
 const CONDITION_PATH := (
-	"res://Framework/Content/Condition/actor_strength.tres"
+	"res://Framework/Content/Behavior/Condition/actor_strength.tres"
 )
 
 const SOURCE_PATHS := [
 	CONDITION_PATH,
-	"res://Framework/Content/Condition/can_strike.tres",
-	"res://Framework/Content/Interaction/strike.tres",
-	"res://Framework/Content/Action/change_health.tres",
+	"res://Framework/Content/Behavior/Condition/can_strike.tres",
+	"res://Framework/Content/Behavior/Interaction/strike.tres",
+	"res://Framework/Content/Behavior/Action/change_health.tres",
 ]
 
 var _entry: GameEntry = GameEntry.new()

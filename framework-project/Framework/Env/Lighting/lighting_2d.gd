@@ -9,7 +9,9 @@ const ShadowSystem2D = preload(
 const SharedShadow2D = preload(
 	"res://Framework/Env/Lighting/Shadows/shared_shadow_2d.gd"
 )
-@export var content: Script
+const Configuration = preload("res://Framework/Env/Configuration/Resources/lighting_2d_resource.gd")
+
+@export var content: Configuration
 
 var _ambient: CanvasModulate
 var _sun: DirectionalLight2D
@@ -26,14 +28,19 @@ func configure_map(map_root: Node) -> void:
 
 	var created := ShadowSystem2D.build_casters(map_root)
 	print("[shadows] Created casters: ", created)
-    
+
 func _ready() -> void:
 	if content == null:
 		push_error("Lighting environment has no content definition.")
 		set_process(false)
 		return
 
-	var definition: Dictionary = content.call(&"defaults")
+	var checked := content.read()
+	if not checked["ok"]:
+		push_error(checked["error"])
+		set_process(false)
+		return
+	var definition: Dictionary = checked["value"]
 	_shadow_profile = definition["shadows"]
 
 	ShadowSystem2D.configure_viewport(

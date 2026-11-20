@@ -1,0 +1,10 @@
+[gd_scene format=3]
+
+[ext_resource type="PackedScene" path="res://Diagnostics/Fixtures/SceneGraph/base.tscn" id="1_base"]
+
+[node name="Derived" instance=ExtResource("1_base")]
+
+[node name="Overridden" parent="."]
+position = Vector2(12, 20)
+
+[node name="Added" type="Marker2D" parent="Kept"]

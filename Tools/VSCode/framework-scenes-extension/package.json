@@ -1,0 +1,85 @@
+{
+	"name": "framework-scenes-extension",
+	"displayName": "Framework Scenes",
+	"description": "Browse Godot scene node hierarchies and nested scene instances.",
+	"version": "0.0.2",
+	"publisher": "framework-tools",
+	"type": "commonjs",
+	"engines": { "vscode": "^1.146.0" },
+	"categories": ["Other"],
+	"main": "./out/extension.js",
+	"activationEvents": ["onStartupFinished"],
+	"extensionKind": ["workspace"],
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": false,
+			"description": "Scene discovery runs the project's Godot scene exporter."
+		},
+		"virtualWorkspaces": false
+	},
+	"scripts": {
+		"compile": "tsc -p .",
+		"test": "npm run compile && node diagnostics/scene_extension_check.cjs",
+		"vscode:prepublish": "npm run compile",
+		"package:list": "vsce ls --no-dependencies",
+		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license"
+	},
+	"contributes": {
+		"views": {
+			"explorer": [{ "id": "frameworkScenes.scenes", "name": "Framework Scenes" }]
+		},
+		"viewsWelcome": [{
+			"view": "frameworkScenes.scenes",
+			"contents": "Open a .tscn file to view its node hierarchy.\n[Find a Scene](command:frameworkScenes.findScene)"
+		}],
+		"configuration": {
+			"title": "Framework Scenes",
+			"properties": {
+				"frameworkScenes.godotExecutable": {
+					"type": "string",
+					"default": "",
+					"scope": "resource",
+					"description": "Godot console executable. When empty, use godotTools.editorPath.godot4."
+				}
+			}
+		},
+		"commands": [
+			{ "command": "frameworkScenes.refresh", "title": "Refresh Scene", "category": "Framework Scenes", "icon": "$(refresh)" },
+			{ "command": "frameworkScenes.findScene", "title": "Find a Scene...", "category": "Framework Scenes", "icon": "$(search)" },
+			{ "command": "frameworkScenes.openDeclaration", "title": "Open Node Declaration", "category": "Framework Scenes" },
+			{ "command": "frameworkScenes.openInstance", "title": "Open Instanced Scene", "category": "Framework Scenes" },
+			{ "command": "frameworkScenes.openBase", "title": "Open Base Scene", "category": "Framework Scenes" },
+			{ "command": "frameworkScenes.openScript", "title": "Open Attached Script", "category": "Framework Scenes" }
+		],
+		"submenus": [{ "id": "frameworkScenes.nodeMenu", "label": "Framework Scenes" }],
+		"menus": {
+			"view/title": [
+				{ "command": "frameworkScenes.findScene", "when": "view == frameworkScenes.scenes", "group": "navigation@1" },
+				{ "command": "frameworkScenes.refresh", "when": "view == frameworkScenes.scenes", "group": "navigation@2" }
+			],
+			"view/item/context": [{
+				"submenu": "frameworkScenes.nodeMenu",
+				"when": "view == frameworkScenes.scenes && viewItem =~ /^scene_node/",
+				"group": "framework@1"
+			}],
+			"frameworkScenes.nodeMenu": [
+				{ "command": "frameworkScenes.openDeclaration", "group": "navigation@1" },
+				{ "command": "frameworkScenes.openInstance", "when": "viewItem =~ /instance/", "group": "navigation@2" },
+				{ "command": "frameworkScenes.openBase", "when": "viewItem =~ /inherited/", "group": "navigation@3" },
+				{ "command": "frameworkScenes.openScript", "when": "viewItem =~ /scripted/", "group": "navigation@4" }
+			],
+			"commandPalette": [
+				{ "command": "frameworkScenes.openDeclaration", "when": "false" },
+				{ "command": "frameworkScenes.openInstance", "when": "false" },
+				{ "command": "frameworkScenes.openBase", "when": "false" },
+				{ "command": "frameworkScenes.openScript", "when": "false" }
+			]
+		}
+	},
+	"devDependencies": {
+		"@types/node": "26.6.6",
+		"@types/vscode": "1.146.0",
+		"@vscode/vsce": "4.1.1",
+		"typescript": "7.0.2"
+	}
+}

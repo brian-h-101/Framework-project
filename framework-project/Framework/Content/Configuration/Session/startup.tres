@@ -1,0 +1,25 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/startup_resource.gd" id="1_hcqi4"]
+
+[resource]
+script = ExtResource("1_hcqi4")
+initial_map = "res://Games/ExampleGame/World/city_recreated.tscn"
+entities = Array[Dictionary]([{
+	"definition": &"player",
+	"key": &"player",
+	"overrides": {
+		&"health": {
+			"current": 75
+		},
+		&"strength": {
+			"current": 80
+		}
+	}
+}, {
+	"definition": &"player",
+	"key": &"second_player"
+}, {
+	"definition": &"enemy",
+	"key": &"enemy"
+}])

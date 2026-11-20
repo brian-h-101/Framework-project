@@ -1,5 +1,9 @@
 extends RefCounted
 
+const StartingAttributesResource = preload(
+	"res://Framework/Infrastructure/API/Entity/Resources/starting_attributes_resource.gd"
+)
+
 
 static func definitions_in(folder_path: String) -> Dictionary:
 	if not DirAccess.dir_exists_absolute(folder_path):
@@ -17,7 +21,7 @@ static func entity_definitions_in(folder_path: String) -> Dictionary:
 static func starting_definitions_in(
 	folder_paths: PackedStringArray
 ) -> Dictionary:
-	var script_paths := PackedStringArray()
+	var resource_paths := PackedStringArray()
 
 	for folder_path in folder_paths:
 		if not DirAccess.dir_exists_absolute(folder_path):
@@ -31,12 +35,48 @@ static func starting_definitions_in(
 				continue
 
 			var preset_path := folder_path.path_join(entry).path_join(
-				"starting_attributes.gd"
+				"starting_attributes.tres"
 			)
 			if ResourceLoader.exists(preset_path):
-				script_paths.append(preset_path)
+				resource_paths.append(preset_path)
 
-	return _definitions_from_paths(script_paths)
+	return _starting_definitions_from_paths(resource_paths)
+
+
+static func _starting_definitions_from_paths(
+	resource_paths: PackedStringArray
+) -> Dictionary:
+	var definitions: Array[Dictionary] = []
+	var sources: Dictionary[StringName, String] = {}
+	resource_paths.sort()
+
+	for resource_path in resource_paths:
+		var preset: Resource = ResourceLoader.load(resource_path)
+		if not preset is StartingAttributesResource:
+			return _failure(
+				"Expected a starting attributes resource: %s" % resource_path
+			)
+		var definition: Dictionary = (preset as StartingAttributesResource).to_definition()
+		if definition.get("ok", true) == false:
+			return _failure(
+				"Definition failed in %s: %s"
+				% [resource_path, definition["error"]]
+			)
+		var definition_id := StringName(definition["id"])
+		if sources.has(definition_id):
+			return _failure(
+				"Duplicate ID '%s' in %s and %s."
+				% [definition_id, sources[definition_id], resource_path]
+			)
+		sources[definition_id] = resource_path
+		definitions.append(definition)
+
+	return {
+		"ok": true,
+		"value": definitions,
+		"sources": sources,
+		"error": "",
+	}
 
 
 static func _script_paths_in(folder_path: String) -> PackedStringArray:

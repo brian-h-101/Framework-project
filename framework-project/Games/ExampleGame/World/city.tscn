@@ -1,13 +1,13 @@
 [gd_scene format=3 uid="uid://o2ry3gsofiv7"]
 
 [ext_resource type="Script" path="res://Framework/Env/Movement/movement_2d.gd" id="1_jscop"]
-[ext_resource type="Script" path="res://Framework/Content/Configuration/Movement/player_movement.gd" id="2_cgxq2"]
+[ext_resource type="Resource" path="res://Framework/Content/Configuration/Movement/player_movement.tres" id="2_cgxq2"]
 [ext_resource type="PackedScene" path="res://Framework/Content/Camera/player_camera_2d.tscn" id="3_18ja3"]
 [ext_resource type="Script" path="res://Framework/Env/Input/interaction_input.gd" id="4_6wogk"]
 [ext_resource type="Script" path="res://Framework/Env/Map/tile_map_layer_2d.gd" id="5_rtv74"]
-[ext_resource type="Script" path="res://Framework/Content/Configuration/Map/city_ground.gd" id="6_d2k3x"]
+[ext_resource type="Resource" path="res://Framework/Content/Configuration/Map/city_ground.tres" id="6_d2k3x"]
 [ext_resource type="Script" path="res://Framework/Env/Lighting/lighting_2d.gd" id="7_giig8"]
-[ext_resource type="Script" path="res://Framework/Content/Configuration/Lighting/city_lighting.gd" id="8_tgjsq"]
+[ext_resource type="Resource" path="res://Framework/Content/Configuration/Lighting/city_lighting.tres" id="8_tgjsq"]
 [ext_resource type="PackedScene" path="res://Framework/Content/Presentation/Entity/TownGuard/town_guard_2d.tscn" id="9_k2gf1"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
@@ -74,4 +74,3 @@ content = ExtResource("8_tgjsq")
 [node name="TownGuard01" parent="." unique_id=1928527115 instance=ExtResource("9_k2gf1")]
 position = Vector2(480, 440)
 metadata/entity_key = &"town_guard_01"
-
