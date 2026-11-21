@@ -1,0 +1,17 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "NodeNext",
+		"moduleResolution": "NodeNext",
+		"verbatimModuleSyntax": false,
+		"lib": ["ES2022"],
+		"types": ["vscode", "node"],
+		"rootDir": "src",
+		"outDir": "out",
+		"strict": true,
+		"sourceMap": true,
+		"noEmitOnError": true,
+		"skipLibCheck": true
+	},
+	"include": ["src/**/*.ts"]
+}

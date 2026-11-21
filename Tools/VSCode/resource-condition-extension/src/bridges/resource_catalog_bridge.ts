@@ -4,7 +4,8 @@ export type ResourceKind =
 	| 'action'
 	| 'condition'
 	| 'condition_group'
-	| 'interaction';
+	| 'interaction'
+	| 'automation';
 
 export interface ResourceCatalogEntry {
 	id: string;
@@ -149,6 +150,7 @@ function isResourceKind(value: unknown): value is ResourceKind {
 		|| value === 'condition'
 		|| value === 'condition_group'
 		|| value === 'interaction'
+		|| value === 'automation'
 	);
 }
 

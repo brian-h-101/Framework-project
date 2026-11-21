@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_action")
 id = &"change_health"
+behavior_id = &"attribute_effects"
 effects = Array[Dictionary]([{
 	"operation": &"add",
 	"entity": &"target",

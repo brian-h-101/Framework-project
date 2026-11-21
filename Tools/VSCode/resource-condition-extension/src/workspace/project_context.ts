@@ -133,7 +133,7 @@ export async function resourcePathInProject(
 	return `res://${relativePath}`;
 }
 
-function isInside(directory: string, candidate: string): boolean {
+export function isInside(directory: string, candidate: string): boolean {
 	const remainingPath = relative(directory, candidate);
 
 	return (
@@ -144,6 +144,13 @@ function isInside(directory: string, candidate: string): boolean {
 			&& !remainingPath.startsWith(`..${sep}`)
 		)
 	);
+}
+
+export function validateResourcePath(source: string, extension?: string): void {
+	if (!source.startsWith('res://') || (extension && !source.endsWith(extension))
+		|| source.slice(6).split('/').some(part => !part || part === '.' || part === '..' || /[\\:\0]/.test(part))) {
+		throw new Error('Expected a canonical project-relative resource path.');
+	}
 }
 
 async function isFile(filePath: string): Promise<boolean> {

@@ -1,188 +1,157 @@
 import * as vscode from 'vscode';
-import type { ResourceGraph } from '../bridges/resource_bridge';
+import { validateGraph, isPath, type ResourceGraph, type ResourceNode } from '../bridges/resource_bridge';
+import type { ValueNode } from '../bridges/behavior_editing_bridge';
+import { isExecutorScriptPath } from '../resources/executor_metadata';
 
 export interface ResourceTreeElement {
 	sourcePath: string;
 	route: (string | number)[];
 	ancestry: string[];
 	cycle: boolean;
+	revision: number;
+	dataIndices?: number[];
+	parentSource?: string;
+	linkRole?: string;
+	linkIndex?: number;
+}
+
+export interface ResolvedElement {
+	graph: ResourceGraph;
+	projectRoot: vscode.Uri;
+	resource: ResourceNode;
+	data?: ValueNode;
+	uri: vscode.Uri;
 }
 
 export class ResourceTreeProvider
 	implements vscode.TreeDataProvider<ResourceTreeElement>, vscode.Disposable {
-
-	private readonly changes = new vscode.EventEmitter<
-		ResourceTreeElement | undefined | null | void
-	>();
-
+	private readonly changes = new vscode.EventEmitter<ResourceTreeElement | undefined | null | void>();
 	readonly onDidChangeTreeData = this.changes.event;
-
 	private graph: ResourceGraph | undefined;
 	private projectRoot: vscode.Uri | undefined;
+	private revision = 0;
+	private readonly elements = new Map<string, string>();
 
 	clear(): void {
+		this.revision++;
+		this.elements.clear();
 		this.graph = undefined;
 		this.projectRoot = undefined;
 		this.changes.fire(undefined);
 	}
 
 	setGraph(projectRoot: vscode.Uri, graph: ResourceGraph): void {
-		if (new Set(graph.roots).size !== graph.roots.length) {
-			throw new Error('The resource graph contains duplicate roots.');
-		}
-
-		for (const [sourcePath, node] of Object.entries(graph.nodes)) {
-			if (
-				!node
-				|| typeof node.id !== 'string'
-				|| typeof node.kind !== 'string'
-				|| node.source_path !== sourcePath
-				|| !Array.isArray(node.links)
-				|| node.links.some(link =>
-					!link
-					|| typeof link.role !== 'string'
-					|| typeof link.target !== 'string'
-				)
-			) {
-				throw new Error(`Malformed resource node: ${sourcePath}`);
-			}
-
-			if (
-				(
-					node.kind === 'condition_group'
-					|| node.kind === 'condition'
-				)
-				&& typeof node.operator !== 'string'
-			) {
-				throw new Error(`Missing condition operator: ${sourcePath}`);
-			}
-
-			if (
-				node.kind === 'condition'
-				&& typeof node.value_text !== 'string'
-			) {
-				throw new Error(`Missing condition value: ${sourcePath}`);
-			}
-
-			resourceUri(projectRoot, sourcePath);
-		}
-
-		for (const root of graph.roots) {
-			if (!Object.hasOwn(graph.nodes, root)) {
-				throw new Error(`Missing root resource: ${root}`);
-			}
-		}
-
-		for (const node of Object.values(graph.nodes)) {
-			for (const link of node.links) {
-				if (!Object.hasOwn(graph.nodes, link.target)) {
-					throw new Error(`Missing linked resource: ${link.target}`);
-				}
-			}
-		}
-
+		validateGraph(graph);
+		this.revision++;
+		this.elements.clear();
 		this.projectRoot = projectRoot;
 		this.graph = graph;
 		this.changes.fire(undefined);
 	}
 
-	getTreeItem(element: ResourceTreeElement): vscode.TreeItem {
-		const node = this.graph?.nodes[element.sourcePath];
-
-		if (!node || !this.projectRoot) {
-			return new vscode.TreeItem(element.sourcePath);
+	resolve(element: ResourceTreeElement): ResolvedElement {
+		if (!element || !this.graph || !this.projectRoot
+			|| element.revision !== this.revision
+			|| this.elements.get(JSON.stringify(element.route)) !== JSON.stringify(element)) {
+			throw new Error('This resource row is stale. Refresh Framework Resources and retry.');
 		}
+		const resource = this.graph.nodes[element.sourcePath];
+		if (!resource) { throw new Error('The resource is no longer in this tree.'); }
+		let data: ValueNode | undefined;
+		if (element.dataIndices) {
+			data = resource.data;
+			for (const index of element.dataIndices) { data = data.children[index]; }
+		}
+		return { graph: this.graph, projectRoot: this.projectRoot, resource, data,
+			uri: resourceUri(this.projectRoot, resource.source_path) };
+	}
 
-		const label = node.source_path.slice(
-			node.source_path.lastIndexOf('/') + 1
+	getTreeItem(element: ResourceTreeElement): vscode.TreeItem {
+		const { resource, data, uri, graph } = this.resolve(element);
+		const executor = graph.executors?.find(
+			entry => entry.id === resource.behavior_id
 		);
-
-		const item = new vscode.TreeItem(
-			label,
-			!element.cycle && node.links.length > 0
-				? vscode.TreeItemCollapsibleState.Collapsed
-				: vscode.TreeItemCollapsibleState.None
-		);
-
-		const uri = resourceUri(this.projectRoot, node.source_path);
-
+		const hasChildren = data ? data.children.length > 0
+			: resource.links.length > 0 || resource.data.children.length > 0;
+		const item = new vscode.TreeItem(data?.label ?? resource.source_path.split('/').at(-1)!,
+			!element.cycle && hasChildren ? vscode.TreeItemCollapsibleState.Collapsed
+				: vscode.TreeItemCollapsibleState.None);
 		item.id = JSON.stringify(element.route);
 		item.resourceUri = uri;
-		item.iconPath = vscode.ThemeIcon.File;
-		item.contextValue = element.cycle ? 'cycle' : node.kind;
-		item.tooltip = `${node.kind}: ${node.id}\n${node.source_path}`;
-
-		if (node.kind === 'condition_group') {
-			item.description = `[${node.operator?.toUpperCase() ?? ''}]`;
-		} else if (node.kind === 'condition') {
-			item.description = `[${node.operator} ${node.value_text}]`;
+		item.iconPath = data ? new vscode.ThemeIcon(data.kind === 'Array' ? 'list-ordered'
+			: data.kind === 'Dictionary' ? 'symbol-object' : 'symbol-field') : vscode.ThemeIcon.File;
+		if (data) {
+			item.contextValue = ['behavior_data', data.editable ? 'edit' : '',
+				data.can_add ? 'add' : '', data.can_rename ? 'rename' : '',
+				data.can_remove ? 'remove' : '', data.can_add_effect ? 'add_effect' : ''].filter(Boolean).join('|');
+			item.description = `${data.kind}: ${data.value_text}`;
+			item.tooltip = `${data.kind}: ${data.value_text}\nOwned by ${resource.source_path}`;
+		} else {
+			const flags = [element.cycle ? 'cycle' : resource.kind];
+			if (!element.cycle) {
+				if (resource.kind === 'action' && resource.supports_effects !== false) { flags.push('add_effect'); }
+				if (element.linkRole === 'condition') { flags.push('condition_link'); }
+				if (element.linkRole === 'requirements') { flags.push('requirements_link'); }
+				if (resource.kind === 'action'
+					&& isExecutorScriptPath(executor?.script_path)) {
+					flags.push('open_executor');
+				}
+				if (resource.links.some(link => link.role === 'requirements')) { flags.push('has_requirements'); }
+			}
+			item.contextValue = flags.join('|');
+			item.tooltip = `${resource.kind}: ${resource.id}\n${resource.source_path}`
+				+ (element.parentSource ? `\nLinked from ${element.parentSource}` : '');
+			if (resource.kind === 'condition_group') { item.description = `[${resource.operator?.toUpperCase()}]`; }
+			if (resource.kind === 'action' && resource.behavior_id !== undefined) {
+				item.description = `[${resource.behavior_id || 'missing behavior'}]`;
+				item.tooltip += `\nExecutor: ${resource.behavior_id}\n${resource.behavior_error || ''}`;
+				if (isExecutorScriptPath(executor?.script_path)) {
+					item.tooltip += `\nScript: ${executor.script_path}`;
+				}
+			}
+			if (resource.kind === 'condition') { item.description = `[${resource.operator} ${resource.value_text}]`; }
+			if (element.cycle) { item.description = `${item.description ?? ''} [cycle]`.trim(); }
 		}
-
-		if (element.cycle) {
-			item.description = `${item.description ?? ''} [cycle]`.trim();
-		}
-
-		item.command = {
-			command: 'vscode.open',
-			title: 'Open Resource',
-			arguments: [uri]
-		};
-
+		item.command = { command: 'vscode.open', title: 'Open Owning Resource', arguments: [uri] };
 		return item;
 	}
 
 	getChildren(element?: ResourceTreeElement): ResourceTreeElement[] {
-		if (!this.graph || element?.cycle) {
-			return [];
-		}
-
-		const ancestry = element?.ancestry ?? [];
-
-		const links = element
-			? this.graph.nodes[element.sourcePath]?.links ?? []
-			: this.graph.roots.map(target => ({
-				role: 'root',
-				target
+		if (!this.graph || element?.cycle) { return []; }
+		if (!element) {
+			return this.graph.roots.map(target => this.remember({
+				sourcePath: target, route: [target], ancestry: [target], cycle: false, revision: this.revision
 			}));
-
-		return links.map((link, index) => ({
-			sourcePath: link.target,
-			route: element
-				? [...element.route, index, link.target]
-				: [link.target],
-			ancestry: [...ancestry, link.target],
-			cycle: ancestry.includes(link.target)
-		}));
+		}
+		const { resource, data } = this.resolve(element);
+		if (data) {
+			return data.children.map((_, index) => this.dataChild(element, [...element.dataIndices!, index]));
+		}
+		return [
+			...resource.links.map((link, index) => this.remember({
+				sourcePath: link.target, route: [...element.route, 'link', index, link.target],
+				ancestry: [...element.ancestry, link.target], cycle: element.ancestry.includes(link.target),
+				revision: this.revision, parentSource: resource.source_path, linkRole: link.role, linkIndex: link.index
+			})),
+			...resource.data.children.map((_, index) => this.dataChild(element, [index]))
+		];
 	}
 
-	dispose(): void {
-		this.changes.dispose();
-		this.graph = undefined;
-		this.projectRoot = undefined;
+	private dataChild(parent: ResourceTreeElement, indices: number[]): ResourceTreeElement {
+		const baseRoute = parent.dataIndices ? parent.route.slice(0, -parent.dataIndices.length - 1) : parent.route;
+		return this.remember({ sourcePath: parent.sourcePath, route: [...baseRoute, 'data', ...indices],
+			ancestry: parent.ancestry, cycle: false, revision: this.revision, dataIndices: indices });
 	}
+
+	private remember(element: ResourceTreeElement): ResourceTreeElement {
+		this.elements.set(JSON.stringify(element.route), JSON.stringify(element));
+		return element;
+	}
+
+	dispose(): void { this.clear(); this.changes.dispose(); }
 }
 
-function resourceUri(
-	projectRoot: vscode.Uri,
-	sourcePath: string
-): vscode.Uri {
-	if (
-		!sourcePath.startsWith('res://')
-		|| !sourcePath.endsWith('.tres')
-	) {
-		throw new Error(`Invalid resource source path: ${sourcePath}`);
-	}
-
-	const segments = sourcePath.slice('res://'.length).split('/');
-
-	if (segments.some(segment =>
-		!segment
-		|| segment === '.'
-		|| segment === '..'
-		|| /[\\:\0]/.test(segment)
-	)) {
-		throw new Error(`Invalid resource source path: ${sourcePath}`);
-	}
-
-	return vscode.Uri.joinPath(projectRoot, ...segments);
+export function resourceUri(project: vscode.Uri, source: string): vscode.Uri {
+	if (!isPath(source)) { throw new Error(`Invalid resource source path: ${source}`); }
+	return vscode.Uri.joinPath(project, ...source.slice(6).split('/'));
 }

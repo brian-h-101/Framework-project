@@ -1,9 +1,11 @@
 [gd_resource type="Resource" format=3]
 
 [ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/movement_resource.gd" id="1_wx8h8"]
+[ext_resource type="Resource" path="res://Framework/Content/Behavior/Action/move.tres" id="2_move"]
 
 [resource]
 script = ExtResource("1_wx8h8")
+movement_action = ExtResource("2_move")
 actions = {
 	"down": &"move_down",
 	"left": &"move_left",

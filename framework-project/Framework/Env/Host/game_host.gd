@@ -236,7 +236,7 @@ func _start_environment(
 
 	map_parent.add_child(ui)
 
-	_driver = SessionDriver.new(entry.runtime)
+	_driver = SessionDriver.new(entry.runtime, entry.world_bridge)
 	_driver.name = &"SessionDriver"
 	map_parent.add_child(_driver)
 	_session_input = SessionInput.new()
@@ -292,7 +292,13 @@ func _select_map_scene(
 		return _failure("Saved map scene_path cannot be empty.")
 
 	if not ResourceLoader.exists(scene_path):
-		return _failure("Saved map scene does not exist: %s" % scene_path)
+		var settings := SessionPersistence.read()
+		if not settings["ok"]:
+			return settings
+		var redirects: Dictionary = settings["value"].get("map_path_redirects", {})
+		scene_path = String(redirects.get(scene_path, scene_path))
+		if not ResourceLoader.exists(scene_path):
+			return _failure("Saved map scene does not exist: %s" % scene_path)
 
 	var map_scene := ResourceLoader.load(scene_path) as PackedScene
 	if map_scene == null or not map_scene.can_instantiate():

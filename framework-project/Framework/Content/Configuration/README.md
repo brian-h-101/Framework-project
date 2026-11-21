@@ -39,5 +39,5 @@ Resources remain editable through text and the Godot Inspector.
 Run the configuration diagnostic from the Godot project folder:
 
 ```powershell
-& Godot_v4.7.1-stable_win64_console.exe --headless --path . --script res://Diagnostics/configuration_resource_check.gd
+& Godot_v4.7.1-stable_win64_console.exe --headless --path . --script res://Diagnostics/Configuration/configuration_resource_check.gd
 ```

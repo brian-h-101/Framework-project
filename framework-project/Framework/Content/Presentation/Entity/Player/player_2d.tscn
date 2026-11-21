@@ -1,9 +1,11 @@
 [gd_scene format=3]
 
-[ext_resource type="Script" path="res://Framework/Env/Movement/movement_2d.gd" id="1_4s44f"]
+[ext_resource type="Script" path="res://Framework/Content/God/Movement/movement_2d.gd" id="1_4s44f"]
 [ext_resource type="Resource" path="res://Framework/Content/Configuration/Movement/player_movement.tres" id="2_ep4mm"]
 [ext_resource type="PackedScene" path="res://Framework/Content/Camera/player_camera_2d.tscn" id="3_i0ukr"]
-[ext_resource type="Script" path="res://Framework/Env/Input/interaction_input.gd" id="4_ecl34"]
+[ext_resource type="Script" path="res://Framework/Content/God/Interaction/interaction_input.gd" id="4_ecl34"]
+[ext_resource type="Script" path="res://Framework/Content/God/Interaction/interaction_behavior.gd" id="5_behavior"]
+[ext_resource type="Resource" path="res://Framework/Content/Behavior/Interaction/strike.tres" id="6_strike"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_lfobw"]
 size = Vector2(32, 32)
@@ -34,3 +36,7 @@ metadata/interaction_target = true
 
 [node name="InteractionInput" type="Node" parent="." unique_id=380040469]
 script = ExtResource("4_ecl34")
+
+[node name="StrikeBehavior" type="Node" parent="."]
+script = ExtResource("5_behavior")
+content = ExtResource("6_strike")

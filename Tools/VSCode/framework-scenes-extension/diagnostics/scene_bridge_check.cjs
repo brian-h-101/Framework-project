@@ -12,7 +12,7 @@ async function main() {
 	}
 	const projectDirectory = resolve(project);
 	const sources = [
-		'Games/ExampleGame/World/city_recreated.tscn',
+		'Framework/Content/Maps/city_recreated.tscn',
 		'Framework/Content/Presentation/Entity/Player/player_2d.tscn',
 		'Framework/Content/Presentation/Entity/Enemy/enemy_2d.tscn',
 		'Framework/Content/Camera/player_camera_2d.tscn',

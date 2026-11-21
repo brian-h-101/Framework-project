@@ -1,4 +1,4 @@
-import { stat } from 'node:fs/promises';
+import { stat, realpath } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path';
 
 export interface ProjectContext {
@@ -27,6 +27,9 @@ export async function resolveProjectContext(
 		.filter(root => isInside(root, candidate));
 	if (roots.length === 0 || !await isFile(candidate)) {
 		throw new Error('Choose an existing scene inside an opened workspace folder.');
+	}
+	if (relative(candidate, await realpath(candidate)) !== '') {
+		throw new Error('Scene authoring does not follow symbolic links or junctions.');
 	}
 	let directory = dirname(candidate);
 	while (roots.some(root => isInside(root, directory))) {

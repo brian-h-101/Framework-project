@@ -1,22 +1,28 @@
 extends RefCounted
 
-const AttributeConnector = preload(
-	"res://Framework/Infrastructure/Implementation/Entity/attribute_connector.gd"
+const ExecutorRegistry = preload(
+	"res://Framework/Infrastructure/API/Gameplay/executor_registry.gd"
 )
-const EffectExecutor = preload(
-	"res://Framework/Infrastructure/Implementation/Gameplay/effect_executor.gd"
+const ExecutionContext = preload(
+	"res://Framework/Infrastructure/API/Gameplay/Executors/execution_context.gd"
 )
+const GameplayExecutor = preload(
+	"res://Framework/Infrastructure/API/Gameplay/Executors/gameplay_executor.gd"
+)
+# Direct legacy dispatch uses this default; runtime registration requires behavior_id.
+const DEFAULT_BEHAVIOR: StringName = &"attribute_effects"
+const Contract = preload("res://Framework/Infrastructure/Implementation/Gameplay/executor_contract.gd")
 
-var _connector: AttributeConnector
-var _effect_executor: EffectExecutor
+var _registry: ExecutorRegistry
+var _context: ExecutionContext
 
 
 func _init(
-	connector: AttributeConnector,
-	effect_executor: EffectExecutor
+	registry: ExecutorRegistry,
+	context: ExecutionContext
 ) -> void:
-	_connector = connector
-	_effect_executor = effect_executor
+	_registry = registry
+	_context = context
 
 
 func execute(
@@ -24,37 +30,29 @@ func execute(
 	bindings: Dictionary,
 	arguments: Dictionary
 ) -> Dictionary:
-	var values: Array = []
+	if _context == null:
+		return _failure("Execution context is null.")
+	if _context.is_closed():
+		return _failure("Execution context is closed.")
+	if _registry == null:
+		return _failure("Action executor has no executor registry.")
+	var behavior: Variant = definition.get("behavior_id", DEFAULT_BEHAVIOR)
+	if typeof(behavior) not in [TYPE_STRING, TYPE_STRING_NAME]:
+		return _failure("Action behavior_id must be text.")
+	var behavior_id := StringName(behavior)
+	var resolved := _registry.resolve(behavior_id)
+	if not resolved["ok"]:
+		return resolved
+	var description := _registry.describe(behavior_id)
+	var checked := Contract.validate_arguments(description["value"], definition, arguments)
+	if not checked["ok"]:
+		return checked
 
-	for effect in definition["effects"]:
-		var role := StringName(effect["entity"])
-		var argument_name := StringName(effect["value_from"])
-
-		if not bindings.has(role):
-			return _failure("Missing entity binding: %s" % role)
-
-		if not arguments.has(argument_name):
-			return _failure("Missing action argument: %s" % argument_name)
-
-		var entity_id: int = bindings[role]
-		var address := _connector.make_reference(
-			entity_id,
-			effect["container"],
-			effect["path"]
-		)
-
-		var result := _effect_executor.execute(
-			effect["operation"],
-			address,
-			arguments[argument_name]
-		)
-
-		if not result.ok:
-			return result
-
-		values.append(result.value)
-
-	return {"ok": true, "value": values, "error": ""}
+	var executor: GameplayExecutor = resolved["value"]
+	var result := executor.execute(_context, definition, bindings, arguments)
+	if typeof(result.get("ok")) != TYPE_BOOL or not result.has("value") or typeof(result.get("error")) != TYPE_STRING:
+		return _failure("Executor '%s' returned an invalid result." % behavior_id)
+	return result
 
 
 func _failure(message: String) -> Dictionary:

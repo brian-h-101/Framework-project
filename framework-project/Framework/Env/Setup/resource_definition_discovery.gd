@@ -1,7 +1,15 @@
 extends RefCounted
 
+const Paths = preload("res://Framework/Env/Setup/library_path_policy.gd")
+
 const InteractionResource = preload(
 	"res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd"
+)
+const ActionResource = preload("res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd")
+const ConditionResource = preload("res://Framework/Infrastructure/API/Gameplay/Resources/condition_resource.gd")
+const GroupResource = preload("res://Framework/Infrastructure/API/Gameplay/Resources/condition_group_resource.gd")
+const AutomationResource = preload(
+	"res://Framework/Infrastructure/API/Gameplay/Resources/automation_resource.gd"
 )
 
 
@@ -14,18 +22,14 @@ static func definitions_in(
 			"Resource folder does not exist: %s" % folder_path
 		)
 
-	var resource_paths: PackedStringArray = []
-
-	for entry in ResourceLoader.list_directory(folder_path):
-		if entry.ends_with("/") or entry.get_extension() != "tres":
-			continue
-
-		resource_paths.append(folder_path.path_join(entry))
-
-	resource_paths.sort()
+	var listed := Paths.paths_in(folder_path)
+	if not listed["ok"]:
+		return listed
+	var resource_paths: PackedStringArray = listed["value"]
 
 	var definitions: Array[Dictionary] = []
 	var sources: Dictionary[StringName, String] = {}
+	var all_ids := {}
 
 	for resource_path in resource_paths:
 		var authored: Resource = ResourceLoader.load(resource_path)
@@ -34,6 +38,29 @@ static func definitions_in(
 			return _failure(
 				"Could not load resource: %s" % resource_path
 			)
+		var kind := ""
+
+		if authored is ActionResource:
+			kind = "action"
+		elif authored is InteractionResource:
+			kind = "interaction"
+		elif authored is ConditionResource:
+			kind = "condition"
+		elif authored is GroupResource:
+			kind = "condition_group"
+		elif authored is AutomationResource:
+			kind = "automation"
+
+		if not kind.is_empty():
+			var id := String(authored.get("id"))
+			if id.strip_edges().is_empty():
+				return _failure("Definition ID cannot be empty: " + resource_path)
+			var key := kind + ":" + id
+			if all_ids.has(key):
+				return _failure("Duplicate %s ID '%s' in %s and %s." % [kind, id, all_ids[key], resource_path])
+			all_ids[key] = resource_path
+		if authored is ActionResource and String(authored.behavior_id).strip_edges().is_empty():
+			return _failure("Action behavior ID cannot be empty: " + resource_path)
 
 		if not is_instance_of(authored, definition_type):
 			continue
@@ -60,7 +87,20 @@ static func definitions_in(
 						% resource_path
 					)
 
-		var converted: Variant = authored.call(&"to_definition")
+		var converted: Variant
+
+		if authored is AutomationResource:
+			var checked: Dictionary = authored.read()
+
+			if not checked["ok"]:
+				return _failure(
+					"Automation validation failed in %s: %s"
+					% [resource_path, checked["error"]]
+				)
+
+			converted = checked["value"]
+		else:
+			converted = authored.call(&"to_definition")
 
 		if not converted is Dictionary:
 			return _failure(

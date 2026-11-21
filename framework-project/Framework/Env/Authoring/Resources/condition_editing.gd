@@ -1,5 +1,8 @@
 extends RefCounted
 
+const Files = preload("res://Framework/Env/Authoring/Shared/resource_files.gd")
+const Schema = preload("res://Framework/Env/Authoring/Resources/behavior_schema.gd")
+
 const ConditionResource = preload(
 	"res://Framework/Infrastructure/API/Gameplay/Resources/condition_resource.gd"
 )
@@ -44,6 +47,8 @@ static func set_comparison(
 			"Condition comparison value must be finite."
 		)
 
+	var hashes := {condition_path: FileAccess.get_sha256(condition_path)}
+
 	var loaded: Resource = ResourceLoader.load(
 		condition_path,
 		"",
@@ -81,16 +86,9 @@ static func set_comparison(
 
 	condition.requirement = updated_requirement
 
-	var save_error: Error = ResourceSaver.save(
-		condition,
-		condition_path
-	)
-
-	if save_error != OK:
-		return _failure(
-			"Could not save condition '%s': %s"
-			% [condition_path, error_string(save_error)]
-		)
+	var saved := Files.save(condition_path, hashes, condition, Schema.snapshot)
+	if not saved["ok"]:
+		return saved
 
 	return {
 		"ok": true,

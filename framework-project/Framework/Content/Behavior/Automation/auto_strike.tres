@@ -1,0 +1,13 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/automation_resource.gd" id="1_schema"]
+[ext_resource type="Resource" path="res://Framework/Content/Behavior/Interaction/strike.tres" id="2_strike"]
+
+[resource]
+script = ExtResource("1_schema")
+id = &"auto_strike"
+interaction = ExtResource("2_strike")
+trigger = &"interval"
+targeting = &"nearest"
+interval_seconds = 0.25
+cooldown_seconds = 1.0

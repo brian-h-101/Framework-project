@@ -1,0 +1,323 @@
+{
+	"name": "resource-attribute",
+	"displayName": "Resource Attribute",
+	"description": "Browse authored categories, create and delete container Resources, and edit native attributes.",
+	"version": "0.0.4",
+	"publisher": "framework-tools",
+	"type": "commonjs",
+	"engines": {
+		"vscode": "^1.146.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"main": "./out/extension.js",
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"extensionKind": [
+		"workspace"
+	],
+	"capabilities": {
+		"untrustedWorkspaces": {
+			"supported": false,
+			"description": "Attribute inspection and editing run the project's Godot helpers."
+		},
+		"virtualWorkspaces": false
+	},
+	"scripts": {
+		"compile": "tsc -p .",
+		"test": "npm run compile && node diagnostics/attribute_extension_check.cjs && node diagnostics/attribute_library_extension_check.cjs && node diagnostics/library_manage_command_check.cjs",
+		"vscode:prepublish": "npm run compile",
+		"package:list": "vsce ls --no-dependencies",
+		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license",
+		"test:library": "node diagnostics/attribute_library_bridge_check.cjs"
+	},
+	"contributes": {
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "frameworkAttributes",
+					"title": "Framework Attributes",
+					"icon": "media/framework-attributes.svg"
+				}
+			]
+		},
+		"views": {
+			"frameworkAttributes": [
+				{
+					"id": "resourceAttribute.library",
+					"name": "Authored Library"
+				},
+				{
+					"id": "resourceAttribute.attributes",
+					"name": "Attribute Details"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "resourceAttribute.attributes",
+				"contents": "Open a container fragment .tres to inspect and edit its attributes.\n[Find an Attribute Resource](command:resourceAttribute.findResource)"
+			},
+			{
+				"view": "resourceAttribute.library",
+				"contents": "Open a Framework Godot project in this workspace to browse its authored categories.\n[Refresh Authored Library](command:resourceAttribute.refreshLibrary)"
+			}
+		],
+		"configuration": {
+			"title": "Resource Attribute",
+			"properties": {
+				"resourceAttribute.godotExecutable": {
+					"type": "string",
+					"default": "",
+					"scope": "resource",
+					"description": "Full Godot console executable path. When empty, use godotTools.editorPath.godot4."
+				}
+			}
+		},
+		"commands": [
+			{
+				"command": "resourceAttribute.refresh",
+				"title": "Refresh Attributes",
+				"category": "Resource Attribute",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "resourceAttribute.findResource",
+				"title": "Find an Attribute Resource...",
+				"category": "Resource Attribute",
+				"icon": "$(search)"
+			},
+			{
+				"command": "resourceAttribute.openSource",
+				"title": "Open Resource",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.editValue",
+				"title": "Edit Value...",
+				"category": "Resource Attribute",
+				"icon": "$(edit)"
+			},
+			{
+				"command": "resourceAttribute.addEntry",
+				"title": "Add Entry...",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.renameEntry",
+				"title": "Rename Entry...",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.removeEntry",
+				"title": "Remove Entry...",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.refreshLibrary",
+				"title": "Refresh Authored Library",
+				"category": "Resource Attribute",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "resourceAttribute.openLibraryResource",
+				"title": "Open Resource",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.newCategory",
+				"title": "New Category...",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.newSubcategory",
+				"title": "New Subcategory...",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.newAttributeResource",
+				"title": "New Attribute Resource...",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.deleteResource",
+				"title": "Delete Resource...",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.deleteCategory",
+				"title": "Delete Empty Category...",
+				"category": "Resource Attribute"
+			},
+			{
+				"command": "resourceAttribute.manageLibrary",
+				"title": "Manage Authored Library...",
+				"category": "Resource Attribute",
+				"icon": "$(folder-opened)"
+			}
+		],
+		"submenus": [
+			{
+				"id": "resourceAttribute.attributeMenu",
+				"label": "Framework Attributes"
+			},
+			{
+				"id": "resourceAttribute.libraryMenu",
+				"label": "Authored Library"
+			}
+		],
+		"menus": {
+			"view/title": [
+				{
+					"command": "resourceAttribute.findResource",
+					"when": "view == resourceAttribute.attributes",
+					"group": "navigation@1"
+				},
+				{
+					"command": "resourceAttribute.refresh",
+					"when": "view == resourceAttribute.attributes",
+					"group": "navigation@3"
+				},
+				{
+					"command": "resourceAttribute.refreshLibrary",
+					"when": "view == resourceAttribute.library",
+					"group": "navigation@1"
+				},
+				{
+					"command": "resourceAttribute.manageLibrary",
+					"when": "view == resourceAttribute.attributes",
+					"group": "navigation@2"
+				}
+			],
+			"view/item/context": [
+				{
+					"submenu": "resourceAttribute.attributeMenu",
+					"when": "view == resourceAttribute.attributes",
+					"group": "framework@1"
+				},
+				{
+					"command": "resourceAttribute.editValue",
+					"when": "view == resourceAttribute.attributes && viewItem =~ /_edit/",
+					"group": "inline"
+				},
+				{
+					"submenu": "resourceAttribute.libraryMenu",
+					"when": "view == resourceAttribute.library && viewItem != library_blocked",
+					"group": "framework@1"
+				}
+			],
+			"resourceAttribute.attributeMenu": [
+				{
+					"command": "resourceAttribute.openSource",
+					"group": "1_open@1"
+				},
+				{
+					"command": "resourceAttribute.editValue",
+					"when": "viewItem =~ /_edit/",
+					"group": "2_edit@1"
+				},
+				{
+					"command": "resourceAttribute.addEntry",
+					"when": "viewItem =~ /_add/",
+					"group": "2_edit@2"
+				},
+				{
+					"command": "resourceAttribute.renameEntry",
+					"when": "viewItem =~ /_rename/",
+					"group": "2_edit@3"
+				},
+				{
+					"command": "resourceAttribute.removeEntry",
+					"when": "viewItem =~ /_remove/",
+					"group": "3_remove@1"
+				}
+			],
+			"commandPalette": [
+				{
+					"command": "resourceAttribute.openSource",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.editValue",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.addEntry",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.renameEntry",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.removeEntry",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.openLibraryResource",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.newCategory",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.newSubcategory",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.newAttributeResource",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.deleteResource",
+					"when": "false"
+				},
+				{
+					"command": "resourceAttribute.deleteCategory",
+					"when": "false"
+				}
+			],
+			"resourceAttribute.libraryMenu": [
+				{
+					"command": "resourceAttribute.openLibraryResource",
+					"when": "viewItem =~ /^library_resource/",
+					"group": "1_open@1"
+				},
+				{
+					"command": "resourceAttribute.newCategory",
+					"when": "viewItem == library_root",
+					"group": "2_create@1"
+				},
+				{
+					"command": "resourceAttribute.newSubcategory",
+					"when": "viewItem == library_folder",
+					"group": "2_create@1"
+				},
+				{
+					"command": "resourceAttribute.newAttributeResource",
+					"when": "viewItem =~ /^library_(root|folder)$/",
+					"group": "2_create@2"
+				},
+				{
+					"command": "resourceAttribute.deleteResource",
+					"when": "viewItem == library_resource_supported",
+					"group": "3_delete@1"
+				},
+				{
+					"command": "resourceAttribute.deleteCategory",
+					"when": "viewItem == library_folder",
+					"group": "3_delete@2"
+				}
+			]
+		}
+	},
+	"devDependencies": {
+		"@types/node": "26.6.6",
+		"@types/vscode": "1.146.0",
+		"@vscode/vsce": "4.1.1",
+		"typescript": "7.0.2"
+	}
+}

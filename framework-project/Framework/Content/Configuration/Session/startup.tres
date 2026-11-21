@@ -4,7 +4,7 @@
 
 [resource]
 script = ExtResource("1_hcqi4")
-initial_map = "res://Games/ExampleGame/World/city_recreated.tscn"
+initial_map = "res://Framework/Content/Maps/city_recreated.tscn"
 entities = Array[Dictionary]([{
 	"definition": &"player",
 	"key": &"player",

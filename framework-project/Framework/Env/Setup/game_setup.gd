@@ -9,15 +9,21 @@ const ActionContent = preload(
 const InteractionContent = preload(
 	"res://Framework/Content/Behavior/Interaction/interactions.gd"
 )
+const AutomationContent = preload("res://Framework/Content/Behavior/Automation/automations.gd")
 const Startup = preload(
 	"res://Framework/Content/Configuration/Session/startup.tres"
 )
 const WorldTime = preload(
 	"res://Framework/Content/Configuration/Session/world_time.tres"
 )
+const ExecutorDiscovery = preload(
+	"res://Framework/Env/Setup/executor_discovery.gd"
+)
 
 var _startup: Dictionary = {}
 
+func register_executors(runtime: GameRuntime) -> Dictionary:
+	return ExecutorDiscovery.register_all(runtime)
 
 func register_content(runtime: GameRuntime) -> Dictionary:
 	var startup_result := Startup.read()
@@ -43,6 +49,9 @@ func register_content(runtime: GameRuntime) -> Dictionary:
 	var definitions: Array[Dictionary] = starting_result["value"]
 	var actions: Array[Dictionary] = action_result["value"]
 	var interactions: Array[Dictionary] = interaction_result["value"]
+	var automation_result := AutomationContent.definitions()
+	if not automation_result["ok"]:
+		return automation_result
 
 	for definition in definitions:
 		var containers: Dictionary[StringName, Dictionary] = {}
@@ -54,10 +63,22 @@ func register_content(runtime: GameRuntime) -> Dictionary:
 		)
 
 	for definition in actions:
-		runtime.define_action(definition)
+		var registered := runtime.define_action(definition)
+		if not registered["ok"]:
+			var source: String = action_result["sources"][StringName(definition["id"])]
+			return {"ok": false, "value": null,
+				"error": "Action registration failed in %s: %s" % [source, registered["error"]]}
 
 	for definition in interactions:
-		runtime.define_interaction(definition)
+		var registered := runtime.define_interaction(definition)
+		if not registered["ok"]:
+			return {"ok": false, "value": null, "error": "Interaction registration failed in %s: %s" % [interaction_result["sources"][StringName(definition["id"])], registered["error"]]}
+
+	for definition: Dictionary in automation_result["value"]:
+		var registered := runtime.define_automation(definition)
+		if not registered["ok"]:
+			return {"ok": false, "value": null, "error": "Automation registration failed in %s: %s"
+				% [automation_result["sources"][StringName(definition["id"])], registered["error"]]}
 
 	return {"ok": true, "value": true, "error": ""}
 

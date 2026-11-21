@@ -5,6 +5,7 @@
 [resource]
 script = ExtResource("1_action")
 id = &"drag_check_action"
+behavior_id = &"attribute_effects"
 effects = Array[Dictionary]([{
 	"operation": &"add",
 	"entity": &"target",

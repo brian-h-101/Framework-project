@@ -9,6 +9,7 @@ const { setImmediate: nextTurn } = require('node:timers/promises');
 const { validateSceneGraph } = require('../out/scene_bridge');
 const { resolveProjectContext, scenePathInProject } = require('../out/project_context');
 const { declarationLine } = require('../out/scene_navigation');
+const { validateMovementConfigurations } = require('../out/movement_configuration_bridge');
 
 function check(label, operation) {
 	operation();
@@ -19,10 +20,19 @@ function graph(sourcePath = 'res://scene.tscn') {
 	const node = (path, children, extra = {}) => ({
 		path, name: path === '.' ? 'Scene' : path.split('/').pop(), type: 'Node2D',
 		source_path: sourcePath, source_node_path: path,
-		instance_path: '', base_scene_path: '', script_path: '', children, ...extra
+		instance_path: '', base_scene_path: '', script_path: '', children,
+		structural_scene: sourcePath, structural_node_path: path, instance_boundary: '',
+		can_add: true, can_rename: path !== '.', can_remove: path !== '.', references: {},
+		is_entity: false,
+		interaction_resource_path: '',
+		interaction_id: '',
+		movement_configuration_path: '', can_assign_movement: false,
+		has_script: false, script_source_path: '', can_attach_script: true, can_remove_script: false,
+		...extra
 	});
 	return {
-		version: 1, source_path: sourcePath, root: '.', dependencies: [sourcePath],
+		version: 2, source_path: sourcePath, root: '.', dependencies: [sourcePath],
+		dependency_hashes: { [sourcePath]: '0'.repeat(64) },
 		nodes: {
 			'.': node('.', ['Left', 'Right']),
 			Left: node('Left', ['Left/Body']),
@@ -79,8 +89,38 @@ async function until(predicate) {
 }
 
 async function main() {
+	check('Movement catalogue validates typed descriptions and dependency hashes', () => {
+		const resource = 'res://Framework/Content/Configuration/Movement/player_movement.tres';
+		const entry = { source_path: resource, action_id: 'move', behavior_id: 'movement_2d', dependency_hashes: { [resource]: 'a'.repeat(64) } };
+		const catalog = () => ({ version: 1, configurations: [structuredClone(entry)] });
+		assert.equal(validateMovementConfigurations(catalog())[0].source_path, resource);
+		for (const mutate of [
+			value => value.version = 2,
+			value => value.configurations.push(structuredClone(entry)),
+			value => value.configurations[0].source_path = 'res://../outside.tres',
+			value => value.configurations[0].source_path = 'res://Framework/Content/Behavior/Action/move.tres',
+			value => value.configurations[0].action_id = '',
+			value => value.configurations[0].behavior_id = '',
+			value => value.configurations[0].dependency_hashes = {},
+			value => value.configurations[0].dependency_hashes[resource] = 'invalid',
+			value => value.configurations[0].dependency_hashes['res://../outside.gd'] = 'a'.repeat(64)
+		]) { const value = catalog(); mutate(value); assert.throws(() => validateMovementConfigurations(value)); }
+	});
 	check('Repeated child names in distinct branches remain valid', () => {
 		assert.equal(validateSceneGraph(graph(), 'res://scene.tscn').nodes['Right/Body'].name, 'Body');
+	});
+	check('Entity and Interaction metadata survive validation', () => {
+		const value = graph();
+		value.nodes.Left.is_entity = true;
+		Object.assign(value.nodes['Left/Body'], {
+			interaction_resource_path: 'res://Framework/Content/Behavior/Interaction/strike.tres',
+			interaction_id: 'strike'
+		});
+		const nodes = validateSceneGraph(value, 'res://scene.tscn').nodes;
+		assert.equal(nodes.Left.is_entity, true);
+		assert.equal(nodes['Left/Body'].interaction_id, 'strike');
+		assert.equal(nodes['Left/Body'].interaction_resource_path,
+			'res://Framework/Content/Behavior/Interaction/strike.tres');
 	});
 	for (const [label, mutate] of [
 		['Incorrect parent is rejected', value => value.nodes.Left.children.push('Right')],
@@ -90,6 +130,13 @@ async function main() {
 		['Cycle is rejected', value => value.nodes.Left.children.push('.')],
 		['External file path is rejected', value => value.nodes.Left.source_path = 'file:///outside.tscn'],
 		['Resource traversal is rejected', value => value.nodes.Left.script_path = 'res://../outside.gd'],
+		['Entity marker must be boolean', value => value.nodes.Left.is_entity = 'player'],
+		['Interaction ID must be text', value => value.nodes.Left.interaction_id = 42],
+		['Interaction resource path must be text', value => value.nodes.Left.interaction_resource_path = null],
+		['Movement capability cannot be forged', value => value.nodes.Left.can_assign_movement = true],
+		['Movement resource path must be text', value => value.nodes.Left.movement_configuration_path = null],
+		['Script capability cannot be forged', value => value.nodes.Left.can_remove_script = true],
+		['Script ownership cannot escape the scene graph', value => value.nodes.Left.script_source_path = 'res://missing.tscn'],
 		['Wrong selected scene is rejected', value => value.source_path = 'res://other.tscn']
 	]) {
 		check(label, () => { const value = graph(); mutate(value); assert.throws(() => validateSceneGraph(value, 'res://scene.tscn')); });
@@ -135,13 +182,15 @@ async function main() {
 		const provider = new SceneTreeProvider();
 		const treeGraph = graph();
 		treeGraph.dependencies.push('res://linked.tscn');
+		treeGraph.dependency_hashes['res://linked.tscn'] = '0'.repeat(64);
 		treeGraph.nodes.Left.instance_path = 'res://linked.tscn';
 		treeGraph.nodes.Left.script_path = 'res://movement.gd';
+		Object.assign(treeGraph.nodes.Left, { has_script: true, script_source_path: 'res://scene.tscn', can_attach_script: false, can_remove_script: true });
 		provider.setGraph(context, validateSceneGraph(treeGraph, 'res://scene.tscn'));
 		const root = provider.getChildren()[0];
 		const left = provider.getChildren(root)[0];
 		check('Tree exposes nested children and contextual navigation', () => {
-			assert.equal(provider.getTreeItem(left).contextValue, 'scene_node_instance_scripted');
+			assert.equal(provider.getTreeItem(left).contextValue, 'scene_node_instance_scripted_add_rename_remove_detach_script');
 			assert.equal(provider.getChildren(left)[0].path, 'Left/Body');
 			assert.equal(provider.getParent(left).path, '.');
 			assert.equal(provider.getTreeItem(left).command.command, 'frameworkScenes.openDeclaration');
@@ -175,6 +224,7 @@ async function main() {
 			assert.equal(loads[1].args[1], 'godot-console.exe');
 			const currentGraph = graph('res://Scenes/second.tscn');
 			currentGraph.dependencies.push('res://Scenes/camera.tscn');
+			currentGraph.dependency_hashes['res://Scenes/camera.tscn'] = '0'.repeat(64);
 			loads[1].resolve(currentGraph);
 			await until(() => publications.length === 1);
 			loads[0].resolve(graph('res://Scenes/first.tscn'));
@@ -201,6 +251,15 @@ async function main() {
 			assert.equal(displayed, undefined);
 			assert.equal(publications.length, 1);
 			console.log('[scene-extension] Removed workspace cannot publish a late response: true');
+			vscode.workspace.workspaceFolders = [{ uri: uri(directory) }];
+			let finish;
+			const pending = new Promise(resolve => { finish = resolve; });
+			selection.follow({ document: { uri: uri(first) } }, pending);
+			await nextTurn(); assert.equal(loads.length, 3);
+			finish(); await until(() => loads.length === 4);
+			selection.removed(uri(first)); loads[3].resolve(graph('res://Scenes/first.tscn')); await nextTurn();
+			assert.equal(displayed, undefined); await selection.refresh(); assert.equal(loads.length, 4);
+			console.log('[scene-extension] Selection waits for mutations and deleted scenes discard late results: true');
 		} finally {
 			selection.dispose();
 			provider.dispose();

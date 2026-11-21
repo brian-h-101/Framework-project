@@ -1,37 +1,63 @@
 {
 	"name": "framework-scenes-extension",
 	"displayName": "Framework Scenes",
-	"description": "Browse Godot scene node hierarchies and nested scene instances.",
-	"version": "0.0.2",
+	"description": "Browse and structurally edit Godot scene hierarchies and nested scene placements.",
+	"version": "0.0.9",
 	"publisher": "framework-tools",
 	"type": "commonjs",
-	"engines": { "vscode": "^1.146.0" },
-	"categories": ["Other"],
+	"engines": {
+		"vscode": "^1.146.0"
+	},
+	"categories": [
+		"Other"
+	],
 	"main": "./out/extension.js",
-	"activationEvents": ["onStartupFinished"],
-	"extensionKind": ["workspace"],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"extensionKind": [
+		"workspace"
+	],
 	"capabilities": {
 		"untrustedWorkspaces": {
 			"supported": false,
-			"description": "Scene discovery runs the project's Godot scene exporter."
+			"description": "Scene inspection and editing run the project's Godot helpers."
 		},
 		"virtualWorkspaces": false
 	},
 	"scripts": {
 		"compile": "tsc -p .",
-		"test": "npm run compile && node diagnostics/scene_extension_check.cjs",
+		"test": "npm run compile && node diagnostics/scene_extension_check.cjs && node diagnostics/scene_editing_extension_check.cjs && node diagnostics/scene_library_extension_check.cjs",
 		"vscode:prepublish": "npm run compile",
 		"package:list": "vsce ls --no-dependencies",
-		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license"
+		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license",
+		"test:library:bridge": "node diagnostics/scene_library_bridge_check.cjs",
+		"test:movement:bridge": "node diagnostics/movement_assignment_bridge_check.cjs"
 	},
 	"contributes": {
-		"views": {
-			"explorer": [{ "id": "frameworkScenes.scenes", "name": "Framework Scenes" }]
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "frameworkScenes",
+					"title": "Framework Scenes",
+					"icon": "media/framework-scenes.svg"
+				}
+			]
 		},
-		"viewsWelcome": [{
-			"view": "frameworkScenes.scenes",
-			"contents": "Open a .tscn file to view its node hierarchy.\n[Find a Scene](command:frameworkScenes.findScene)"
-		}],
+		"views": {
+			"frameworkScenes": [
+				{
+					"id": "frameworkScenes.scenes",
+					"name": "Framework Scenes"
+				}
+			]
+		},
+		"viewsWelcome": [
+			{
+				"view": "frameworkScenes.scenes",
+				"contents": "Open a .tscn file to view its node hierarchy.\n[Find a Scene](command:frameworkScenes.findScene)"
+			}
+		],
 		"configuration": {
 			"title": "Framework Scenes",
 			"properties": {
@@ -44,35 +70,234 @@
 			}
 		},
 		"commands": [
-			{ "command": "frameworkScenes.refresh", "title": "Refresh Scene", "category": "Framework Scenes", "icon": "$(refresh)" },
-			{ "command": "frameworkScenes.findScene", "title": "Find a Scene...", "category": "Framework Scenes", "icon": "$(search)" },
-			{ "command": "frameworkScenes.openDeclaration", "title": "Open Node Declaration", "category": "Framework Scenes" },
-			{ "command": "frameworkScenes.openInstance", "title": "Open Instanced Scene", "category": "Framework Scenes" },
-			{ "command": "frameworkScenes.openBase", "title": "Open Base Scene", "category": "Framework Scenes" },
-			{ "command": "frameworkScenes.openScript", "title": "Open Attached Script", "category": "Framework Scenes" }
+			{
+				"command": "frameworkScenes.refresh",
+				"title": "Refresh Scene",
+				"category": "Framework Scenes",
+				"icon": "$(refresh)"
+			},
+			{
+				"command": "frameworkScenes.findScene",
+				"title": "Find a Scene...",
+				"category": "Framework Scenes",
+				"icon": "$(search)"
+			},
+			{
+				"command": "frameworkScenes.openDeclaration",
+				"title": "Open Node Declaration",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.openInstance",
+				"title": "Open Instanced Scene",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.openBase",
+				"title": "Open Base Scene",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.openScript",
+				"title": "Open Attached Script",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.openStructure",
+				"title": "Open Structure Source",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.addNode",
+				"title": "Add Child Node...",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.addInstance",
+				"title": "Add Scene Instance...",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.attachBehavior",
+				"title": "Attach Behavior Resource...",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.attachScript",
+				"title": "Attach Script...",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.removeScript",
+				"title": "Remove Attached Script...",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.assignMovement",
+				"title": "Assign Movement Configuration...",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.renameNode",
+				"title": "Rename Node...",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.removeNode",
+				"title": "Remove Node...",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.manageAuthoredLibrary",
+				"title": "Manage Authored Library?",
+				"category": "Framework Scenes",
+				"icon": "$(folder-opened)"
+			}
 		],
-		"submenus": [{ "id": "frameworkScenes.nodeMenu", "label": "Framework Scenes" }],
+		"submenus": [
+			{
+				"id": "frameworkScenes.nodeMenu",
+				"label": "Framework Scenes"
+			}
+		],
 		"menus": {
 			"view/title": [
-				{ "command": "frameworkScenes.findScene", "when": "view == frameworkScenes.scenes", "group": "navigation@1" },
-				{ "command": "frameworkScenes.refresh", "when": "view == frameworkScenes.scenes", "group": "navigation@2" }
+				{
+					"command": "frameworkScenes.findScene",
+					"when": "view == frameworkScenes.scenes",
+					"group": "navigation@1"
+				},
+				{
+					"command": "frameworkScenes.refresh",
+					"when": "view == frameworkScenes.scenes",
+					"group": "navigation@3"
+				},
+				{
+					"command": "frameworkScenes.manageAuthoredLibrary",
+					"when": "view == frameworkScenes.scenes",
+					"group": "navigation@2"
+				}
 			],
-			"view/item/context": [{
-				"submenu": "frameworkScenes.nodeMenu",
-				"when": "view == frameworkScenes.scenes && viewItem =~ /^scene_node/",
-				"group": "framework@1"
-			}],
+			"view/item/context": [
+				{
+					"submenu": "frameworkScenes.nodeMenu",
+					"when": "view == frameworkScenes.scenes && viewItem =~ /^scene_node/",
+					"group": "framework@1"
+				}
+			],
 			"frameworkScenes.nodeMenu": [
-				{ "command": "frameworkScenes.openDeclaration", "group": "navigation@1" },
-				{ "command": "frameworkScenes.openInstance", "when": "viewItem =~ /instance/", "group": "navigation@2" },
-				{ "command": "frameworkScenes.openBase", "when": "viewItem =~ /inherited/", "group": "navigation@3" },
-				{ "command": "frameworkScenes.openScript", "when": "viewItem =~ /scripted/", "group": "navigation@4" }
+				{
+					"command": "frameworkScenes.openDeclaration",
+					"group": "navigation@1"
+				},
+				{
+					"command": "frameworkScenes.openInstance",
+					"when": "viewItem =~ /instance/",
+					"group": "navigation@2"
+				},
+				{
+					"command": "frameworkScenes.openBase",
+					"when": "viewItem =~ /inherited/",
+					"group": "navigation@3"
+				},
+				{
+					"command": "frameworkScenes.openScript",
+					"when": "viewItem =~ /scripted/",
+					"group": "navigation@4"
+				},
+				{
+					"command": "frameworkScenes.openStructure",
+					"group": "navigation@5"
+				},
+				{
+					"command": "frameworkScenes.addNode",
+					"when": "viewItem =~ /_add/",
+					"group": "2_edit@1"
+				},
+				{
+					"command": "frameworkScenes.addInstance",
+					"when": "viewItem =~ /_add/",
+					"group": "2_edit@2"
+				},
+				{
+					"command": "frameworkScenes.renameNode",
+					"when": "viewItem =~ /_rename/",
+					"group": "2_edit@4"
+				},
+				{
+					"command": "frameworkScenes.attachBehavior",
+					"when": "viewItem =~ /_attach_behavior/",
+					"group": "2_edit@3"
+				},
+				{
+					"command": "frameworkScenes.attachScript",
+					"when": "viewItem =~ /_attach_script/",
+					"group": "2_edit@5"
+				},
+				{
+					"command": "frameworkScenes.removeScript",
+					"when": "viewItem =~ /_detach_script/",
+					"group": "3_remove@2"
+				},
+				{
+					"command": "frameworkScenes.removeNode",
+					"when": "viewItem =~ /_remove/",
+					"group": "3_remove@1"
+				}
 			],
 			"commandPalette": [
-				{ "command": "frameworkScenes.openDeclaration", "when": "false" },
-				{ "command": "frameworkScenes.openInstance", "when": "false" },
-				{ "command": "frameworkScenes.openBase", "when": "false" },
-				{ "command": "frameworkScenes.openScript", "when": "false" }
+				{
+					"command": "frameworkScenes.attachScript",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.removeScript",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.assignMovement",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.openDeclaration",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.openInstance",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.openBase",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.openScript",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.openStructure",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.addNode",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.addInstance",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.attachBehavior",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.renameNode",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.removeNode",
+					"when": "false"
+				}
 			]
 		}
 	},

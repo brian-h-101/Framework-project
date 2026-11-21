@@ -1,11 +1,12 @@
 [gd_resource type="Resource" format=3]
 
-[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd" id="1_schema"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd" id="1_7gfqt"]
 
 [resource]
-script = ExtResource("1_schema")
+script = ExtResource("1_7gfqt")
 containers = {
 	&"abilities": {
-		"precognition": 0,
-	},
+		"Power": 0,
+		"precognition": 0
+	}
 }

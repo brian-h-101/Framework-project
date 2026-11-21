@@ -9,11 +9,7 @@ const FragmentComposition = preload(
 const ContentComposition = preload(
 	"res://Framework/Env/Setup/content_composition.gd"
 )
-const LIBRARIES: Array[String] = [
-	"res://Framework/Content/Authored/Entity/",
-	"res://Framework/Content/Authored/Items/",
-	"res://Framework/Content/Authored/Objects/",
-]
+const AuthoredLibrary = preload("res://Framework/Env/Setup/authored_library.gd")
 
 
 # Resource selections retain their authored order; starting overrides apply last.
@@ -53,10 +49,7 @@ static func define(
 
 
 static func _inside_library(resource_path: String) -> bool:
-	for root in LIBRARIES:
-		if resource_path.begins_with(root):
-			return true
-	return false
+	return AuthoredLibrary.resource_error(resource_path).is_empty()
 
 
 static func _failure(message: String) -> Dictionary:

@@ -35,7 +35,7 @@ export class SceneSelection implements vscode.Disposable {
 		private readonly status: (message: string | undefined) => void
 	) {}
 
-	follow(editor: vscode.TextEditor | undefined): void {
+	follow(editor: vscode.TextEditor | undefined, after?: Promise<void>): void {
 		const uri = editor?.document.uri;
 		if (this.disposed || !uri || uri.scheme !== 'file' || !uri.path.endsWith('.tscn')) {
 			return;
@@ -46,19 +46,47 @@ export class SceneSelection implements vscode.Disposable {
 		}
 		this.selectedUri = uri;
 		this.dependencies = new Set([uri.toString()]);
-		void this.refresh();
+		this.scheduleRefreshAfter(after);
 	}
 
 	affects(uri: vscode.Uri): boolean {
 		return this.dependencies.has(uri.toString());
 	}
 
-	scheduleRefresh(uri: vscode.Uri): void {
+	scheduleRefresh(uri: vscode.Uri, after?: Promise<void>): void {
 		if (this.disposed || !this.affects(uri)) {
 			return;
 		}
 		clearTimeout(this.timer);
-		this.timer = setTimeout(() => void this.refresh(), 150);
+		const request = this.request;
+		this.timer = setTimeout(() => {
+			void (async () => {
+				await after?.catch(() => undefined);
+				if (!this.disposed && request === this.request) { await this.refresh(); }
+			})();
+		}, 150);
+	}
+
+	scheduleRefreshAfter(after?: Promise<void>): void {
+		this.request++;
+		this.controller?.abort();
+		this.provider.clear();
+		const request = this.request;
+		void (async () => {
+			await after?.catch(() => undefined);
+			if (!this.disposed && request === this.request) { await this.refresh(); }
+		})();
+	}
+
+	removed(uri: vscode.Uri, after?: Promise<void>): void {
+		if (uri.toString() !== this.selectedUri?.toString()) { this.scheduleRefresh(uri, after); return; }
+		this.request++;
+		this.controller?.abort();
+		clearTimeout(this.timer);
+		this.selectedUri = undefined;
+		this.dependencies.clear();
+		this.provider.clear();
+		this.status(undefined);
 	}
 
 	updateStatus(): void {
@@ -70,7 +98,7 @@ export class SceneSelection implements vscode.Disposable {
 		this.status(dirty ? 'Showing saved scene data. Save scene edits to refresh.' : undefined);
 	}
 
-	workspaceChanged(): void {
+	workspaceChanged(after?: Promise<void>): void {
 		if (!this.selectedUri || this.disposed) {
 			return;
 		}
@@ -84,7 +112,7 @@ export class SceneSelection implements vscode.Disposable {
 			this.status(undefined);
 			return;
 		}
-		void this.refresh();
+		this.scheduleRefreshAfter(after);
 	}
 
 	async refresh(): Promise<void> {
@@ -130,7 +158,7 @@ export class SceneSelection implements vscode.Disposable {
 				return;
 			}
 			ensureWorkspace(context);
-			this.dependencies = new Set(graph.dependencies.map(path => projectUri(context, path).toString()));
+			this.dependencies = new Set(Object.keys(graph.dependency_hashes).map(path => projectUri(context, path).toString()));
 			this.provider.setGraph(context, graph);
 			this.updateStatus();
 			this.output.appendLine(`[scene-bridge] Loaded ${Object.keys(graph.nodes).length} node(s).`);

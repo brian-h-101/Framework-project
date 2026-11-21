@@ -5,6 +5,8 @@ import { SceneTreeProvider, projectUri } from './scene_tree_provider';
 import type { SceneTreeElement } from './scene_tree_provider';
 import { SceneSelection, ensureWorkspace, workspaceDirectories } from './scene_selection';
 import { declarationLine } from './scene_navigation';
+import { SceneEditingCommands } from './scene_editing_command';
+import { LibraryManager } from './library/library_manager';
 
 export function activate(context: vscode.ExtensionContext): void {
 	const output = vscode.window.createOutputChannel('Framework Scenes');
@@ -14,13 +16,28 @@ export function activate(context: vscode.ExtensionContext): void {
 		showCollapseAll: true
 	});
 	const selection = new SceneSelection(provider, output, message => { view.message = message; });
+	const editing = new SceneEditingCommands(provider, output, () => selection.refresh());
+	let pendingOperation: Promise<void> | undefined;
+	const library = new LibraryManager(output, async (uri, removed) => {
+		if (removed) { selection.removed(uri, pendingOperation); }
+		else { selection.scheduleRefresh(uri, pendingOperation); }
+	});
+	function runOperation(operation: () => Promise<void>): Promise<void> {
+		if (pendingOperation) {
+			output.appendLine('[scene-editing] A scene operation is already running.');
+			return pendingOperation;
+		}
+		pendingOperation = operation().finally(() => { pendingOperation = undefined; });
+		return pendingOperation;
+	}
 
-	async function navigate(element: SceneTreeElement, target: 'declaration' | 'instance' | 'base' | 'script'): Promise<void> {
+	async function navigate(element: SceneTreeElement, target: 'declaration' | 'structure' | 'instance' | 'base' | 'script'): Promise<void> {
 		try {
 			const resolved = provider.resolve(element);
 			ensureWorkspace(resolved.context);
 			const node = resolved.node;
 			const path = target === 'declaration' ? node.source_path
+				: target === 'structure' ? node.structural_scene
 				: target === 'instance' ? node.instance_path
 					: target === 'base' ? node.base_scene_path : node.script_path;
 			if (!path) {
@@ -36,8 +53,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			const document = await vscode.workspace.openTextDocument(uri);
 			provider.resolve(element);
 			ensureWorkspace(resolved.context);
-			const line = target === 'declaration'
-				? declarationLine(document.getText(), node.source_node_path) : undefined;
+			const line = target === 'declaration' || target === 'structure'
+				? declarationLine(document.getText(), target === 'structure' ? node.structural_node_path : node.source_node_path) : undefined;
 			await vscode.window.showTextDocument(document, {
 				preview: true,
 				selection: line === undefined ? undefined : new vscode.Range(line, 0, line, 0)
@@ -87,24 +104,34 @@ export function activate(context: vscode.ExtensionContext): void {
 	const watcher = vscode.workspace.createFileSystemWatcher('**/*.tscn');
 	context.subscriptions.push(
 		view, provider, selection, output, findScene, watcher,
-		vscode.commands.registerCommand('frameworkScenes.refresh', () => selection.refresh()),
+		vscode.commands.registerCommand('frameworkScenes.refresh', () => runOperation(() => selection.refresh())),
+		vscode.commands.registerCommand('frameworkScenes.manageAuthoredLibrary', () => runOperation(() => library.execute())),
 		vscode.commands.registerCommand('frameworkScenes.openDeclaration', (node: SceneTreeElement) => navigate(node, 'declaration')),
+		vscode.commands.registerCommand('frameworkScenes.openStructure', (node: SceneTreeElement) => navigate(node, 'structure')),
+		vscode.commands.registerCommand('frameworkScenes.addNode', (node: SceneTreeElement) => runOperation(() => editing.execute('add_node', node))),
+		vscode.commands.registerCommand('frameworkScenes.addInstance', (node: SceneTreeElement) => runOperation(() => editing.execute('add_instance', node))),
+		vscode.commands.registerCommand('frameworkScenes.attachBehavior', (node: SceneTreeElement) => runOperation(() => editing.execute('attach_behavior', node))),
+		vscode.commands.registerCommand('frameworkScenes.assignMovement', (node: SceneTreeElement) => runOperation(() => editing.execute('assign_movement', node))),
+		vscode.commands.registerCommand('frameworkScenes.attachScript', (node: SceneTreeElement) => runOperation(() => editing.execute('attach_script', node))),
+		vscode.commands.registerCommand('frameworkScenes.removeScript', (node: SceneTreeElement) => runOperation(() => editing.execute('remove_script', node))),
+		vscode.commands.registerCommand('frameworkScenes.renameNode', (node: SceneTreeElement) => runOperation(() => editing.execute('rename', node))),
+		vscode.commands.registerCommand('frameworkScenes.removeNode', (node: SceneTreeElement) => runOperation(() => editing.execute('remove', node))),
 		vscode.commands.registerCommand('frameworkScenes.openInstance', (node: SceneTreeElement) => navigate(node, 'instance')),
 		vscode.commands.registerCommand('frameworkScenes.openBase', (node: SceneTreeElement) => navigate(node, 'base')),
 		vscode.commands.registerCommand('frameworkScenes.openScript', (node: SceneTreeElement) => navigate(node, 'script')),
-		vscode.window.onDidChangeActiveTextEditor(editor => selection.follow(editor)),
-		vscode.workspace.onDidSaveTextDocument(document => selection.scheduleRefresh(document.uri)),
+		vscode.window.onDidChangeActiveTextEditor(editor => selection.follow(editor, pendingOperation)),
+		vscode.workspace.onDidSaveTextDocument(document => selection.scheduleRefresh(document.uri, pendingOperation)),
 		vscode.workspace.onDidChangeTextDocument(() => selection.updateStatus()),
-		vscode.workspace.onDidChangeWorkspaceFolders(() => selection.workspaceChanged()),
+		vscode.workspace.onDidChangeWorkspaceFolders(() => selection.workspaceChanged(pendingOperation)),
 		vscode.workspace.onDidChangeConfiguration(event => {
 			if (event.affectsConfiguration('frameworkScenes.godotExecutable')
 				|| event.affectsConfiguration('godotTools.editorPath.godot4')) {
-				void selection.refresh();
+				selection.scheduleRefreshAfter(pendingOperation);
 			}
 		}),
-		watcher.onDidChange(uri => selection.scheduleRefresh(uri)),
-		watcher.onDidCreate(uri => selection.scheduleRefresh(uri)),
-		watcher.onDidDelete(uri => selection.scheduleRefresh(uri))
+		watcher.onDidChange(uri => selection.scheduleRefresh(uri, pendingOperation)),
+		watcher.onDidCreate(uri => selection.scheduleRefresh(uri, pendingOperation)),
+		watcher.onDidDelete(uri => selection.removed(uri, pendingOperation))
 	);
 	output.appendLine('Framework Scenes activated.');
 	selection.follow(vscode.window.activeTextEditor);

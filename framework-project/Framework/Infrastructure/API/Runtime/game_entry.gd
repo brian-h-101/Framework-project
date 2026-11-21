@@ -29,7 +29,7 @@ func start(setup: GameSetup) -> Dictionary:
 	var core := RuntimeCore.new(setup.get_clock_definition())
 	runtime = GameRuntime.new(core)
 
-	var registered := setup.register_content(runtime)
+	var registered := _register_setup(setup)
 
 	if not registered["ok"]:
 		stop()
@@ -70,7 +70,7 @@ func restore_session(
 	var core := RuntimeCore.new(setup.get_clock_definition())
 	runtime = GameRuntime.new(core)
 
-	var registered := setup.register_content(runtime)
+	var registered := _register_setup(setup)
 	if not registered["ok"]:
 		stop()
 		return registered
@@ -89,6 +89,10 @@ func restore_session(
 		return restored
 
 	entity_ids = restored["value"]
+	var automations := runtime.restore_automations(snapshot.get("automations", {}), entity_ids)
+	if not automations["ok"]:
+		stop()
+		return automations
 	world_bridge = WorldBridge.new(core)
 
 	return {
@@ -96,6 +100,13 @@ func restore_session(
 		"value": true,
 		"error": "",
 	}
+
+func _register_setup(setup: GameSetup) -> Dictionary:
+	var executors := setup.register_executors(runtime)
+	if not executors["ok"]:
+		return executors
+	return setup.register_content(runtime)
+
 
 func snapshot_session() -> Dictionary:
 	if runtime == null:
@@ -116,6 +127,12 @@ func snapshot_session() -> Dictionary:
 	var snapshot: Dictionary = {
 		"entities": captured["value"],
 	}
+	var automations := runtime.snapshot_automations(entity_ids)
+	if not automations["ok"]:
+		return automations
+	# Omit empty state to retain the shape of existing entity-only snapshots.
+	if not automations["value"].is_empty():
+		snapshot["automations"] = automations["value"]
 
 	if captured_clock["value"] != null:
 		snapshot["clock"] = captured_clock["value"]

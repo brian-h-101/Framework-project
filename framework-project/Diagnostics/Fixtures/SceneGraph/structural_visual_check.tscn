@@ -1,0 +1,12 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="PackedScene" path="res://Diagnostics/Fixtures/SceneGraph/base.tscn" id="1_base"]
+
+[node name="StructuralVisualCheck" type="Node2D" unique_id=101]
+metadata/purpose = "Scene extension visual checkpoint"
+
+[node name="LocalNodes" type="Node2D" parent="." unique_id=102]
+
+[node name="Example" type="Marker2D" parent="LocalNodes" unique_id=103]
+
+[node name="Placement" parent="." unique_id=104 instance=ExtResource("1_base")]

@@ -18,10 +18,10 @@ const Presentation2DResource = preload(
 	"res://Framework/Env/Presentation/Resources/presentation_2d_resource.gd"
 )
 const Movement2D = preload(
-	"res://Framework/Env/Movement/movement_2d.gd"
+	"res://Framework/Content/God/Movement/movement_2d.gd"
 )
 const InteractionInput = preload(
-	"res://Framework/Env/Input/interaction_input.gd"
+	"res://Framework/Content/God/Interaction/interaction_input.gd"
 )
 const StartingContent = preload(
 	"res://Framework/Env/Setup/starting_definitions.gd"

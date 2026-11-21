@@ -7,10 +7,10 @@ const SceneDefaults = preload(
 	"res://Framework/Content/Configuration/Map/scene_defaults.tres"
 )
 const GroundLayer = preload(
-	"res://Framework/Env/Map/tile_map_layer_2d.gd"
+	"res://Framework/Content/God/Map/tile_map_layer_2d.gd"
 )
 const LightingEnvironment = preload(
-	"res://Framework/Env/Lighting/lighting_2d.gd"
+	"res://Framework/Content/God/Lighting/lighting_2d.gd"
 )
 
 

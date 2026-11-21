@@ -10,6 +10,6 @@ const InteractionResource = preload(
 
 static func definitions() -> Dictionary:
 	return ResourceDefinitionDiscovery.definitions_in(
-		"res://Framework/Content/Behavior/Interaction",
+		"res://Framework/Content/Behavior",
 		InteractionResource
 	)

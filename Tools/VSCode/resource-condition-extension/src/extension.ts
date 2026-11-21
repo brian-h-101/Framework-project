@@ -11,7 +11,10 @@ import {
 	assignInteractionResourceFromFiles
 } from './commands/condition_assignment_command';
 import { ResourceDragAndDropController } from './tree/resource_drag_and_drop';
+import { editTreeEntry, type StructuralOperation } from './commands/behavior_editing_command';
 import { editConditionFromFile } from './commands/condition_editing_command';
+import { LibraryManager } from './library/library_manager';
+import { openExecutorScript } from './commands/executor_navigation_command';
 
 export function activate(context: vscode.ExtensionContext): void {
 	const output = vscode.window.createOutputChannel(
@@ -19,7 +22,11 @@ export function activate(context: vscode.ExtensionContext): void {
 	);
 
 	const provider = new ResourceTreeProvider();
-	const selection = new ResourceSelection(provider, output);
+	const selection = new ResourceSelection(provider, output, message => { view.message = message; });
+	const library = new LibraryManager(output, async (uri, removed) => {
+		if (removed) { selection.removed(uri); }
+		else { await selection.refresh(); }
+	});
 
 	let pendingOperation: Promise<void> | undefined;
 
@@ -61,13 +68,14 @@ export function activate(context: vscode.ExtensionContext): void {
 						);
 					}
 
+					const resolved = provider.resolve(element);
 					const item = provider.getTreeItem(element);
 
 					if (
 						!item.resourceUri
 						|| (
 							expectedKind !== undefined
-							&& item.contextValue !== expectedKind
+							&& (resolved.data !== undefined || resolved.resource.kind !== expectedKind)
 						)
 					) {
 						throw new Error(
@@ -125,6 +133,8 @@ export function activate(context: vscode.ExtensionContext): void {
 			() => selection.refresh()
 		)
 	);
+	const manageLibraryCommand = vscode.commands.registerCommand('customTreeView.manageBehaviorLibrary',
+		() => runOperation(() => library.execute()));
 
 	const assignmentCommand = vscode.commands.registerCommand(
 		'customTreeView.addConditionToGroup',
@@ -195,18 +205,50 @@ export function activate(context: vscode.ExtensionContext): void {
 		)
 	);
 
+	const openExecutorCommand = vscode.commands.registerCommand(
+		'customTreeView.openExecutorScript',
+		(element?: ResourceTreeElement) => runOperation(
+			() => openExecutorScript(provider, element, output)
+		)
+	);
+
+	const structuralCommands = ([
+		['setAutomationInteraction', 'set_interaction'],
+		['setActionBehavior', 'set_behavior'], ['editValue', 'set'], ['addEntry', 'add'], ['renameEntry', 'rename'],
+		['removeEntry', 'remove'], ['addEffect', 'add_effect'],
+		['removeConditionFromGroup', 'remove_condition'], ['clearRequirements', 'clear_requirements']
+	] as const).map(([name, operation]) => vscode.commands.registerCommand(
+		'customTreeView.' + name,
+		(element?: ResourceTreeElement) => runOperation(() => editTreeEntry(
+			provider, element, operation as StructuralOperation, output, () => selection.refresh()
+		))
+	));
+	const watcher = vscode.workspace.createFileSystemWatcher('**/*.{tres,gd,godot,tscn,res,scn,gdshader}');
+	const changed = (uri: vscode.Uri): void => selection.changed(uri, pendingOperation);
+	const subscriptions = [watcher, watcher.onDidChange(changed), watcher.onDidCreate(changed),
+		watcher.onDidDelete(uri => selection.removed(uri, pendingOperation)), vscode.workspace.onDidSaveTextDocument(document => changed(document.uri)),
+		vscode.workspace.onDidChangeTextDocument(() => selection.updateStatus()),
+		vscode.workspace.onDidChangeWorkspaceFolders(() => selection.workspaceChanged(pendingOperation)),
+		vscode.workspace.onDidChangeConfiguration(event => {
+			if (event.affectsConfiguration('godotTools.editorPath.godot4')) { selection.workspaceChanged(pendingOperation); }
+		})];
+
 	const editorSelection = vscode.window.onDidChangeActiveTextEditor(
 		editor => selection.follow(editor, pendingOperation)
 	);
 
 	context.subscriptions.push(
+		...structuralCommands,
+		...subscriptions,
 		view,
 		refreshCommand,
+		manageLibraryCommand,
 		assignmentCommand,
 		requirementsCommand,
 		actionCommand,
 		editingCommand,
 		openCommand,
+		openExecutorCommand,
 		editorSelection,
 		selection,
 		provider,

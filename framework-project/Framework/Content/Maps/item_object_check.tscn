@@ -1,0 +1,26 @@
+[gd_scene format=3 uid="uid://pdifhia51ptf"]
+
+[ext_resource type="Script" path="res://Framework/Content/God/Map/tile_map_layer_2d.gd" id="1_olbkh"]
+[ext_resource type="Resource" path="res://Framework/Content/Configuration/Map/city_ground.tres" id="2_rw0yi"]
+[ext_resource type="Script" path="res://Framework/Content/God/Lighting/lighting_2d.gd" id="3_mo2lt"]
+[ext_resource type="Resource" path="res://Framework/Content/Configuration/Lighting/city_lighting.tres" id="4_bmjfy"]
+[ext_resource type="PackedScene" path="res://Framework/Content/Presentation/Items/IronSword/iron_sword_2d.tscn" id="5_tp0yx"]
+[ext_resource type="PackedScene" path="res://Framework/Content/Presentation/Objects/WoodenChest/wooden_chest_2d.tscn" id="6_f561y"]
+
+[node name="ItemObjectCheck" type="Node2D" unique_id=1789992570]
+
+[node name="Ground" type="TileMapLayer" parent="." unique_id=127730849]
+z_index = -1
+script = ExtResource("1_olbkh")
+content = ExtResource("2_rw0yi")
+metadata/receives_shadow = true
+
+[node name="Lighting" type="Node2D" parent="." unique_id=1888702705]
+script = ExtResource("3_mo2lt")
+content = ExtResource("4_bmjfy")
+
+[node name="IronSword01" parent="." unique_id=1942091868 instance=ExtResource("5_tp0yx")]
+metadata/entity_key = &"iron_sword_01"
+
+[node name="WoodenChest01" parent="." unique_id=1729397697 instance=ExtResource("6_f561y")]
+metadata/entity_key = &"wooden_chest_01"

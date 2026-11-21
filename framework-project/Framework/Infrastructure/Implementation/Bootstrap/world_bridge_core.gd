@@ -58,6 +58,13 @@ func bind_entity(entity_id: int, world_node: Node) -> Dictionary:
 	return {"ok": true, "value": entity_id, "error": ""}
 
 
+func bind_automation(world_node: Node, id: StringName, enabled: bool = true) -> Dictionary:
+	if _closed:
+		return _failure("World bridge is closed.")
+	var entity_id := entity_for(world_node)
+	return _runtime.bind_automation(entity_id, id, enabled)
+
+
 func node_for(entity_id: int) -> Node:
 	if _closed:
 		return null
@@ -126,6 +133,34 @@ func interact(
 		)
 
 	return _runtime.interact(interaction_id, actor_id, target_id)
+
+func execute_action(
+	action_id: StringName,
+	actor_node: Node,
+	target_node: Node,
+	arguments: Dictionary = {}
+) -> Dictionary:
+	if _closed:
+		return _failure("World bridge is closed.")
+
+	var actor_id := entity_for(actor_node)
+	if actor_id == 0:
+		return _failure(
+			"Actor node is not bound to a runtime entity."
+		)
+
+	var target_id := entity_for(target_node)
+	if target_id == 0:
+		return _failure(
+			"Target node is not bound to a runtime entity."
+		)
+
+	return _runtime.execute_action(
+		action_id,
+		actor_id,
+		target_id,
+		arguments
+	)
 
 func _on_runtime_attribute_written(
 	entity_id: int,

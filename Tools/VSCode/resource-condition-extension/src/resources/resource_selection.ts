@@ -8,10 +8,15 @@ export class ResourceSelection implements vscode.Disposable {
 	private selectedUri: vscode.Uri | undefined;
 	private requestId = 0;
 	private disposed = false;
+	private dependencies = new Set<string>();
+	private timer: ReturnType<typeof setTimeout> | undefined;
+	private unsupported = false;
+	private projectUri: vscode.Uri | undefined;
 
 	constructor(
 		private readonly provider: ResourceTreeProvider,
-		private readonly output: vscode.OutputChannel
+		private readonly output: vscode.OutputChannel,
+		private readonly status: (message: string | undefined) => void = () => undefined
 	) {}
 
 	follow(
@@ -50,6 +55,50 @@ export class ResourceSelection implements vscode.Disposable {
 		if (uri) {
 			await this.load(uri, request);
 		}
+	}
+
+	changed(uri: vscode.Uri, after?: Promise<void>): void {
+		if (this.disposed || !this.selectedUri || uri.path.split('/').at(-1)?.startsWith('.')) { return; }
+		const tracked = this.dependencies.has(uri.toString()) || uri.toString() === this.selectedUri.toString()
+			|| (this.projectUri && uri.path.startsWith(this.projectUri.path + '/') && /\.(gd|godot|tres|tscn|res|scn|gdshader)$/.test(uri.path))
+			|| uri.path.includes('/Framework/Content/Behavior/')
+			|| uri.path.startsWith(this.selectedUri.path.slice(0, this.selectedUri.path.lastIndexOf('/') + 1));
+		if (!tracked) { return; }
+		clearTimeout(this.timer);
+		const request = this.requestId;
+		this.timer = setTimeout(() => {
+			void (async () => {
+				await after?.catch(() => undefined);
+				if (this.isCurrent(request)) { await this.refresh(); }
+			})();
+		}, 150);
+	}
+
+	removed(uri: vscode.Uri, after?: Promise<void>): void {
+		if (uri.toString() !== this.selectedUri?.toString()) { this.changed(uri, after); return; }
+		clearTimeout(this.timer);
+		this.requestId++;
+		this.selectedUri = undefined;
+		this.dependencies.clear();
+		this.unsupported = false;
+		this.provider.clear();
+		this.status('Open a framework .tres file to view its relationships.');
+	}
+
+	workspaceChanged(after?: Promise<void>): void {
+		this.provider.clear();
+		const request = ++this.requestId;
+		if (this.selectedUri) { void this.loadAfter(this.selectedUri, request, after); }
+	}
+
+	updateStatus(): void {
+		if (this.unsupported) {
+			this.status('Open an action, interaction, condition, or condition-group Resource in Framework Resources.');
+			return;
+		}
+		const dirty = vscode.workspace.textDocuments.some(document => document.isDirty
+			&& (this.dependencies.has(document.uri.toString()) || document.uri.toString() === this.selectedUri?.toString()));
+		this.status(dirty ? 'Showing saved data. Save or revert related resources before editing.' : undefined);
 	}
 
 	private async loadAfter(
@@ -183,7 +232,18 @@ export class ResourceSelection implements vscode.Disposable {
 			}
 
 			ensureWorkspace();
+			this.projectUri = projectUri;
+			this.dependencies = new Set(Object.keys({ ...graph.dependency_hashes, ...graph.executor_snapshot?.hashes }).map(path =>
+				vscode.Uri.joinPath(projectUri, ...path.slice(6).split('/')).toString()));
+			this.unsupported = graph.supported === false;
+			if (this.unsupported) {
+				this.provider.clear();
+				this.updateStatus();
+				this.output.appendLine(`[bridge] Selected Resource is handled by another schema: ${resourcePath}`);
+				return;
+			}
 			this.provider.setGraph(projectUri, graph);
+			this.updateStatus();
 
 			this.output.appendLine(
 				`[bridge] Loaded ${resourcePath}; `
@@ -200,12 +260,17 @@ export class ResourceSelection implements vscode.Disposable {
 				? error.message
 				: String(error);
 
+			this.dependencies.clear();
+			this.unsupported = false;
+			this.status(message);
 			this.output.appendLine(`[bridge] Error: ${message}`);
 			void vscode.window.showErrorMessage(message);
 		}
 	}
 
 	dispose(): void {
+		clearTimeout(this.timer);
+		this.dependencies.clear();
 		this.disposed = true;
 		this.requestId++;
 		this.selectedUri = undefined;

@@ -12,12 +12,12 @@ const ConditionGroupResource = preload(
 const InteractionResource = preload(
 	"res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd"
 )
+const AutomationResource = preload("res://Framework/Infrastructure/API/Gameplay/Resources/automation_resource.gd")
 
 const CONTENT_FOLDERS: Array[String] = [
-	"res://Framework/Content/Behavior/Action",
-	"res://Framework/Content/Behavior/Condition",
-	"res://Framework/Content/Behavior/Interaction",
+	"res://Framework/Content/Behavior",
 ]
+const Paths = preload("res://Framework/Env/Setup/library_path_policy.gd")
 
 
 func _initialize() -> void:
@@ -36,11 +36,17 @@ func _export_catalog() -> Dictionary:
 				"Resource folder does not exist: %s" % folder_path
 			)
 
-		resource_paths.append_array(_paths_in(folder_path))
+		var found := Paths.paths_in(folder_path)
+		if not found["ok"]:
+			return found
+		for path in found["value"]:
+			if String(path).get_extension() == "tres":
+				resource_paths.append(path)
 
 	resource_paths.sort()
 
 	var resources: Array[Dictionary] = []
+	var ids := {}
 
 	for resource_path in resource_paths:
 		var authored: Resource = ResourceLoader.load(resource_path)
@@ -62,6 +68,10 @@ func _export_catalog() -> Dictionary:
 				"Resource ID cannot be empty: %s" % resource_path
 			)
 
+		var key := kind + ":" + resource_id
+		if ids.has(key):
+			return _failure("Duplicate %s ID '%s' in %s and %s." % [kind, resource_id, ids[key], resource_path])
+		ids[key] = resource_path
 		resources.append({
 			"id": resource_id,
 			"kind": kind,
@@ -78,21 +88,9 @@ func _export_catalog() -> Dictionary:
 	}
 
 
-func _paths_in(folder_path: String) -> PackedStringArray:
-	var paths: PackedStringArray = []
-
-	for entry in ResourceLoader.list_directory(folder_path):
-		var entry_path: String = folder_path.path_join(entry)
-
-		if entry.ends_with("/"):
-			paths.append_array(_paths_in(entry_path))
-		elif entry.get_extension() == "tres":
-			paths.append(entry_path)
-
-	return paths
-
-
 func _kind_for(authored: Resource) -> String:
+	if authored is AutomationResource:
+		return "automation"
 	if authored is ActionResource:
 		return "action"
 

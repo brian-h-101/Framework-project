@@ -41,6 +41,10 @@ func bind_entity(entity_id: int, world_node: Node) -> Dictionary:
 	return _core.bind_entity(entity_id, world_node)
 
 
+func bind_automation(world_node: Node, id: StringName, enabled: bool = true) -> Dictionary:
+	return _core.bind_automation(world_node, id, enabled)
+
+
 func node_for(entity_id: int) -> Node:
 	return _core.node_for(entity_id)
 
@@ -68,6 +72,18 @@ func interact(
 ) -> Dictionary:
 	return _core.interact(interaction_id, actor_node, target_node)
 
+func execute_action(
+	action_id: StringName,
+	actor_node: Node,
+	target_node: Node,
+	arguments: Dictionary = {}
+) -> Dictionary:
+	return _core.execute_action(
+		action_id,
+		actor_node,
+		target_node,
+		arguments
+	)
 
 func _on_core_attribute_written(
 	world_node: Node,

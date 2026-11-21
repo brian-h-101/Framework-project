@@ -1,0 +1,22 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd" id="1_schema"]
+
+[resource]
+script = ExtResource("1_schema")
+containers = {
+	&"visual_check": {
+		"health": {
+			"current": 75,
+			"maximum": 100
+		},
+		"title": "Attribute editor fixture",
+		"rank": 2,
+		"multiplier": 1.5,
+		"enabled": true,
+		"role": &"guard",
+		"optional": null,
+		"items": ["medicine", "key"],
+		"native_position": Vector2(10, 20)
+	}
+}

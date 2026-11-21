@@ -2,7 +2,7 @@
 
 [ext_resource type="PackedScene" path="res://Framework/Content/UI/HUD/session_header.tscn" id="1_header"]
 [ext_resource type="PackedScene" path="res://Framework/Content/UI/HUD/entity_status.tscn" id="2_status"]
-[ext_resource type="Script" path="res://Framework/Env/Presentation/entity_status_layer_2d.gd" id="3_status_layer"]
+[ext_resource type="Script" path="res://Framework/Content/God/UI/entity_status_layer_2d.gd" id="3_status_layer"]
 
 [sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_ui"]
 light_mode = 1

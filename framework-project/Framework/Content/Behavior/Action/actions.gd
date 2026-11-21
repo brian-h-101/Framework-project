@@ -10,6 +10,6 @@ const ActionResource = preload(
 
 static func definitions() -> Dictionary:
 	return ResourceDefinitionDiscovery.definitions_in(
-		"res://Framework/Content/Behavior/Action",
+		"res://Framework/Content/Behavior",
 		ActionResource
 	)

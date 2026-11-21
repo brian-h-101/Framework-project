@@ -1,0 +1,10 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/condition_group_resource.gd" id="1_group"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/condition_resource.gd" id="2_condition_script"]
+[ext_resource type="Resource" path="res://Framework/Content/Behavior/Condition/actor_strength.tres" id="3_condition"]
+
+[resource]
+script = ExtResource("1_group")
+id = &"visual_structural_group"
+conditions = Array[ExtResource("2_condition_script")]([ExtResource("3_condition")])

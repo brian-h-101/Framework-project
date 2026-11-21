@@ -10,15 +10,34 @@ export interface SceneNode {
 	instance_path: string;
 	base_scene_path: string;
 	script_path: string;
+	has_script: boolean;
+	script_source_path: string;
+	can_attach_script: boolean;
+	can_remove_script: boolean;
+	is_entity: boolean;
+	interaction_resource_path: string;
+	interaction_id: string;
+	automation_id?: string;
+	automation_resource_path?: string;
+	movement_configuration_path: string;
+	can_assign_movement: boolean;
 	children: string[];
+	structural_scene: string;
+	structural_node_path: string;
+	instance_boundary: string;
+	can_add: boolean;
+	can_rename: boolean;
+	can_remove: boolean;
+	references: Record<string, { source_path: string; paths: string[] }>;
 }
 
 export interface SceneGraph {
-	version: 1;
+	version: 2;
 	source_path: string;
 	root: '.';
 	nodes: Record<string, SceneNode>;
 	dependencies: string[];
+	dependency_hashes: Record<string, string>;
 }
 
 const RESULT_PREFIX = '[scene-graph] ';
@@ -64,6 +83,9 @@ export function loadSceneGraph(
 				if (error) {
 					throw error;
 				}
+				if (/^(SCRIPT ERROR|ERROR):/m.test(stdout + '\n' + stderr)) {
+					throw new Error('Godot reported a scene inspection error. See Framework Scenes output.');
+				}
 				resolve(validateSceneGraph(packet.value, scenePath));
 			} catch (failure) {
 				reject(failure);
@@ -73,9 +95,9 @@ export function loadSceneGraph(
 }
 
 export function validateSceneGraph(value: unknown, scenePath: string): SceneGraph {
-	if (!isRecord(value) || value.version !== 1 || value.source_path !== scenePath
+	if (!isRecord(value) || value.version !== 2 || value.source_path !== scenePath
 		|| value.root !== '.' || !isRecord(value.nodes)
-		|| !Array.isArray(value.dependencies)) {
+		|| !Array.isArray(value.dependencies) || !isRecord(value.dependency_hashes)) {
 		throw new Error('Unsupported or malformed scene graph.');
 	}
 	validateResourcePath(scenePath, '.tscn');
@@ -93,20 +115,58 @@ export function validateSceneGraph(value: unknown, scenePath: string): SceneGrap
 	if (!dependencies.has(scenePath)) {
 		throw new Error('The selected scene is absent from its dependencies.');
 	}
+	for (const dependency of dependencies) {
+		if (!Object.hasOwn(value.dependency_hashes, dependency)) {
+			throw new Error('Missing scene dependency hash.');
+		}
+	}
+	for (const [dependency, hash] of Object.entries(value.dependency_hashes)) {
+		validateResourcePath(dependency, '.tscn');
+		if (typeof hash !== 'string' || !/^[a-f0-9]{64}$/.test(hash)) {
+			throw new Error('Malformed scene dependency hash.');
+		}
+	}
 	for (const [path, node] of Object.entries(value.nodes)) {
 		if (!isRecord(node) || node.path !== path
 			|| !['name', 'type', 'source_path', 'source_node_path', 'instance_path',
-				'base_scene_path', 'script_path'].every(key => typeof node[key] === 'string')
+				'base_scene_path', 'script_path', 'structural_scene', 'structural_node_path',
+				'instance_boundary', 'interaction_resource_path', 'interaction_id', 'movement_configuration_path', 'script_source_path']
+				.every(key => typeof node[key] === 'string')
+			|| !['can_add', 'can_rename', 'can_remove', 'is_entity', 'can_assign_movement', 'has_script', 'can_attach_script', 'can_remove_script']
+				.every(key => typeof node[key] === 'boolean')
+			|| !isRecord(node.references)
 			|| node.name === '' || !Array.isArray(node.children)
 			|| !node.children.every(child => typeof child === 'string')
 			|| new Set(node.children).size !== node.children.length) {
 			throw new Error(`Malformed scene node: ${path}`);
 		}
 		validateNodePath(path);
+		for (const key of ['automation_id', 'automation_resource_path']) {
+			if (node[key] !== undefined && typeof node[key] !== 'string') { throw new Error('Malformed Automation attachment metadata.'); }
+		}
+		if (node.automation_resource_path) { validateResourcePath(node.automation_resource_path as string, '.tres'); }
 		validateNodePath(node.source_node_path as string);
-		for (const key of ['source_path', 'instance_path', 'base_scene_path'] as const) {
+		validateNodePath(node.structural_node_path as string);
+		const local = node.structural_scene === scenePath;
+		if (node.can_rename !== (local && path !== '.') || node.can_remove !== node.can_rename
+			|| node.can_add !== ((local || path === '.') && node.type !== 'InstancePlaceholder')
+			|| node.can_attach_script !== (local && node.type !== 'InstancePlaceholder' && !node.has_script)
+			|| node.can_remove_script !== (local && node.has_script && node.script_source_path === scenePath)
+			|| node.can_assign_movement !== (local && node.type === 'CharacterBody2D'
+				&& node.script_path === 'res://Framework/Content/God/Movement/movement_2d.gd')) {
+			throw new Error(`Invalid structural capabilities: ${path}`);
+		}
+		if (node.instance_boundary !== '') { validateNodePath(node.instance_boundary as string); }
+		for (const reference of Object.values(node.references)) {
+			if (!isRecord(reference) || typeof reference.source_path !== 'string'
+				|| !dependencies.has(reference.source_path) || !Array.isArray(reference.paths)
+				|| !reference.paths.every(item => typeof item === 'string')) {
+				throw new Error(`Invalid node reference metadata: ${path}`);
+			}
+		}
+		for (const key of ['source_path', 'instance_path', 'base_scene_path', 'structural_scene'] as const) {
 			const resource = node[key] as string;
-			if (key === 'source_path' || resource !== '') {
+			if (key === 'source_path' || key === 'structural_scene' || resource !== '') {
 				validateResourcePath(resource, '.tscn');
 				if (!dependencies.has(resource)) {
 					throw new Error(`Missing scene dependency: ${resource}`);
@@ -115,6 +175,15 @@ export function validateSceneGraph(value: unknown, scenePath: string): SceneGrap
 		}
 		if (node.script_path !== '') {
 			validateResourcePath(node.script_path as string);
+			if (!node.has_script) { throw new Error('Script path requires an attached script.'); }
+		}
+		if (node.script_source_path !== '') {
+			validateResourcePath(node.script_source_path as string, '.tscn');
+			if (!dependencies.has(node.script_source_path as string)) { throw new Error('Missing script declaration scene.'); }
+		}
+		if (node.movement_configuration_path !== '') {
+			const resource = (node.movement_configuration_path as string).split('::')[0];
+			validateResourcePath(resource);
 		}
 	}
 	const pending = ['.'];

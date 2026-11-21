@@ -23,6 +23,19 @@ const EffectExecutor = preload(
 const ActionExecutor = preload(
 	"res://Framework/Infrastructure/Implementation/Gameplay/action_executor.gd"
 )
+const ExecutorRegistry = preload(
+	"res://Framework/Infrastructure/API/Gameplay/executor_registry.gd"
+)
+const ExecutionContext = preload(
+	"res://Framework/Infrastructure/API/Gameplay/Executors/execution_context.gd"
+)
+const ExecutionContextCore = preload(
+	"res://Framework/Infrastructure/Implementation/Gameplay/execution_context_core.gd"
+)
+const AttributeEffectsExecutor = preload(
+	"res://Framework/Infrastructure/Implementation/Gameplay/Executors/attribute_effects_executor.gd"
+)
+const ExecutorContract = preload("res://Framework/Infrastructure/Implementation/Gameplay/executor_contract.gd")
 
 const InteractionExecutor = preload(
 	"res://Framework/Infrastructure/Implementation/Gameplay/interaction_executor.gd"
@@ -31,17 +44,23 @@ const InteractionExecutor = preload(
 const SessionClock = preload(
 	"res://Framework/Infrastructure/Implementation/Runtime/session_clock.gd"
 )
+const AutomationSystem = preload("res://Framework/Infrastructure/Implementation/Gameplay/automation_system.gd")
 
 var _definitions: Dictionary[StringName, EntityDefinition] = {}
 var _entity_definition_ids: Dictionary[int, StringName] = {}
 var _actions: Dictionary[StringName, Dictionary] = {}
 var _interactions: Dictionary[StringName, Dictionary] = {}
+var _automations := AutomationSystem.new()
 
 var _registry := EntityRegistry.new()
 var connector := AttributeConnector.new(_registry)
 var _effect_executor := EffectExecutor.new(connector)
+var _executor_registry := ExecutorRegistry.new()
+var _execution_context := ExecutionContext.new(
+	ExecutionContextCore.new(connector, _effect_executor)
+)
 var _action_executor := ActionExecutor.new(
-	connector, _effect_executor
+	_executor_registry, _execution_context
 )
 var _interaction_executor := InteractionExecutor.new(
 	connector, _action_executor
@@ -65,6 +84,13 @@ func define_attributes(
 
 func _init(clock_definition: Dictionary = {}) -> void:
 	_registry.attribute_written.connect(_on_registry_attribute_written)
+	var registered := _executor_registry.register_executor(
+		&"attribute_effects", AttributeEffectsExecutor.new()
+	)
+	if not registered["ok"]:
+		push_error(String(registered["error"]))
+		close()
+		return
 
 	if not clock_definition.is_empty():
 		_clock = SessionClock.new(clock_definition)
@@ -82,9 +108,14 @@ func close() -> void:
 	_entity_definition_ids.clear()
 	_actions.clear()
 	_interactions.clear()
+	_automations.close()
+	_execution_context.close()
+	_executor_registry.close()
 
 	_interaction_executor = null
 	_action_executor = null
+	_execution_context = null
+	_executor_registry = null
 	_effect_executor = null
 	connector = null
 	_registry = null
@@ -100,19 +131,113 @@ func _on_registry_attribute_written(
 
 	attribute_written.emit(entity_id, container_id, attribute_name)
 
-func define_action(definition: Dictionary) -> void:
+func register_executor(behavior_id: StringName, executor: Variant) -> Dictionary:
 	if _closed:
-		return
+		return _failure("Game runtime is closed.")
+	return _executor_registry.register_executor(behavior_id, executor)
 
-	var action_id := StringName(definition["id"])
-	_actions[action_id] = definition.duplicate(true)
 
-func define_interaction(definition: Dictionary) -> void:
+func has_executor(behavior_id: StringName) -> bool:
+	return not _closed and _executor_registry.has_executor(behavior_id)
+
+
+func get_executor_ids() -> Array[StringName]:
+	return [] if _closed else _executor_registry.get_ids()
+
+
+func executor_catalogue() -> Dictionary:
+	return _failure("Game runtime is closed.") if _closed else _executor_registry.catalogue()
+
+
+func define_action(definition: Dictionary) -> Dictionary:
 	if _closed:
-		return
+		return _failure("Game runtime is closed.")
+	var id_value: Variant = definition.get("id")
+	if typeof(id_value) not in [TYPE_STRING, TYPE_STRING_NAME] or String(id_value).strip_edges().is_empty():
+		return _failure("Action requires a nonempty text ID.")
+	var action_id := StringName(id_value)
+	var behavior: Variant = definition.get("behavior_id")
+	if typeof(behavior) not in [TYPE_STRING, TYPE_STRING_NAME] or String(behavior).strip_edges().is_empty():
+		return _failure("Action '%s' requires a nonempty text behavior_id." % action_id)
+	var behavior_id := StringName(behavior)
+	var resolved := _executor_registry.resolve(behavior_id)
+	if not resolved["ok"]:
+		return _failure("Action '%s': %s" % [action_id, resolved["error"]])
+	var description := _executor_registry.describe(behavior_id)
+	var checked := ExecutorContract.argument_specs(description["value"], definition)
+	if not checked["ok"]:
+		return _failure("Action '%s': %s" % [action_id, checked["error"]])
+	for interaction: Dictionary in _interactions.values():
+		if StringName(interaction["action"]) == action_id:
+			checked = ExecutorContract.validate_arguments(description["value"], definition, interaction.get("arguments", {}))
+			if not checked["ok"]:
+				return _failure("Interaction '%s': %s" % [interaction["id"], checked["error"]])
 
+	var stored := definition.duplicate(true)
+	stored["id"] = action_id
+	stored["behavior_id"] = behavior_id
+	_actions[action_id] = stored
+	return {"ok": true, "value": true, "error": ""}
+
+func define_interaction(definition: Dictionary) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+	if typeof(definition.get("id")) not in [TYPE_STRING, TYPE_STRING_NAME] or String(definition["id"]).strip_edges().is_empty():
+		return _failure("Interaction requires a nonempty text ID.")
+	if typeof(definition.get("action")) not in [TYPE_STRING, TYPE_STRING_NAME] or not _actions.has(StringName(definition["action"])):
+		return _failure("Interaction requires a registered action.")
+	if not definition.get("arguments", {}) is Dictionary:
+		return _failure("Interaction arguments must be a dictionary.")
+	var action: Dictionary = _actions[StringName(definition["action"])]
+	var description := _executor_registry.describe(action["behavior_id"])
+	var checked := ExecutorContract.validate_arguments(description["value"], action, definition.get("arguments", {}))
+	if not checked["ok"]:
+		return _failure("Interaction '%s': %s" % [definition["id"], checked["error"]])
 	var interaction_id := StringName(definition["id"])
 	_interactions[interaction_id] = definition.duplicate(true)
+	return {"ok": true, "value": true, "error": ""}
+
+
+func define_automation(definition: Dictionary) -> Dictionary:
+	return _automations.define_automation(definition, func(id: StringName) -> bool: return _interactions.has(id))
+
+
+func read_automation(id: StringName) -> Dictionary:
+	return _automations.read_automation(id)
+
+
+func bind_automation(entity_id: int, id: StringName, enabled: bool = true) -> Dictionary:
+	if not has_entity(entity_id):
+		return _failure("Game runtime is closed or entity is unknown.")
+	return _automations.bind_automation(entity_id, id, enabled)
+
+
+func automation_bindings(entity_id: int) -> Dictionary:
+	if not has_entity(entity_id):
+		return _failure("Game runtime is closed or entity is unknown.")
+	return _automations.read_bindings(entity_id)
+
+
+func set_automation_enabled(entity_id: int, id: StringName, enabled: bool) -> Dictionary:
+	return _automations.set_enabled(entity_id, id, enabled) if has_entity(entity_id) else _failure("Game runtime is closed or entity is unknown.")
+
+
+func unbind_automation(entity_id: int, id: StringName) -> Dictionary:
+	return _automations.unbind_automation(entity_id, id) if has_entity(entity_id) else _failure("Game runtime is closed or entity is unknown.")
+
+
+func advance_automations(delta: float, resolve_target: Callable) -> Dictionary:
+	return _automations.advance(delta, resolve_target, interact)
+
+
+func snapshot_automations(entity_ids: Dictionary[StringName, int]) -> Dictionary:
+	var checked := snapshot_entities(entity_ids)
+	return _automations.snapshot(entity_ids) if checked["ok"] else checked
+
+
+func restore_automations(records: Variant, entity_ids: Dictionary[StringName, int]) -> Dictionary:
+	var checked := snapshot_entities(entity_ids)
+	return _automations.restore(records, entity_ids) if checked["ok"] else checked
 
 
 func interact(
@@ -144,6 +269,38 @@ func interact(
 		_actions[action_id],
 		actor_id,
 		target_id
+	)
+
+func execute_action(
+	action_id: StringName,
+	actor_id: int,
+	target_id: int,
+	arguments: Dictionary = {}
+) -> Dictionary:
+	if _closed:
+		return _failure("Game runtime is closed.")
+
+	if String(action_id).strip_edges().is_empty():
+		return _failure("Action ID cannot be empty.")
+
+	if not _actions.has(action_id):
+		return _failure("Unknown action: %s" % action_id)
+
+	if not _registry.has_entity(actor_id):
+		return _failure("Unknown actor entity: %s" % actor_id)
+
+	if not _registry.has_entity(target_id):
+		return _failure("Unknown target entity: %s" % target_id)
+
+	var bindings := {
+		&"actor": actor_id,
+		&"target": target_id,
+	}
+
+	return _action_executor.execute(
+		_actions[action_id],
+		bindings,
+		arguments
 	)
 
 func spawn(

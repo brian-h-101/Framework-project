@@ -5,6 +5,10 @@ const GameRuntime = preload(
 )
 
 
+func register_executors(_runtime: GameRuntime) -> Dictionary:
+	return {"ok": true, "value": true, "error": ""}
+
+
 func register_content(_runtime: GameRuntime) -> Dictionary:
 	return {"ok": true, "value": true, "error": ""}
 

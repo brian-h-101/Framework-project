@@ -15,4 +15,5 @@ out/**
 !out/resources/*.js
 !out/tree/*.js
 !out/workspace/*.js
+!out/library/*.js
 *.log

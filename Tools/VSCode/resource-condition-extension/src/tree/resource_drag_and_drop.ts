@@ -43,14 +43,16 @@ export class ResourceDragAndDropController
 			return;
 		}
 
-		const item = this.provider.getTreeItem(source[0]);
+		let item: vscode.TreeItem;
+		try { item = this.provider.getTreeItem(source[0]); } catch { return; }
+		const kind = item.contextValue?.split('|')[0];
 
 		if (
 			!item.resourceUri
 			|| (
-				item.contextValue !== 'condition'
-				&& item.contextValue !== 'condition_group'
-				&& item.contextValue !== 'action'
+				kind !== 'condition'
+				&& kind !== 'condition_group'
+				&& kind !== 'action'
 			)
 		) {
 			return;
@@ -79,12 +81,13 @@ export class ResourceDragAndDropController
 			}
 
 			const destination = this.provider.getTreeItem(target);
+			const kind = destination.contextValue?.split('|')[0];
 
 			if (
 				!destination.resourceUri
 				|| (
-					destination.contextValue !== 'condition_group'
-					&& destination.contextValue !== 'interaction'
+					kind !== 'condition_group'
+					&& kind !== 'interaction'
 				)
 			) {
 				throw new Error(
@@ -135,7 +138,8 @@ export class ResourceDragAndDropController
 				return;
 			}
 
-			if (destination.contextValue === 'condition_group') {
+			this.provider.getTreeItem(target);
+			if (kind === 'condition_group') {
 				await this.assign({
 					group: destination.resourceUri,
 					condition: sourceUri

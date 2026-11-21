@@ -1,5 +1,9 @@
 extends RefCounted
 
+const Files = preload("res://Framework/Env/Authoring/Shared/resource_files.gd")
+const Schema = preload("res://Framework/Env/Authoring/Resources/behavior_schema.gd")
+const Executors = preload("res://Framework/Env/Authoring/Resources/executor_catalog.gd")
+
 const ActionResource = preload(
 	"res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd"
 )
@@ -23,6 +27,8 @@ static func add_condition(
 
 		if not path_error.is_empty():
 			return _failure(path_error)
+
+	var hashes := _hashes([group_path, condition_path])
 
 	var loaded_group: Resource = ResourceLoader.load(
 		group_path,
@@ -81,13 +87,9 @@ static func add_condition(
 
 	group.conditions.append(condition)
 
-	var save_error: Error = ResourceSaver.save(group, group_path)
-
-	if save_error != OK:
-		return _failure(
-			"Could not save condition group '%s': %s"
-			% [group_path, error_string(save_error)]
-		)
+	var saved := Files.save(group_path, hashes, group, Schema.snapshot)
+	if not saved["ok"]:
+		return saved
 
 	return {
 		"ok": true,
@@ -109,6 +111,8 @@ static func set_requirements(
 
 		if not path_error.is_empty():
 			return _failure(path_error)
+
+	var hashes := _hashes([interaction_path, group_path])
 
 	var loaded_interaction: Resource = ResourceLoader.load(
 		interaction_path,
@@ -168,16 +172,9 @@ static func set_requirements(
 
 	interaction.requirements = group
 
-	var save_error: Error = ResourceSaver.save(
-		interaction,
-		interaction_path
-	)
-
-	if save_error != OK:
-		return _failure(
-			"Could not save interaction '%s': %s"
-			% [interaction_path, error_string(save_error)]
-		)
+	var saved := Files.save(interaction_path, hashes, interaction, Schema.snapshot)
+	if not saved["ok"]:
+		return saved
 
 	return {
 		"ok": true,
@@ -198,6 +195,8 @@ static func set_action(
 
 		if not path_error.is_empty():
 			return _failure(path_error)
+
+	var hashes := _hashes([interaction_path, action_path])
 
 	var loaded_interaction: Resource = ResourceLoader.load(
 		interaction_path,
@@ -251,16 +250,15 @@ static func set_action(
 
 	interaction.action = action
 
-	var save_error: Error = ResourceSaver.save(
-		interaction,
-		interaction_path
-	)
-
-	if save_error != OK:
-		return _failure(
-			"Could not save interaction '%s': %s"
-			% [interaction_path, error_string(save_error)]
-		)
+	var catalog := Executors.refresh()
+	if not catalog["ok"]:
+		return catalog
+	var error := Schema.validate(interaction)
+	if not error.is_empty():
+		return _failure(error)
+	var saved := Files.save(interaction_path, hashes, interaction, Schema.snapshot, Executors.unchanged_at_stage.bind(catalog["value"]["executor_snapshot"]), true)
+	if not saved["ok"]:
+		return saved
 
 	return {
 		"ok": true,
@@ -343,3 +341,10 @@ static func _failure(message: String) -> Dictionary:
 		"value": null,
 		"error": message,
 	}
+
+
+static func _hashes(paths: Array) -> Dictionary:
+	var hashes := {}
+	for path: String in paths:
+		hashes[path] = FileAccess.get_sha256(path)
+	return hashes

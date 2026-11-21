@@ -1,0 +1,14 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://Framework/Content/God/Interaction/interaction_behavior.gd" id="behavior_script"]
+[ext_resource type="Resource" path="res://Framework/Content/Behavior/Interaction/strike.tres" id="behavior_content"]
+
+[node name="BehaviorAttachmentCheck" type="Node2D"]
+metadata/entity_definition = &"enemy"
+
+[node name="VisualRoot" type="Node2D" parent="."]
+
+[node name="StrikeBehavior" parent="." unique_id=112148206 type="Node"]
+script = ExtResource("behavior_script")
+content = ExtResource("behavior_content")
+

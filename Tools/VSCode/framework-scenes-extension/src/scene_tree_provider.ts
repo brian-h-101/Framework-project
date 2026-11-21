@@ -74,14 +74,24 @@ export class SceneTreeProvider
 		item.contextValue = 'scene_node'
 			+ (node.instance_path ? '_instance' : '')
 			+ (node.base_scene_path ? '_inherited' : '')
-			+ (node.script_path ? '_scripted' : '');
+			+ (node.script_path ? '_scripted' : '')
+			+ (node.can_add ? '_add' : '')
+			+ (node.can_rename ? '_rename' : '')
+			+ (node.can_remove ? '_remove' : '')
+			+ (node.can_attach_script ? '_attach_script' : '')
+			+ (node.can_remove_script ? '_detach_script' : '')
+			+ (node.is_entity && node.can_add ? '_attach_behavior' : '')
+			+ (node.can_assign_movement ? '_assign_movement' : '');
 		item.iconPath = new vscode.ThemeIcon(node.instance_path ? 'references' : 'symbol-class');
 		item.resourceUri = projectUri(context, node.source_path);
 		item.tooltip = `${node.name} (${node.type || 'Node'})\n`
 			+ `Node: ${node.path}\nDeclared in: ${node.source_path}`
+			+ `\nStructure belongs to: ${node.structural_scene}`
 			+ (node.instance_path ? `\nInstance: ${node.instance_path}` : '')
 			+ (node.base_scene_path ? `\nInherits: ${node.base_scene_path}` : '')
-			+ (node.script_path ? `\nScript: ${node.script_path}` : '');
+			+ (node.script_path ? `\nScript: ${node.script_path}` : '')
+			+ (node.movement_configuration_path ? `\nMovement: ${node.movement_configuration_path}` : '')
+			+ (node.automation_id ? `\nAutomation: ${node.automation_id}\n${node.automation_resource_path}` : '');
 		item.command = {
 			command: 'frameworkScenes.openDeclaration',
 			title: 'Open Node Declaration',

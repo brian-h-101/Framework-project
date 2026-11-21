@@ -30,12 +30,64 @@ func define_attributes(
 	_core.define_attributes(definition_id, containers)
 
 
-func define_action(definition: Dictionary) -> void:
-	_core.define_action(definition)
+func register_executor(behavior_id: StringName, executor: Variant) -> Dictionary:
+	return _core.register_executor(behavior_id, executor)
 
 
-func define_interaction(definition: Dictionary) -> void:
-	_core.define_interaction(definition)
+func has_executor(behavior_id: StringName) -> bool:
+	return _core.has_executor(behavior_id)
+
+
+func get_executor_ids() -> Array[StringName]:
+	return _core.get_executor_ids()
+
+
+func define_action(definition: Dictionary) -> Dictionary:
+	return _core.define_action(definition)
+
+
+func executor_catalogue() -> Dictionary:
+	return _core.executor_catalogue()
+
+
+func define_interaction(definition: Dictionary) -> Dictionary:
+	return _core.define_interaction(definition)
+
+
+func define_automation(definition: Dictionary) -> Dictionary:
+	return _core.define_automation(definition)
+
+
+func read_automation(id: StringName) -> Dictionary:
+	return _core.read_automation(id)
+
+
+func bind_automation(entity_id: int, id: StringName, enabled: bool = true) -> Dictionary:
+	return _core.bind_automation(entity_id, id, enabled)
+
+
+func automation_bindings(entity_id: int) -> Dictionary:
+	return _core.automation_bindings(entity_id)
+
+
+func set_automation_enabled(entity_id: int, id: StringName, enabled: bool) -> Dictionary:
+	return _core.set_automation_enabled(entity_id, id, enabled)
+
+
+func unbind_automation(entity_id: int, id: StringName) -> Dictionary:
+	return _core.unbind_automation(entity_id, id)
+
+
+func advance_automations(delta: float, resolve_target: Callable) -> Dictionary:
+	return _core.advance_automations(delta, resolve_target)
+
+
+func snapshot_automations(entity_ids: Dictionary[StringName, int]) -> Dictionary:
+	return _core.snapshot_automations(entity_ids)
+
+
+func restore_automations(records: Variant, entity_ids: Dictionary[StringName, int]) -> Dictionary:
+	return _core.restore_automations(records, entity_ids)
 
 
 func interact(
@@ -45,6 +97,18 @@ func interact(
 ) -> Dictionary:
 	return _core.interact(interaction_id, actor_id, target_id)
 
+func execute_action(
+	action_id: StringName,
+	actor_id: int,
+	target_id: int,
+	arguments: Dictionary = {}
+) -> Dictionary:
+	return _core.execute_action(
+		action_id,
+		actor_id,
+		target_id,
+		arguments
+	)
 
 func spawn(
 	definition_id: StringName,

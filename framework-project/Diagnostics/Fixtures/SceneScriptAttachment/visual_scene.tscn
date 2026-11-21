@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="ScriptPreview" type="Node2D"]
+
+[node name="ScriptTarget" type="Node2D" parent="."]
+position = Vector2(120, 80)
+caption = "Retained authoring value"
