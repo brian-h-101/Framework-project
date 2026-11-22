@@ -1,4 +1,4 @@
-extends "res://Framework/Env/Setup/game_setup.gd"
+extends "res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 
 
 func register_content(runtime: GameRuntime) -> Dictionary:

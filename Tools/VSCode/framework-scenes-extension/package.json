@@ -2,7 +2,7 @@
 	"name": "framework-scenes-extension",
 	"displayName": "Framework Scenes",
 	"description": "Browse and structurally edit Godot scene hierarchies and nested scene placements.",
-	"version": "0.0.9",
+	"version": "0.0.23",
 	"publisher": "framework-tools",
 	"type": "commonjs",
 	"engines": {
@@ -32,7 +32,8 @@
 		"package:list": "vsce ls --no-dependencies",
 		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license",
 		"test:library:bridge": "node diagnostics/scene_library_bridge_check.cjs",
-		"test:movement:bridge": "node diagnostics/movement_assignment_bridge_check.cjs"
+		"test:movement:bridge": "node diagnostics/movement_assignment_bridge_check.cjs",
+		"test:movement:capability": "node diagnostics/movement_capability_bridge_check.cjs"
 	},
 	"contributes": {
 		"viewsContainers": {
@@ -123,6 +124,11 @@
 				"category": "Framework Scenes"
 			},
 			{
+				"command": "frameworkScenes.configureCapabilities",
+				"title": "Configure Capabilities...",
+				"category": "Framework Scenes"
+			},
+			{
 				"command": "frameworkScenes.attachScript",
 				"title": "Attach Script...",
 				"category": "Framework Scenes"
@@ -152,6 +158,11 @@
 				"title": "Manage Authored Library?",
 				"category": "Framework Scenes",
 				"icon": "$(folder-opened)"
+			},
+			{
+				"command": "frameworkScenes.setNodeProperty",
+				"title": "Set Node Property...",
+				"category": "Framework Scenes"
 			}
 		],
 		"submenus": [
@@ -230,6 +241,11 @@
 					"group": "2_edit@3"
 				},
 				{
+					"command": "frameworkScenes.configureCapabilities",
+					"when": "viewItem =~ /_configure_capabilities/",
+					"group": "capabilities@1"
+				},
+				{
 					"command": "frameworkScenes.attachScript",
 					"when": "viewItem =~ /_attach_script/",
 					"group": "2_edit@5"
@@ -243,6 +259,11 @@
 					"command": "frameworkScenes.removeNode",
 					"when": "viewItem =~ /_remove/",
 					"group": "3_remove@1"
+				},
+				{
+					"command": "frameworkScenes.setNodeProperty",
+					"when": "viewItem =~ /_set_property/",
+					"group": "2_edit@6"
 				}
 			],
 			"commandPalette": [
@@ -291,11 +312,19 @@
 					"when": "false"
 				},
 				{
+					"command": "frameworkScenes.configureCapabilities",
+					"when": "false"
+				},
+				{
 					"command": "frameworkScenes.renameNode",
 					"when": "false"
 				},
 				{
 					"command": "frameworkScenes.removeNode",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.setNodeProperty",
 					"when": "false"
 				}
 			]

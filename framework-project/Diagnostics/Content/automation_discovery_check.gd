@@ -1,7 +1,7 @@
 extends SceneTree
 
 const AutomationContent = preload(
-	"res://Framework/Content/Behavior/Automation/automations.gd"
+	"res://Framework/Env/Setup/Definitions/automations.gd"
 )
 
 var _passed := true

@@ -1,8 +1,0 @@
-[gd_resource type="Resource" format=3]
-
-[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd" id="1_action"]
-
-[resource]
-script = ExtResource("1_action")
-id = &"change_health"
-behavior_id = &"change_health"

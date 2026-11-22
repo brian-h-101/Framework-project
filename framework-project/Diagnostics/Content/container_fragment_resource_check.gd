@@ -3,10 +3,10 @@ extends SceneTree
 const ContainerFragmentResource = preload(
 	"res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd"
 )
-const FragmentComposition = preload("res://Framework/Env/Setup/fragment_composition.gd")
-const CommonAttributes = preload("res://Framework/Env/Setup/common_attributes.gd")
-const Precognition = preload("res://Framework/Content/Authored/Entity/Attributes/Abilities/precognition.tres")
-const Reflex = preload("res://Framework/Content/Authored/Entity/Attributes/Abilities/reflex.tres")
+const FragmentComposition = preload("res://Framework/Env/Setup/Composition/fragment_composition.gd")
+const CommonAttributes = preload("res://Framework/Env/Setup/Composition/common_attributes.gd")
+const Precognition = preload("res://Framework/Content/Gameplay/Authored/Entity/Attributes/Abilities/precognition.tres")
+const Reflex = preload("res://Framework/Content/Gameplay/Authored/Entity/Attributes/Abilities/reflex.tres")
 
 var _passed := true
 
@@ -52,14 +52,14 @@ func _initialize() -> void:
 	]))
 	_check("Other resource types cannot act as fragments", not wrong_type["ok"])
 	var missing := FragmentComposition.compose_paths(PackedStringArray([
-		"res://Framework/Content/Authored/Entity/Attributes/Missing/missing.tres",
+		"res://Framework/Content/Gameplay/Authored/Entity/Attributes/Missing/missing.tres",
 	]))
 	_check("Missing resource paths are rejected", not missing["ok"])
 	var legacy := FragmentComposition.compose_paths(PackedStringArray([
-		"res://Framework/Env/Setup/common_attributes.gd",
+		"res://Framework/Env/Setup/Composition/common_attributes.gd",
 	]))
 	_check("Script files cannot act as data fragments", not legacy["ok"])
-	var discovered := FragmentComposition.compose_in("res://Framework/Content/Authored/Entity/Attributes")
+	var discovered := FragmentComposition.compose_in("res://Framework/Content/Gameplay/Authored/Entity/Attributes")
 	_check("Folder composition discovers resource fragments", (
 		discovered["ok"]
 		and discovered["value"][&"abilities"] == {"precognition": 0, "reflex": 0}

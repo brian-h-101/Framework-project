@@ -6,7 +6,10 @@ export interface DataPathPart {
 	text: string;
 }
 
+export interface SequenceRow { role: string; step_id: string; [key: string]: unknown }
+
 export interface ValueNode {
+	sequence?: SequenceRow;
 	label: string;
 	kind: string;
 	path: DataPathPart[];
@@ -23,6 +26,25 @@ export interface ValueNode {
 }
 
 export interface BehaviorEdit {
+	action?: string;
+	key_codes?: string[];
+	movement_behavior_path?: string;
+	velocity_step_id?: string;
+	input_actions?: Record<string, string>;
+	pixels_per_unit?: number;
+	expected_parent?: string;
+	presentation_preset?: boolean;
+	fragment_paths?: string[];
+	step_id?: string;
+	new_id?: string;
+	step_kind?: string;
+	label?: string;
+	direction?: number;
+	field?: string;
+	executor_id?: string;
+	arguments?: {name: string; value_type: string; value_text: string}[];
+	condition_id?: string;
+	requirement?: Record<string, unknown>;
 	operation: string;
 	expected_hashes: Record<string, string>;
 	catalog_paths: string[];
@@ -30,6 +52,8 @@ export interface BehaviorEdit {
 	executor_snapshot?: ExecutorSnapshot;
 	behavior_id?: string;
 	interaction_path?: string;
+	role?: string;
+	target_path?: string;
 	path?: DataPathPart[];
 	key?: DataPathPart;
 	value_type?: string;
@@ -39,13 +63,36 @@ export interface BehaviorEdit {
 	effect?: Record<string, unknown>;
 }
 
+interface EditResult {
+	source_path: string;
+	content_hash: string;
+	source_text?: unknown;
+	uid?: unknown;
+}
+
+export async function draftMovementConfiguration(
+	project: string,
+	executable: string,
+	source: string,
+	request: BehaviorEdit,
+	report: (message: string) => void
+): Promise<{ source_path: string; content_hash: string; source_text: string; uid: string }> {
+	const result = await editBehavior(project, executable, source, request, report);
+	if (typeof result.source_text !== 'string' || Buffer.byteLength(result.source_text, 'utf8') > 1024 * 1024
+		|| typeof result.uid !== 'string' || !/^uid:\/\/[a-z0-9]+$/.test(result.uid)
+		|| !result.source_text.split(/\r?\n/, 1)[0].includes(`uid="${result.uid}"`)) {
+		throw new Error('Godot returned an invalid Movement configuration draft.');
+	}
+	return { ...result, source_text: result.source_text, uid: result.uid };
+}
+
 export function editBehavior(
 	project: string,
 	executable: string,
 	source: string,
 	request: BehaviorEdit,
 	report: (message: string) => void
-): Promise<{ source_path: string; content_hash: string }> {
+): Promise<EditResult> {
 	const input = JSON.stringify(request);
 	if (Buffer.byteLength(input) > 1024 * 1024) {
 		return Promise.reject(new Error('The editing request exceeds 1 MiB.'));
@@ -53,7 +100,7 @@ export function editBehavior(
 	return new Promise((resolve, reject) => {
 		const child = execFile(executable, [
 			'--headless', '--path', project, '--script',
-			'res://Framework/Env/Authoring/Resources/behavior_editing_cli.gd',
+			'res://Framework/Env/Authoring/Resources/Behavior/behavior_editing_cli.gd',
 			'--', source
 		], {
 			cwd: project, encoding: 'utf8', windowsHide: true,

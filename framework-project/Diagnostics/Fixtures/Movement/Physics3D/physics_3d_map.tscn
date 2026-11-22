@@ -1,0 +1,98 @@
+[gd_scene load_steps=13 format=3]
+
+[ext_resource type="Script" path="res://Framework/Content/Universal/Movement/based/Physics3D/movement_body_3d.gd" id="1_host"]
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_3d.tres" id="2_profile"]
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Controller/player_keyboard.tres" id="3_keyboard"]
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Controller/enemy_ai.tres" id="4_ai"]
+[ext_resource type="Script" path="res://Framework/Content/Universal/Interaction/based/Bindings/behavior_binding.gd" id="5_binding"]
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Profiles/Movement/Behavior/move.tres" id="6_behavior"]
+
+[sub_resource type="BoxShape3D" id="BoxShape_actor"]
+size = Vector3(0.8, 1, 0.8)
+
+[sub_resource type="BoxMesh" id="BoxMesh_actor"]
+size = Vector3(0.8, 1, 0.8)
+
+[sub_resource type="StandardMaterial3D" id="Material_enemy"]
+albedo_color = Color(0.9, 0.3, 0.2, 1)
+
+[sub_resource type="BoxShape3D" id="BoxShape_wall"]
+size = Vector3(3, 1, 0.5)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall"]
+size = Vector3(3, 1, 0.5)
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_floor"]
+size = Vector2(18, 18)
+
+[node name="Physics3DMap" type="Node3D"]
+position = Vector3(10, 0, 5)
+
+[node name="Camera" type="Camera3D" parent="."]
+position = Vector3(0, 7, 9)
+rotation = Vector3(-0.65, 0, 0)
+current = true
+
+[node name="Sun" type="DirectionalLight3D" parent="."]
+rotation = Vector3(-0.9, -0.45, 0)
+
+[node name="Floor" type="MeshInstance3D" parent="."]
+mesh = SubResource("PlaneMesh_floor")
+
+[node name="Wall" type="StaticBody3D" parent="."]
+position = Vector3(0, 0.5, -1.75)
+
+[node name="Shape" type="CollisionShape3D" parent="Wall"]
+shape = SubResource("BoxShape_wall")
+
+[node name="Mesh" type="MeshInstance3D" parent="Wall"]
+mesh = SubResource("BoxMesh_wall")
+
+[node name="Player" type="Node3D" parent="."]
+metadata/entity_key = &"player"
+metadata/entity_definition = &"player"
+
+[node name="Body3D" type="CharacterBody3D" parent="Player"]
+position = Vector3(0, 0.5, 0)
+script = ExtResource("1_host")
+content = ExtResource("2_profile")
+controller = ExtResource("3_keyboard")
+metadata/entity_spatial_root = true
+
+[node name="Shape" type="CollisionShape3D" parent="Player/Body3D"]
+shape = SubResource("BoxShape_actor")
+
+[node name="Mesh" type="MeshInstance3D" parent="Player/Body3D"]
+mesh = SubResource("BoxMesh_actor")
+
+[node name="TargetPoint" type="Marker3D" parent="Player/Body3D"]
+metadata/interaction_target = true
+
+[node name="MoveBehavior" type="Node" parent="Player"]
+script = ExtResource("5_binding")
+content = ExtResource("6_behavior")
+
+[node name="Enemy" type="Node3D" parent="."]
+metadata/entity_key = &"enemy"
+metadata/entity_definition = &"enemy"
+
+[node name="Body3D" type="CharacterBody3D" parent="Enemy"]
+position = Vector3(4, 0.5, 0)
+script = ExtResource("1_host")
+content = ExtResource("2_profile")
+controller = ExtResource("4_ai")
+metadata/entity_spatial_root = true
+
+[node name="Shape" type="CollisionShape3D" parent="Enemy/Body3D"]
+shape = SubResource("BoxShape_actor")
+
+[node name="Mesh" type="MeshInstance3D" parent="Enemy/Body3D"]
+mesh = SubResource("BoxMesh_actor")
+material_override = SubResource("Material_enemy")
+
+[node name="TargetPoint" type="Marker3D" parent="Enemy/Body3D"]
+metadata/interaction_target = true
+
+[node name="MoveBehavior" type="Node" parent="Enemy"]
+script = ExtResource("5_binding")
+content = ExtResource("6_behavior")

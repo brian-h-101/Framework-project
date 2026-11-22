@@ -4,13 +4,13 @@ const GameEntry = preload(
 	"res://Framework/Infrastructure/API/Runtime/game_entry.gd"
 )
 const EnvironmentSetup = preload(
-	"res://Framework/Env/Setup/game_setup.gd"
+	"res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 )
 const MapCoordinator = preload(
 	"res://Framework/Env/Map/map_coordinator.gd"
 )
 const GuardScene = preload(
-	"res://Framework/Content/Presentation/Entity/TownGuard/town_guard_2d.tscn"
+	"res://Framework/Content/Gameplay/Presentation/Entity/TownGuard/town_guard_2d.tscn"
 )
 
 var _entry := GameEntry.new()

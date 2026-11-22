@@ -1,13 +1,13 @@
 extends SceneTree
 
 const ResourceDefinitionDiscovery = preload(
-	"res://Framework/Env/Setup/resource_definition_discovery.gd"
+	"res://Framework/Env/Setup/Discovery/resource_definition_discovery.gd"
 )
 const ActionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Actions/action_resource.gd"
 )
 const InteractionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Interactions/interaction_resource.gd"
 )
 const ExistingAction = preload(
 	"res://Diagnostics/Fixtures/GameplayBaselines/change_health.gd"

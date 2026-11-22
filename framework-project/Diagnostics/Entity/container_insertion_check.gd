@@ -4,10 +4,10 @@ const GameEntry = preload(
 	"res://Framework/Infrastructure/API/Runtime/game_entry.gd"
 )
 const EnvironmentSetup = preload(
-	"res://Framework/Env/Setup/game_setup.gd"
+	"res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 )
 const Inventory = preload(
-	"res://Framework/Content/Authored/Entity/Container/inventory.tres"
+	"res://Framework/Content/Gameplay/Authored/Entity/Container/inventory.tres"
 )
 
 var _entry := GameEntry.new()

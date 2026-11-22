@@ -1,7 +1,7 @@
 extends SceneTree
 
 const SpatialRoot2D = preload(
-	"res://Framework/Env/Map/spatial_root_2d.gd"
+	"res://Framework/Content/Universal/Map/based/Spatial2D/spatial_root_2d.gd"
 )
 
 var _entity: Node
@@ -138,14 +138,13 @@ func _finalize() -> void:
 
 func _check_authored_scenes() -> void:
 	var fixtures: Dictionary = {
-		"res://Framework/Content/Presentation/Entity/Player/player_2d.tscn": ["."],
-		"res://Framework/Content/Presentation/Entity/Enemy/enemy_2d.tscn": ["."],
-		"res://Framework/Content/Presentation/Entity/TownGuard/town_guard_2d.tscn": ["."],
-		"res://Framework/Content/Maps/city.tscn": [
+		"res://Framework/Content/Gameplay/Presentation/Entity/Player/player_2d.tscn": ["."],
+		"res://Framework/Content/Gameplay/Presentation/Entity/Enemy/enemy_2d.tscn": ["."],
+		"res://Framework/Content/Gameplay/Maps/city.tscn": [
 			"Player",
 			"Enemy",
-			"TownGuard01",
 		],
+		"res://Diagnostics/Fixtures/Movement/Grid/grid_map.tscn": ["Player", "Enemy"],
 	}
 
 	for scene_path in fixtures:

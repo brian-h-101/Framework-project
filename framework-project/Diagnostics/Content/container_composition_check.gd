@@ -5,13 +5,13 @@ const PresetData = preload(
 )
 
 const PlayerContainers = preload(
-	"res://Framework/Content/Presentation/Entity/Player/starting_attributes.tres"
+	"res://Framework/Content/Gameplay/Presentation/Entity/Player/starting_attributes.tres"
 )
 const PlayerBaseline = preload(
 	"res://Diagnostics/Fixtures/Baselines/player_containers_baseline.gd"
 )
 const EnemyContainers = preload(
-	"res://Framework/Content/Presentation/Entity/Enemy/starting_attributes.tres"
+	"res://Framework/Content/Gameplay/Presentation/Entity/Enemy/starting_attributes.tres"
 )
 const EnemyBaseline = preload(
 	"res://Diagnostics/Fixtures/Baselines/enemy_containers_baseline.gd"
@@ -20,13 +20,13 @@ const GameEntry = preload(
 	"res://Framework/Infrastructure/API/Runtime/game_entry.gd"
 )
 const EnvironmentSetup = preload(
-	"res://Framework/Env/Setup/game_setup.gd"
+	"res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 )
 const TownGuard = preload(
-	"res://Framework/Content/Presentation/Entity/TownGuard/starting_attributes.tres"
+	"res://Framework/Content/Gameplay/Presentation/Entity/TownGuard/starting_attributes.tres"
 )
 const Inventory = preload(
-	"res://Framework/Content/Authored/Entity/Container/inventory.tres"
+	"res://Framework/Content/Gameplay/Authored/Entity/Container/inventory.tres"
 )
 
 var _entry := GameEntry.new()

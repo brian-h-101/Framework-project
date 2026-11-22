@@ -1,8 +1,8 @@
 extends SceneTree
 
-const Schema = preload("res://Framework/Env/Authoring/Resources/behavior_schema.gd")
-const Assignment = preload("res://Framework/Env/Authoring/Resources/condition_assignment.gd")
-const Editing = preload("res://Framework/Env/Authoring/Resources/condition_editing.gd")
+const Schema = preload("res://Framework/Env/Authoring/Resources/Behavior/behavior_schema.gd")
+const Assignment = preload("res://Framework/Env/Authoring/Resources/Conditions/condition_assignment.gd")
+const Editing = preload("res://Framework/Env/Authoring/Resources/Conditions/condition_editing.gd")
 const Files = preload("res://Framework/Env/Authoring/Shared/resource_files.gd")
 
 

@@ -1,10 +1,10 @@
 extends SceneTree
 
 const ConditionEditing = preload(
-	"res://Framework/Env/Authoring/Resources/condition_editing.gd"
+	"res://Framework/Env/Authoring/Resources/Conditions/condition_editing.gd"
 )
 const ConditionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/condition_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_resource.gd"
 )
 
 const GROUP_PATH := "res://Framework/Content/Behavior/Condition/can_strike.tres"
@@ -141,9 +141,15 @@ func _run_check() -> void:
 	):
 		return
 
+	if not _apply_edit("Boolean equality", condition_path, "==", true, "Boolean condition."):
+		return
+	var boolean_read := ConditionEditing.get_comparison(condition_path)
+	if not _expect("Boolean type is available for editing", boolean_read["ok"] and boolean_read["value"]["value_type"] == "bool"):
+		return
+	if not _expect_rejected("Boolean ordering", condition_path, ">=", true, "Boolean comparisons support only == and !=."):
+		return
 	var non_numbers: Array[Dictionary] = [
 		{"label": "Text value", "value": "20"},
-		{"label": "Boolean value", "value": true},
 		{"label": "Null value", "value": null},
 	]
 
@@ -253,7 +259,7 @@ func _apply_edit(
 	)
 
 	var type_ok: bool = _expect(
-		label + " preserves numeric type",
+		label + " preserves native value type",
 		typeof(saved.requirement["value"]) == typeof(value)
 	)
 

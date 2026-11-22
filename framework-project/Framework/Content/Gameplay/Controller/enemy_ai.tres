@@ -1,0 +1,9 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Content/Universal/Movement/based/Controllers/ai_movement_controller.gd" id="1_ai"]
+
+[resource]
+script = ExtResource("1_ai")
+targeting = "nearest"
+stopping_distance = 4.8
+distance_unit = "gameplay_units"

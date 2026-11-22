@@ -17,6 +17,7 @@ const WorldBridgeCore = preload(
 )
 
 var _core: WorldBridgeCore
+var _behavior_targeting: Callable
 
 
 func _init(runtime_core: RuntimeCore) -> void:
@@ -26,6 +27,7 @@ func _init(runtime_core: RuntimeCore) -> void:
 	_core.entity_unbound.connect(_on_core_entity_unbound)
 
 func close() -> void:
+	_behavior_targeting = Callable()
 	_core.close()
 
 	if _core.entity_bound.is_connected(_on_core_entity_bound):
@@ -101,3 +103,31 @@ func _on_core_entity_bound(entity_id: int, world_node: Node) -> void:
 
 func _on_core_entity_unbound(entity_id: int) -> void:
 	entity_unbound.emit(entity_id)
+
+func bind_behavior(node: Node, id: StringName, enabled: bool = true) -> Dictionary:
+	return _core.bind_behavior(node, id, enabled)
+
+func emit_behavior_event(node: Node, event: StringName) -> Dictionary:
+	return _core.emit_behavior_event(node, event, resolve_behavior_target)
+
+func invoke_behavior(
+	node: Node,
+	id: StringName,
+	step_id: StringName = &"",
+	step_arguments: Dictionary = {}
+) -> Dictionary:
+	return _core.invoke_behavior(node, id, resolve_behavior_target, step_id, step_arguments)
+
+func select_behavior_target(actor: Node, target: Node) -> Dictionary:
+	return _core.select_behavior_target(actor, target)
+
+func selected_behavior_target(actor: Node) -> Node:
+	return _core.selected_behavior_target(actor)
+
+func configure_behavior_targeting(resolver: Callable) -> void:
+	_behavior_targeting = resolver
+
+func resolve_behavior_target(entity_id: int, mode: StringName) -> Dictionary:
+	if not _behavior_targeting.is_valid():
+		return {"ok": false, "value": null, "error": "No Behavior targeting service is configured."}
+	return _behavior_targeting.call(entity_id, mode)

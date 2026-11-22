@@ -5,6 +5,7 @@ export interface MovementConfigurationEntry {
 	source_path: string;
 	action_id: string;
 	behavior_id: string;
+	body_type?: 'CharacterBody2D' | 'CharacterBody3D';
 	dependency_hashes: Record<string, string>;
 }
 
@@ -16,9 +17,10 @@ export function validateMovementConfigurations(value: unknown): MovementConfigur
 	const paths = new Set<string>();
 	return value.configurations.map(entry => {
 		if (!isRecord(entry) || typeof entry.source_path !== 'string'
-			|| !entry.source_path.startsWith('res://Framework/Content/Configuration/')
+			|| !['Configuration', 'Gameplay/Profiles'].some(root => (entry.source_path as string).startsWith(`res://Framework/Content/${root}/`))
 			|| typeof entry.action_id !== 'string' || !entry.action_id.trim()
 			|| typeof entry.behavior_id !== 'string' || !entry.behavior_id.trim()
+			|| (entry.body_type !== undefined && entry.body_type !== 'CharacterBody2D' && entry.body_type !== 'CharacterBody3D')
 			|| !isRecord(entry.dependency_hashes) || Object.keys(entry.dependency_hashes).length > 1000) {
 			throw new Error('Malformed movement configuration entry.');
 		}
@@ -36,7 +38,7 @@ export function validateMovementConfigurations(value: unknown): MovementConfigur
 			hashes[source] = hash;
 		}
 		return { source_path: entry.source_path, action_id: entry.action_id,
-			behavior_id: entry.behavior_id, dependency_hashes: hashes };
+			behavior_id: entry.behavior_id, body_type: entry.body_type as MovementConfigurationEntry['body_type'], dependency_hashes: hashes };
 	}).sort((left, right) => left.source_path.localeCompare(right.source_path));
 }
 
@@ -44,7 +46,7 @@ export function loadMovementConfigurations(project: string, executable: string,
 	report: (message: string) => void): Promise<MovementConfigurationEntry[]> {
 	return new Promise((resolve, reject) => {
 		execFile(executable, ['--headless', '--path', project, '--script',
-			'res://Framework/Env/Authoring/Scenes/movement_configuration_catalog_export.gd'],
+			'res://Framework/Env/Authoring/Scenes/Configuration/movement_configuration_catalog_export.gd'],
 		{ cwd: project, encoding: 'utf8', windowsHide: true, timeout: 30000, maxBuffer: 16 * 1024 * 1024 },
 		(error, stdout, stderr) => {
 			try {

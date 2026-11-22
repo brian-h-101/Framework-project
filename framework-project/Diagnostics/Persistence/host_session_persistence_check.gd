@@ -4,16 +4,16 @@ const GameHost = preload(
 	"res://Framework/Env/Host/game_host.gd"
 )
 const EntityStatusLayer2D = preload(
-	"res://Framework/Content/God/UI/entity_status_layer_2d.gd"
+	"res://Framework/Content/Universal/UI/based/Spatial2D/entity_status_layer_2d.gd"
 )
 const CityMap = preload(
-	"res://Framework/Content/Maps/city.tscn"
+	"res://Framework/Content/Gameplay/Maps/city.tscn"
 )
 const SessionStore = preload(
 	"res://Framework/Infrastructure/API/Persistence/session_store.gd"
 )
 const SpatialRoot2D = preload(
-	"res://Framework/Env/Map/spatial_root_2d.gd"
+	"res://Framework/Content/Universal/Map/based/Spatial2D/spatial_root_2d.gd"
 )
 
 const TEST_ROOT := "res://.godot/diagnostics/host_persistence_"

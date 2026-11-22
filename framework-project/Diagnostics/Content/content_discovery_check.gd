@@ -1,13 +1,13 @@
 extends SceneTree
 
 const ActionContent = preload(
-	"res://Framework/Content/Behavior/Action/actions.gd"
+	"res://Framework/Env/Setup/Definitions/actions.gd"
 )
 const InteractionContent = preload(
-	"res://Framework/Content/Behavior/Interaction/interactions.gd"
+	"res://Framework/Env/Setup/Definitions/interactions.gd"
 )
 const EntityContent = preload(
-	"res://Framework/Env/Setup/entity_definitions.gd"
+	"res://Framework/Env/Setup/Definitions/entity_definitions.gd"
 )
 
 func _initialize() -> void:

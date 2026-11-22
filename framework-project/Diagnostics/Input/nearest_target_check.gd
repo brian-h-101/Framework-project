@@ -4,13 +4,13 @@ const GameEntry = preload(
 	"res://Framework/Infrastructure/API/Runtime/game_entry.gd"
 )
 const EnvironmentSetup = preload(
-	"res://Framework/Env/Setup/game_setup.gd"
+	"res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 )
 const TargetPoint2D = preload(
-	"res://Framework/Env/Targeting/target_point_2d.gd"
+	"res://Framework/Content/Universal/Targeting/based/Spatial2D/target_point_2d.gd"
 )
 const TargetResolver2D = preload(
-	"res://Framework/Env/Targeting/target_resolver_2d.gd"
+	"res://Framework/Content/Universal/Targeting/based/Spatial2D/target_resolver_2d.gd"
 )
 
 var _entry := GameEntry.new()
@@ -33,9 +33,9 @@ func _run_check() -> void:
 	root.add_child(_world)
 
 	var bridge := _entry.world_bridge
-	var actor_id: int = _entry.entity_ids[&"player"]
-	var enemy_id: int = _entry.entity_ids[&"enemy"]
-	var second_id: int = _entry.entity_ids[&"second_player"]
+	var actor_id := _entry.runtime.spawn(&"player")
+	var enemy_id := _entry.runtime.spawn(&"enemy")
+	var second_id := _entry.runtime.spawn(&"player")
 
 	var actor := _make_entity(&"player", Vector2.ZERO)
 	var enemy := _make_entity(&"enemy", Vector2(80, 0))

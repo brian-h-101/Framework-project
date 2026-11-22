@@ -1,0 +1,30 @@
+[gd_resource type="Resource" format=3 uid="uid://4ntn5bcyhp5j"]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Behavior/behavior_configuration_resource.gd" id="1_a1nbe"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Behavior/behavior_resource.gd" id="2_bb4yb"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Behavior/action_step_resource.gd" id="3_7yk3v"]
+
+[sub_resource type="Resource" id="Resource_stuf0"]
+script = ExtResource("1_a1nbe")
+trigger = "manual"
+targeting = "self"
+cooldown_seconds = 0.0
+
+[sub_resource type="Resource" id="Resource_jdbhn"]
+script = ExtResource("3_7yk3v")
+executor_id = &"movement"
+arguments = {
+	&"lateral": 0.0,
+	&"forward": 0.0,
+	&"vertical": 0.0,
+	&"speed_container": &"speed",
+	&"speed_path": ["current"]
+}
+id = &"calculate_velocity"
+label = "Calculate Velocity"
+
+[resource]
+script = ExtResource("2_bb4yb")
+id = &"move"
+configuration = SubResource("Resource_stuf0")
+steps = Array[Resource]([SubResource("Resource_jdbhn")])

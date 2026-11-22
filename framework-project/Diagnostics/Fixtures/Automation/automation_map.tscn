@@ -1,7 +1,7 @@
 [gd_scene format=3]
 
-[ext_resource type="PackedScene" path="res://Framework/Content/Maps/city_recreated.tscn" id="1_map"]
-[ext_resource type="Script" path="res://Framework/Content/God/Interaction/automation_behavior.gd" id="2_behavior"]
+[ext_resource type="PackedScene" path="res://Framework/Content/Gameplay/Maps/city_recreated.tscn" id="1_map"]
+[ext_resource type="Script" path="res://Framework/Content/Universal/Interaction/based/Legacy/automation_behavior.gd" id="2_behavior"]
 [ext_resource type="Resource" path="res://Framework/Content/Behavior/Automation/auto_strike.tres" id="3_automation"]
 
 [node name="AutomationMap" instance=ExtResource("1_map")]

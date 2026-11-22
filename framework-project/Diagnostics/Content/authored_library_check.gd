@@ -1,9 +1,9 @@
 extends SceneTree
 
-const Policy = preload("res://Framework/Env/Setup/authored_library.gd")
-const Starting = preload("res://Framework/Env/Setup/starting_attributes.gd")
+const Policy = preload("res://Framework/Env/Setup/Library/authored_library.gd")
+const Starting = preload("res://Framework/Env/Setup/Composition/starting_attributes.gd")
 const Fragment = preload("res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd")
-const EntityContent = preload("res://Framework/Env/Setup/entity_definitions.gd")
+const EntityContent = preload("res://Framework/Env/Setup/Definitions/entity_definitions.gd")
 
 var _passed := true
 

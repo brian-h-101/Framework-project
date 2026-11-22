@@ -2,7 +2,7 @@
 	"name": "resource-attribute",
 	"displayName": "Resource Attribute",
 	"description": "Browse authored categories, create and delete container Resources, and edit native attributes.",
-	"version": "0.0.4",
+	"version": "0.0.5",
 	"publisher": "framework-tools",
 	"type": "commonjs",
 	"engines": {

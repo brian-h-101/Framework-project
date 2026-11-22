@@ -1,7 +1,10 @@
 import * as vscode from 'vscode';
+import { bindingAction } from '../resources/configuration_fields';
 import { validateGraph, isPath, type ResourceGraph, type ResourceNode } from '../bridges/resource_bridge';
+import { isBehaviorPath } from '../bridges/behavior_library_bridge';
 import type { ValueNode } from '../bridges/behavior_editing_bridge';
 import { isExecutorScriptPath } from '../resources/executor_metadata';
+import { relationships } from '../resources/resource_relationships';
 
 export interface ResourceTreeElement {
 	sourcePath: string;
@@ -69,7 +72,7 @@ export class ResourceTreeProvider
 	getTreeItem(element: ResourceTreeElement): vscode.TreeItem {
 		const { resource, data, uri, graph } = this.resolve(element);
 		const executor = graph.executors?.find(
-			entry => entry.id === resource.behavior_id
+			entry => entry.id === (data?.sequence?.executor_id ?? resource.behavior_id)
 		);
 		const hasChildren = data ? data.children.length > 0
 			: resource.links.length > 0 || resource.data.children.length > 0;
@@ -80,15 +83,53 @@ export class ResourceTreeProvider
 		item.resourceUri = uri;
 		item.iconPath = data ? new vscode.ThemeIcon(data.kind === 'Array' ? 'list-ordered'
 			: data.kind === 'Dictionary' ? 'symbol-object' : 'symbol-field') : vscode.ThemeIcon.File;
-		if (data) {
+		if (data?.sequence && data.sequence.role !== 'argument_data') {
+			const row = data.sequence;
+			const flags = ['sequence', 'sequence_' + row.role, 'open_owner'];
+			if (row.role === 'executor' && isExecutorScriptPath(executor?.script_path)) { flags.push('open_executor'); }
+			if (row.role === 'steps' || row.role === 'step' && row.step_kind === 'group') { flags.push('sequence_add'); }
+			if (row.role === 'executor' || row.role === 'step' && row.step_kind === 'action' || row.role === 'argument') { flags.push('sequence_executor'); }
+			item.contextValue = flags.join('|');
+			item.description = data.value_text;
+			item.tooltip = (executor?.script_path ? 'Script: ' + executor.script_path + '\n' : '') + 'Owned by ' + resource.source_path + (row.step_id ? '\nStep ID: ' + row.step_id : '');
+		} else if (data) {
+			const editFlags: string[] = [];
+			if (resource.configuration_type === 'input' && data.path[0]?.text === 'Bindings') {
+				if (data.path.length === 1) { editFlags.push('input_bindings'); }
+				const action = bindingAction(data);
+				if (action !== undefined) {
+					item.label = action;
+					editFlags.push('input_binding');
+				}
+			}
+			if (resource.kind === 'starting_attributes' && data.path[0]?.text === 'Fragments') {
+				if (data.path.length === 1) { editFlags.push('choose_fragments'); }
+				if (data.path.length === 2 && data.path[1].kind === 'index') {
+					const index = Number(data.path[1].text);
+					if (index > 0) { editFlags.push('fragment_up'); }
+					if (index < (resource.fragment_paths?.length ?? 0) - 1) { editFlags.push('fragment_down'); }
+				}
+			}
 			item.contextValue = ['behavior_data', data.editable ? 'edit' : '',
+				'open_owner',
 				data.can_add ? 'add' : '', data.can_rename ? 'rename' : '',
-				data.can_remove ? 'remove' : '', data.can_add_effect ? 'add_effect' : ''].filter(Boolean).join('|');
+				data.can_remove ? 'remove' : '', data.can_add_effect ? 'add_effect' : '', ...editFlags].filter(Boolean).join('|');
 			item.description = `${data.kind}: ${data.value_text}`;
 			item.tooltip = `${data.kind}: ${data.value_text}\nOwned by ${resource.source_path}`;
 		} else {
 			const flags = [element.cycle ? 'cycle' : resource.kind];
+			if (resource.kind === 'behavior') { flags.push('sequence', 'sequence_add'); }
 			if (!element.cycle) {
+				if (element.parentSource) {
+					flags.push('open_owner', 'replace_reference');
+					if (element.linkRole === 'condition' || element.linkRole === 'requirements') { flags.push('remove_reference'); }
+				}
+				if (relationships(resource.kind).length) { flags.push('link_resource'); }
+				if (resource.kind === 'starting_attributes') { flags.push('choose_fragments'); }
+				else if (resource.kind !== 'configuration') { flags.push('new_resource'); }
+				if (resource.kind === 'configuration') { flags.push('new_configuration'); }
+				if (resource.configuration_type === 'movement') { flags.push('movement_configuration'); }
+				if (isBehaviorPath(resource.source_path)) { flags.push('resource_file'); }
 				if (resource.kind === 'action' && resource.supports_effects !== false) { flags.push('add_effect'); }
 				if (element.linkRole === 'condition') { flags.push('condition_link'); }
 				if (element.linkRole === 'requirements') { flags.push('requirements_link'); }
@@ -101,6 +142,7 @@ export class ResourceTreeProvider
 			item.contextValue = flags.join('|');
 			item.tooltip = `${resource.kind}: ${resource.id}\n${resource.source_path}`
 				+ (element.parentSource ? `\nLinked from ${element.parentSource}` : '');
+			if (resource.kind === 'starting_attributes') { item.description = `[Starting Attributes · ${resource.id}]`; }
 			if (resource.kind === 'condition_group') { item.description = `[${resource.operator?.toUpperCase()}]`; }
 			if (resource.kind === 'action' && resource.behavior_id !== undefined) {
 				item.description = `[${resource.behavior_id || 'missing behavior'}]`;
@@ -112,7 +154,7 @@ export class ResourceTreeProvider
 			if (resource.kind === 'condition') { item.description = `[${resource.operator} ${resource.value_text}]`; }
 			if (element.cycle) { item.description = `${item.description ?? ''} [cycle]`.trim(); }
 		}
-		item.command = { command: 'vscode.open', title: 'Open Owning Resource', arguments: [uri] };
+		item.command = { command: 'vscode.open', title: 'Open Owning Resource', arguments: [data?.sequence?.role === 'condition' && isPath(data.sequence.condition_path) ? resourceUri(this.projectRoot!, data.sequence.condition_path) : uri] };
 		return item;
 	}
 

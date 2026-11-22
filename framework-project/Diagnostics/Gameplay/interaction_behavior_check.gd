@@ -4,13 +4,13 @@ const Entry = preload(
 	"res://Framework/Infrastructure/API/Runtime/game_entry.gd"
 )
 const Setup = preload(
-	"res://Framework/Env/Setup/game_setup.gd"
+	"res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 )
 const Behavior = preload(
-	"res://Framework/Content/God/Interaction/interaction_behavior.gd"
+	"res://Framework/Content/Universal/Interaction/based/Legacy/interaction_behavior.gd"
 )
 const Interaction = preload(
-	"res://Diagnostics/Fixtures/BehaviorEditing/visual_interaction.tres"
+	"res://Diagnostics/Fixtures/GameplayResources/strike.tres"
 )
 
 
@@ -64,7 +64,7 @@ func _run_check(
 
 	var containers: Dictionary[StringName, Dictionary] = {
 		&"health": {"current": 100},
-		&"strength": {"current": 20},
+		&"strength": {"current": 10},
 		&"interactions": {"available": [Interaction.id]},
 	}
 
@@ -103,7 +103,7 @@ func _run_check(
 		return false
 
 	var weakened: Dictionary = runtime.write_attribute(
-		actor_id, &"strength", ["current"], 19
+		actor_id, &"strength", ["current"], 9
 	)
 	if not weakened["ok"]:
 		return false
@@ -113,7 +113,7 @@ func _run_check(
 		target_id, &"health", ["current"]
 	)
 
-	print("[interaction-behavior] Invocation at strength 19: ", rejected)
+	print("[interaction-behavior] Invocation at strength 9: ", rejected)
 	print("[interaction-behavior] Health after rejection: ", after_rejection)
 
 	return (

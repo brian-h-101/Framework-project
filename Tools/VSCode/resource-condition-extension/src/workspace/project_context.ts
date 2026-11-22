@@ -49,6 +49,7 @@ export async function resolveProjectContext(
 				'Env',
 				'Authoring',
 				'Resources',
+				'Inspection',
 				'resource_graph_export.gd'
 			);
 

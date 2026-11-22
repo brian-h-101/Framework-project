@@ -41,7 +41,7 @@ async function main() {
 		assert.ok(nameError('COM¹')); assert.ok(nameError('CON.tscn'));
 		await assert.rejects(service.createCategory(await get(mapFolder), '../escape'), /leading dot|reserved/);
 		check('Duplicate siblings and unsafe Windows names are rejected');
-		for (const outside of ['res://Framework/Content/Camera', 'res://Framework/Content/UI', 'res://Framework/Content/MapsExtra']) {
+		for (const outside of ['res://Framework/Content/Camera', 'res://Framework/Content/Gameplay/UI', 'res://Framework/Content/MapsExtra']) {
 			await assert.rejects(checkedLibraryPath(context, outside, 'directory'), /inside/);
 			await assert.rejects(libraryRequest(project, executable, 'draft', outside + '/probe.tscn', { template: 'empty_2d', node_name: 'Probe' }, () => {}), /inside/);
 		}

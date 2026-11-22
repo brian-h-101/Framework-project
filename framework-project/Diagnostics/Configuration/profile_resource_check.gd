@@ -4,21 +4,21 @@ const StartingAttributesResource = preload(
 	"res://Framework/Infrastructure/API/Entity/Resources/starting_attributes_resource.gd"
 )
 const Presentation2DResource = preload(
-	"res://Framework/Env/Presentation/Resources/presentation_2d_resource.gd"
+	"res://Framework/Content/Universal/Presentation/based/Configuration/presentation_2d_resource.gd"
 )
 const StartingContent = preload(
-	"res://Framework/Env/Setup/starting_definitions.gd"
+	"res://Framework/Env/Setup/Definitions/starting_definitions.gd"
 )
 const ContainerFragmentResource = preload(
 	"res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd"
+)
+const Movement2DProfile = preload(
+	"res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_2d.tres"
 )
 
 const PROFILES := {
 	"Entity/Enemy": &"enemy",
 	"Entity/Player": &"player",
-	"Entity/TownGuard": &"town_guard",
-	"Items/IronSword": &"iron_sword",
-	"Objects/WoodenChest": &"wooden_chest",
 }
 
 var _passed := true
@@ -31,15 +31,12 @@ func _initialize() -> void:
 		print(discovered)
 		quit(1)
 		return
-	_check("All five presets remain available", discovered["value"].size() == PROFILES.size())
-
 	for relative_folder: String in PROFILES:
-		var folder := "res://Framework/Content/Presentation/".path_join(relative_folder)
+		var folder := "res://Framework/Content/Gameplay/Presentation/".path_join(relative_folder)
 		var preset_path := folder.path_join("starting_attributes.tres")
 		var preset := load(preset_path) as StartingAttributesResource
-		var profile := load(folder.path_join("presentation.tres")) as Presentation2DResource
-		_check("Resource types load: %s" % relative_folder, preset != null and profile != null)
-		if preset == null or profile == null:
+		_check("Starting attributes load: %s" % relative_folder, preset != null)
+		if preset == null:
 			continue
 		var expected_id: StringName = PROFILES[relative_folder]
 		_check("Fragment references use the resource schema: %s" % expected_id,
@@ -58,7 +55,6 @@ func _initialize() -> void:
 			and preset.to_definition()["containers"][&"identity"]["name"] == original_name
 			and var_to_bytes(preset.overrides) == overrides_before
 		))
-		_check("Presentation converts: %s" % expected_id, not profile.to_definition().has("error"))
 
 	var nested := StartingAttributesResource.new()
 	nested.id = &"nested_probe"
@@ -88,14 +84,19 @@ func _initialize() -> void:
 	var invalid := Presentation2DResource.new()
 	invalid.body_size = Vector2(0, 32)
 	_check("Invalid presentation dimensions are rejected", not invalid.to_definition().get("ok", true))
-	var player := load("res://Framework/Content/Presentation/Entity/Player/presentation.tres") as Presentation2DResource
-	_check("Player retains movement, camera and input references", (
-		player != null
-		and player.movement_content != null
-		and player.movement_content.resource_path == "res://Framework/Content/Configuration/Movement/player_movement.tres"
-		and player.camera_scene != null
-		and player.camera_scene.resource_path == "res://Framework/Content/Camera/player_camera_2d.tscn"
-		and player.interaction_input
+	var presentation := Presentation2DResource.new()
+	var camera := Camera2D.new()
+	var camera_scene := PackedScene.new()
+	_check("Test camera packs", camera_scene.pack(camera) == OK)
+	camera.free()
+	presentation.movement_content = Movement2DProfile
+	presentation.camera_scene = camera_scene
+	presentation.interaction_input = true
+	var definition := presentation.to_definition()
+	_check("Custom presentation retains movement, camera and input", (
+		definition.get("movement_content") == Movement2DProfile
+		and definition.get("camera_scene") == camera_scene
+		and definition.get("interaction_input") == true
 	))
 	print("[profile-resource] Checks passed: ", _passed)
 	quit(0 if _passed else 1)

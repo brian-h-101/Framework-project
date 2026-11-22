@@ -1,7 +1,7 @@
 extends RefCounted
 
 const ContextCore = preload(
-	"res://Framework/Infrastructure/Implementation/Gameplay/execution_context_core.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/Execution/execution_context_core.gd"
 )
 
 var _core: ContextCore

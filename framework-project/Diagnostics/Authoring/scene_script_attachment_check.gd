@@ -1,11 +1,11 @@
 extends SceneTree
 
-const Graph = preload("res://Framework/Env/Authoring/Scenes/scene_graph.gd")
-const Editing = preload("res://Framework/Env/Authoring/Scenes/scene_editing.gd")
-const SceneScript = preload("res://Framework/Env/Authoring/Scenes/scene_script.gd")
-const PLAYER := "res://Framework/Content/Presentation/Entity/Player/player_2d.tscn"
-const MAP := "res://Framework/Content/Maps/city_recreated.tscn"
-const EXECUTOR := "res://Framework/Content/Executor/movement_2d_executor.gd"
+const Graph = preload("res://Framework/Env/Authoring/Scenes/Inspection/scene_graph.gd")
+const Editing = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_editing.gd")
+const SceneScript = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_script.gd")
+const PLAYER := "res://Framework/Content/Gameplay/Presentation/Entity/Player/player_2d.tscn"
+const MAP := "res://Framework/Content/Gameplay/Maps/city.tscn"
+const EXECUTOR := "res://Framework/Content/Gameplay/Profiles/Movement/Executor/movement_2d_executor.gd"
 const FLAG := &"script_attachment_node_instantiated"
 
 var _passed := true

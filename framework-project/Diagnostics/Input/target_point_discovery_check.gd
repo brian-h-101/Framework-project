@@ -1,7 +1,7 @@
 extends SceneTree
 
 const TargetPoint2D = preload(
-	"res://Framework/Env/Targeting/target_point_2d.gd"
+	"res://Framework/Content/Universal/Targeting/based/Spatial2D/target_point_2d.gd"
 )
 
 var _entity: Node

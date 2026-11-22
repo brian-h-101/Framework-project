@@ -67,7 +67,7 @@ async function main() {
 
 	const groupText = `[gd_resource type="Resource" format=3]
 
-[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/condition_group_resource.gd" id="1_group"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_group_resource.gd" id="1_group"]
 
 [resource]
 script = ExtResource("1_group")

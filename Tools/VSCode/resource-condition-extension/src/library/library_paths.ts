@@ -1,7 +1,7 @@
 import { lstat, realpath, readdir } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { createHash } from 'node:crypto';
-import { BEHAVIOR_ROOT } from '../bridges/behavior_library_bridge';
+import { isBehaviorPath } from '../bridges/behavior_library_bridge';
 import { validateResourcePath, type ProjectContext } from '../workspace/project_context';
 
 export function nameError(name: string): string | undefined {
@@ -35,8 +35,8 @@ export async function checkedProjectPath(context: ProjectContext, source: string
 }
 
 export async function checkedBehaviorPath(context: ProjectContext, source: string, kind: 'directory' | 'file'): Promise<string> {
-	if (source !== BEHAVIOR_ROOT && !source.startsWith(BEHAVIOR_ROOT + '/')) {
-		throw new Error('Choose a path inside Framework/Content/Behavior.');
+	if (!isBehaviorPath(source)) {
+		throw new Error('Choose a path inside Framework/Content/Gameplay/Profiles/<category>/Behavior.');
 	}
 	const path = await checkedProjectPath(context, source);
 	const info = await lstat(path);

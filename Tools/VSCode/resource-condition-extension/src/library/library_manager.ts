@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { basename, join, relative } from 'node:path';
 import { resolveProjectContext, isInside, type ProjectContext } from '../workspace/project_context';
-import type { LibraryCatalogue, LibraryEntry } from '../bridges/behavior_library_bridge';
+import { isBehaviorPath, isBehaviorRoot, type LibraryCatalogue, type LibraryEntry } from '../bridges/behavior_library_bridge';
 import { LibraryService } from './library_service';
 import { sha256, nameError } from './library_paths';
 import { creationDetails } from './resource_prompts';
@@ -16,16 +16,18 @@ export function ensureWorkspace(context: ProjectContext): void {
 interface Library { context: ProjectContext; catalogue: LibraryCatalogue; service: LibraryService }
 interface Choice extends vscode.QuickPickItem { library: Library; entry: LibraryEntry }
 const ACTIONS = [
-	{ label: 'New Category…', operation: 'category', targetKind: 'root', description: 'Create directly beneath Behavior' },
+	{ label: 'New Category…', operation: 'category', targetKind: 'behavior-root', description: 'Create directly beneath a profile’s Behavior folder' },
 	{ label: 'New Subcategory…', operation: 'category', targetKind: 'folder', description: 'Create inside an existing category' },
-	{ label: 'New Behavior Resource…', operation: 'resource', targetKind: 'directory', description: 'Action, Condition, Condition Group, or Interaction' },
+	{ label: 'New Behavior Resource…', operation: 'resource', targetKind: 'directory', description: 'Create a Behavior with Configuration and Steps' },
+	{ label: 'New Configuration Resource…', operation: 'configuration', description: 'Create a shared Movement profile' },
 	{ label: 'Delete Resource…', operation: 'delete-resource', targetKind: 'resource', description: 'Check references, then move to the Recycle Bin' },
 	{ label: 'Delete Empty Category…', operation: 'delete-category', targetKind: 'empty', description: 'Move an empty category to the Recycle Bin' }
 ] as const;
 
 export class LibraryManager {
 	constructor(private readonly output: vscode.OutputChannel,
-		private readonly changed: (uri: vscode.Uri, removed: boolean) => Promise<void>) {}
+		private readonly changed: (uri: vscode.Uri, removed: boolean) => Promise<void>,
+		private readonly createConfiguration: () => Promise<void>) {}
 
 	async execute(): Promise<void> {
 		try {
@@ -34,12 +36,20 @@ export class LibraryManager {
 			const action = await vscode.window.showQuickPick(ACTIONS, { title: 'Manage Behavior Library',
 				placeHolder: 'Choose a create or delete operation', matchOnDescription: true, ignoreFocusOut: true });
 			if (!action) { return; }
+			if (action.operation === 'configuration') {
+				await this.createConfiguration();
+				return;
+			}
 			const libraries = await this.discover();
 			const emptyHash = sha256(Buffer.from('[]'));
-			const choices: Choice[] = libraries.flatMap(library => library.catalogue.entries.filter(entry =>
-				action.targetKind === 'directory' ? ['root', 'folder'].includes(entry.kind)
-					: action.targetKind === 'empty' ? entry.kind === 'folder' && entry.fingerprint === emptyHash
-						: entry.kind === action.targetKind && (entry.kind !== 'resource' || entry.supported))
+			const choices: Choice[] = libraries.flatMap(library => library.catalogue.entries.filter(entry => {
+				if (action.targetKind === 'resource') { return entry.kind === 'resource' && entry.supported; }
+				if (entry.kind !== 'folder' || !isBehaviorPath(entry.source_path)) { return false; }
+				if (action.targetKind === 'directory') { return true; }
+				const isRoot = isBehaviorRoot(entry.source_path);
+				if (action.targetKind === 'behavior-root') { return isRoot; }
+				return !isRoot && (action.targetKind !== 'empty' || entry.fingerprint === emptyHash);
+			})
 				.map(entry => ({ label: entry.name, description: `${basename(library.context.projectDirectory)} · ${entry.source_path.slice(6)}`,
 					detail: library.context.projectDirectory, library, entry })));
 			const activeProject = active?.scheme === 'file' ? libraries.filter(item => isInside(item.context.projectDirectory, active.fsPath))

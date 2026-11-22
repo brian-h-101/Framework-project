@@ -1,0 +1,85 @@
+[gd_resource type="Resource" format=3]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Behavior/behavior_resource.gd" id="1"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Behavior/behavior_configuration_resource.gd" id="2"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Behavior/action_step_resource.gd" id="3"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Behavior/group_step_resource.gd" id="4"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_group_resource.gd" id="5"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_resource.gd" id="6"]
+[ext_resource type="Resource" path="res://Framework/Content/Behavior/Condition/actor_strength.tres" id="7"]
+
+[sub_resource type="Resource" id="Configuration"]
+script = ExtResource("2")
+trigger = "event"
+event_id = &"on_attack"
+targeting = "selected"
+cooldown_seconds = 1.5
+
+[sub_resource type="Resource" id="Alive"]
+script = ExtResource("6")
+id = &"target_alive"
+requirement = {"entity": &"target", "container": &"health", "path": ["alive"], "operator": "==", "value": true}
+
+[sub_resource type="Resource" id="DamageRequirements"]
+script = ExtResource("5")
+id = &"damage_requirements"
+conditions = [ExtResource("7"), SubResource("Alive")]
+
+[sub_resource type="Resource" id="Damage"]
+script = ExtResource("3")
+id = &"damage"
+label = "Damage"
+requirements = SubResource("DamageRequirements")
+arguments = {&"amount": -10}
+
+[sub_resource type="Resource" id="StrongCondition"]
+script = ExtResource("6")
+id = &"strong_actor"
+requirement = {"entity": &"actor", "container": &"strength", "path": ["current"], "operator": ">=", "value": 30}
+
+[sub_resource type="Resource" id="StrongRequirements"]
+script = ExtResource("5")
+id = &"strong_requirements"
+conditions = [SubResource("StrongCondition")]
+
+[sub_resource type="Resource" id="Bonus"]
+script = ExtResource("3")
+id = &"bonus_damage"
+label = "Bonus Damage"
+arguments = {&"amount": -2}
+
+[sub_resource type="Resource" id="CriticalCondition"]
+script = ExtResource("6")
+id = &"critical_actor"
+requirement = {"entity": &"actor", "container": &"strength", "path": ["current"], "operator": ">=", "value": 40}
+
+[sub_resource type="Resource" id="CriticalRequirements"]
+script = ExtResource("5")
+id = &"critical_requirements"
+conditions = [SubResource("CriticalCondition")]
+
+[sub_resource type="Resource" id="CriticalDamage"]
+script = ExtResource("3")
+id = &"critical_damage"
+label = "Critical Damage"
+arguments = {&"amount": -3}
+
+[sub_resource type="Resource" id="Critical"]
+script = ExtResource("4")
+id = &"critical_effect"
+label = "Critical Effect"
+requirements = SubResource("CriticalRequirements")
+steps = Array[Resource]([SubResource("CriticalDamage")])
+
+[sub_resource type="Resource" id="Strong"]
+script = ExtResource("4")
+id = &"strong_attack"
+label = "Strong Attack"
+requirements = SubResource("StrongRequirements")
+steps = Array[Resource]([SubResource("Bonus"), SubResource("Critical")])
+
+[resource]
+script = ExtResource("1")
+id = &"nested_strike_preview"
+configuration = SubResource("Configuration")
+steps = Array[Resource]([SubResource("Damage"), SubResource("Strong")])

@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3]
 
-[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/world_time_resource.gd" id="1_pwgpr"]
+[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/Session/world_time_resource.gd" id="1_pwgpr"]
 
 [resource]
 script = ExtResource("1_pwgpr")

@@ -4,10 +4,13 @@ const GameEntry = preload(
 	"res://Framework/Infrastructure/API/Runtime/game_entry.gd"
 )
 const EnvironmentSetup = preload(
-	"res://Framework/Env/Setup/game_setup.gd"
+	"res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 )
 const MapCoordinator = preload(
 	"res://Framework/Env/Map/map_coordinator.gd"
+)
+const MapPositions = preload(
+	"res://Framework/Env/Map/map_positions.gd"
 )
 const Controls = preload(
 	"res://Framework/Content/Configuration/Input/controls.tres"
@@ -20,9 +23,6 @@ const Displays = preload(
 )
 const SessionDriver = preload(
 	"res://Framework/Env/Session/session_driver.gd"
-)
-const UIRootScene = preload(
-	"res://Framework/Content/UI/HUD/ui_root.tscn"
 )
 const SessionStore = preload(
 	"res://Framework/Infrastructure/API/Persistence/session_store.gd"
@@ -182,6 +182,11 @@ func _start_environment(
 		stop()
 		return selected_map
 
+	var selected_ui := setup.get_ui_scene_result()
+	if not selected_ui["ok"]:
+		stop()
+		return selected_ui
+	var ui_scene: PackedScene = selected_ui["value"]
 	var map_scene: PackedScene = selected_map["value"]
 	var starting_clock := entry.runtime.snapshot_time()
 	if starting_clock["ok"] and starting_clock["value"] != null:
@@ -208,35 +213,39 @@ func _start_environment(
 		var saved_map: Variant = environment.get("map")
 
 		if saved_map is Dictionary:
-			var positions_value: Variant = saved_map.get("positions_2d", {})
-			if not (positions_value is Dictionary):
+			var positions := MapPositions.read_saved_positions(saved_map)
+			if not positions["ok"]:
 				stop()
-				return _failure(
-					"Saved map positions_2d must be a dictionary."
-				)
+				return positions
 
-			saved_positions = positions_value
+			saved_positions = positions["value"]
 
 		var loaded := maps.load_map(map_scene, saved_positions)
 		if not loaded["ok"]:
 			stop()
 			return loaded
 
-	ui = UIRootScene.instantiate() as CanvasLayer
+	if ui_scene != null:
+		var ui_node := ui_scene.instantiate()
+		if not ui_node is CanvasLayer:
+			ui_node.free()
+			stop()
+			return _failure("The configured UI scene must have a CanvasLayer root.")
+		ui = ui_node as CanvasLayer
+		var components: Array[Node] = [ui]
+		components.append_array(ui.find_children("*", "", true, false))
+		for component in components:
+			if component.has_method(&"configure_session"):
+				component.call(
+					&"configure_session",
+					entry.runtime,
+					entry.world_bridge,
+					entry.entity_ids,
+					displays
+				)
+		map_parent.add_child(ui)
 
-	for component in ui.find_children("*", "", true, false):
-		if component.has_method(&"configure_session"):
-			component.call(
-				&"configure_session",
-				entry.runtime,
-				entry.world_bridge,
-				entry.entity_ids,
-				displays
-			)
-
-	map_parent.add_child(ui)
-
-	_driver = SessionDriver.new(entry.runtime, entry.world_bridge)
+	_driver = SessionDriver.new(entry.runtime, entry.world_bridge, maps.get_active_map)
 	_driver.name = &"SessionDriver"
 	map_parent.add_child(_driver)
 	_session_input = SessionInput.new()
@@ -269,11 +278,7 @@ func _select_map_scene(
 	environment: Dictionary
 ) -> Dictionary:
 	if not environment.has("map"):
-		var initial_map := setup.get_initial_map()
-		if initial_map == null or not initial_map.can_instantiate():
-			return _failure("Initial map scene cannot be instantiated.")
-
-		return {"ok": true, "value": initial_map, "error": ""}
+		return setup.get_initial_map_result()
 
 	var saved_map: Variant = environment["map"]
 	if saved_map == null:

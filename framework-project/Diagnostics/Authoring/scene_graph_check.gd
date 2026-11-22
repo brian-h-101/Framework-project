@@ -1,9 +1,12 @@
 extends SceneTree
 
-const SceneGraph = preload("res://Framework/Env/Authoring/Scenes/scene_graph.gd")
-const CITY := "res://Framework/Content/Maps/city_recreated.tscn"
-const PLAYER := "res://Framework/Content/Presentation/Entity/Player/player_2d.tscn"
-const CAMERA := "res://Framework/Content/Camera/player_camera_2d.tscn"
+const SceneGraph = preload("res://Framework/Env/Authoring/Scenes/Inspection/scene_graph.gd")
+const CITY := "res://Framework/Content/Gameplay/Maps/city.tscn"
+const PLAYER := "res://Framework/Content/Gameplay/Presentation/Entity/Player/player_2d.tscn"
+const ENEMY := "res://Framework/Content/Gameplay/Presentation/Entity/Enemy/enemy_2d.tscn"
+const MOVEMENT := "res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_2d.tres"
+const KEYBOARD := "res://Framework/Content/Gameplay/Controller/player_keyboard.tres"
+const AI := "res://Framework/Content/Gameplay/Controller/enemy_ai.tres"
 const INHERITED := "res://Diagnostics/Fixtures/SceneGraph/inherited.tscn"
 const BASE := "res://Diagnostics/Fixtures/SceneGraph/base.tscn"
 const COMPOSED := "res://Diagnostics/Fixtures/SceneGraph/composed.tscn"
@@ -12,7 +15,7 @@ var _passed := true
 
 
 func _initialize() -> void:
-	var scene_paths := [CITY, PLAYER, CAMERA, INHERITED, BASE, COMPOSED]
+	var scene_paths := [CITY, PLAYER, ENEMY, INHERITED, BASE, COMPOSED]
 	var hashes: Dictionary = {}
 	for scene_path: String in scene_paths:
 		hashes[scene_path] = FileAccess.get_sha256(scene_path)
@@ -26,16 +29,21 @@ func _initialize() -> void:
 		_check("Entity instance identifies its source", nodes["Player"]["instance_path"] == PLAYER)
 		_check("Nested moving body is expanded", nodes["Player/View2D"]["type"] == "CharacterBody2D")
 		_check("Nested scene expands its own children", nodes["Player/View2D"]["children"].has("Player/View2D/Body"))
-		_check("Camera instance identifies its source", nodes["Player/View2D/FollowCamera"]["instance_path"] == CAMERA)
+		_check("Camera declaration belongs to Player", nodes["Player/View2D/FollowCamera"]["structural_scene"] == PLAYER)
 		_check("Camera native type is preserved", nodes["Player/View2D/FollowCamera"]["type"] == "Camera2D")
 		_check("Local instance declaration belongs to the map", nodes["Player"]["source_path"] == CITY and nodes["Player"]["source_node_path"] == "Player")
 		_check("Nested declaration belongs to the presentation", nodes["Player/View2D/Body"]["source_path"] == PLAYER and nodes["Player/View2D/Body"]["source_node_path"] == "View2D/Body")
-		_check("Attached script is available for navigation", nodes["Player/View2D"]["script_path"] == "res://Framework/Content/God/Movement/movement_2d.gd")
-		_check("Dependencies include the nested camera", graph["dependencies"].has(CAMERA))
+		_check("Attached script is available for navigation", nodes["Player/View2D"]["script_path"] == "res://Framework/Content/Universal/Movement/based/Physics2D/movement_body_2d.gd")
+		_check("Dependencies include both presentations", graph["dependencies"].has(PLAYER) and graph["dependencies"].has(ENEMY))
 		_check(
-			"Nested movement configuration is visible",
-			nodes["Player/View2D"]["movement_configuration_path"]
-			== "res://Framework/Content/Configuration/Movement/player_movement.tres"
+			"Nested entities expose the shared movement profile",
+			nodes["Player/View2D"]["movement_configuration_path"] == MOVEMENT
+			and nodes["Enemy/View2D"]["movement_configuration_path"] == MOVEMENT
+		)
+		_check(
+			"Nested entities expose their own controllers",
+			nodes["Player/View2D"]["movement_controller_path"] == KEYBOARD
+			and nodes["Enemy/View2D"]["movement_controller_path"] == AI
 		)
 		_check(
 			"Nested body is edited through its source scene",
@@ -54,8 +62,7 @@ func _initialize() -> void:
 		)
 		_check(
 			"Local movement configuration is preserved",
-			player_nodes["View2D"]["movement_configuration_path"]
-			== "res://Framework/Content/Configuration/Movement/player_movement.tres"
+			player_nodes["View2D"]["movement_configuration_path"] == MOVEMENT
 		)
 		_check(
 			"Other nodes do not accept movement configuration",
@@ -82,7 +89,7 @@ func _initialize() -> void:
 		_check("Explicit sibling insertion is preserved", nodes["Left"]["children"] == ["Left/Kept", "Left/Inserted", "Left/Overridden"])
 	_check("Reading scenes never instantiates gameplay nodes", not Engine.has_meta(&"scene_graph_node_was_instantiated"))
 	_check("Traversal outside the project is rejected", not SceneGraph.read("res://../outside.tscn")["ok"])
-	_check("Resources cannot be used as scenes", not SceneGraph.read("res://Framework/Content/Behavior/Action/change_health.tres")["ok"])
+	_check("Resources cannot be used as scenes", not SceneGraph.read(MOVEMENT)["ok"])
 	_check("Missing scene is rejected", not SceneGraph.read("res://Diagnostics/Fixtures/SceneGraph/missing.tscn")["ok"])
 	for scene_path: String in scene_paths:
 		_check("Source unchanged: %s" % scene_path.get_file(), FileAccess.get_sha256(scene_path) == hashes[scene_path])

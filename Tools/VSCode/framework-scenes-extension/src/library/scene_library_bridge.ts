@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { validateResourcePath } from '../project_context';
 
-export const SCENE_ROOTS = ['res://Framework/Content/Maps', 'res://Framework/Content/Presentation', 'res://Framework/Content/UI/HUD'] as const;
+export const SCENE_ROOTS = ['res://Framework/Content/Gameplay/Maps', 'res://Framework/Content/Gameplay/Presentation', 'res://Framework/Content/Gameplay/UI/HUD'] as const;
 export interface LibraryEntry {
 	source_path: string;
 	parent_path: string;
@@ -11,7 +11,18 @@ export interface LibraryEntry {
 	supported: boolean;
 }
 export interface LibraryCatalogue { version: 1; root_paths: string[]; entries: LibraryEntry[] }
-export interface SceneDraft { source_path: string; source_text: string; content_hash: string; uid: string; node_name: string; root_type: string; dependency_hashes: Record<string, string> }
+export interface FileDraft {
+	source_path: string;
+	source_text: string;
+	content_hash: string;
+	uid: string;
+	dependency_hashes: Record<string, string>;
+}
+export interface SceneDraft extends FileDraft {
+	node_name: string;
+	root_type: string;
+	starting_attributes?: FileDraft;
+}
 export interface DeletionPreview {
 	source_path: string;
 	content_hash: string;
@@ -20,7 +31,8 @@ export interface DeletionPreview {
 	directories: Record<string, string>;
 }
 
-export function libraryRequest(project: string, executable: string, operation: 'catalogue' | 'draft' | 'deletion-preview',
+export function libraryRequest(project: string, executable: string,
+	operation: 'catalogue' | 'attribute-fragments' | 'draft' | 'verify-entity' | 'deletion-preview',
 	source: string | undefined, request: Record<string, unknown>, report: (message: string) => void,
 	signal?: AbortSignal): Promise<unknown> {
 	if (source !== undefined) { validateResourcePath(source, '.tscn'); }
@@ -28,7 +40,7 @@ export function libraryRequest(project: string, executable: string, operation: '
 	if (Buffer.byteLength(input) > 1024 * 1024) { throw new Error('Library requests cannot exceed 1 MiB.'); }
 	return new Promise((resolve, reject) => {
 		const args = ['--headless', '--path', project, '--script',
-			'res://Framework/Env/Authoring/Scenes/scene_library_cli.gd', '--', operation];
+			'res://Framework/Env/Authoring/Scenes/Library/scene_library_cli.gd', '--', operation];
 		if (source !== undefined) { args.push(source); }
 		const child = execFile(executable, args, { cwd: project, encoding: 'utf8', windowsHide: true,
 			timeout: 60_000, maxBuffer: 16 * 1024 * 1024, signal }, (error, stdout, stderr) => {

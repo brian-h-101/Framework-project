@@ -1,7 +1,7 @@
 extends Resource
 
 const StartingAttributes = preload(
-	"res://Framework/Env/Setup/starting_attributes.gd"
+	"res://Framework/Env/Setup/Composition/starting_attributes.gd"
 )
 const ContainerFragmentResource = preload(
 	"res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd"

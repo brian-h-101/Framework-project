@@ -371,7 +371,7 @@ async function main() {
 		'Non-resource file is rejected',
 		group,
 		transferFor(uriFor(
-			'res://Framework/Env/Authoring/Resources/condition_assignment.gd'
+			'res://Framework/Env/Authoring/Resources/Conditions/condition_assignment.gd'
 		)),
 		'Drop a local .tres resource file.'
 	);

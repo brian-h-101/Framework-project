@@ -1,7 +1,7 @@
 extends SceneTree
 
 const UIAnchor2D = preload(
-	"res://Framework/Env/Presentation/ui_anchor_2d.gd"
+	"res://Framework/Content/Universal/UI/based/Spatial2D/ui_anchor_2d.gd"
 )
 
 var _entity: Node

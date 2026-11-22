@@ -21,10 +21,14 @@ export interface ResourceNode {
 	supports_effects?: boolean;
 	behavior_error?: string;
 	argument_specs?: ArgumentSpec[];
+	fragment_paths?: string[];
+	configuration_type?: 'input' | 'movement';
+	physical_keys?: { label: string; code: string }[];
 }
 
 export interface ResourceGraph {
 	version: 2;
+	mode?: 'browse' | 'edit';
 	supported?: boolean;
 	source_path?: string;
 	roots: string[];
@@ -37,6 +41,7 @@ export interface ResourceGraph {
 
 export function validateGraph(value: unknown): asserts value is ResourceGraph {
 	if (!isRecord(value) || value.version !== 2
+		|| (value.mode !== undefined && value.mode !== 'browse' && value.mode !== 'edit')
 		|| !Array.isArray(value.roots) || !value.roots.every(isPath)
 		|| (value.supported !== undefined && typeof value.supported !== 'boolean')
 		|| (value.source_path !== undefined && !isPath(value.source_path))
@@ -50,7 +55,8 @@ export function validateGraph(value: unknown): asserts value is ResourceGraph {
 			throw new Error('Malformed resource dependency hashes.');
 		}
 	}
-	validateExecutors(value.executors, value.executor_snapshot);
+	validateExecutors(value.executors, value.executor_snapshot, value.mode !== 'browse');
+	if (value.mode === 'browse' && value.catalog_paths.length !== 0) { throw new Error('Browsing graphs cannot authorize catalogue edits.'); }
 	if (value.supported === false && (!isPath(value.source_path)
 		|| value.roots.length !== 0 || Object.keys(value.nodes).length !== 0 || value.catalog_paths.length !== 0
 		|| Object.keys(value.dependency_hashes).length !== 1 || !Object.hasOwn(value.dependency_hashes, value.source_path))) {
@@ -59,7 +65,7 @@ export function validateGraph(value: unknown): asserts value is ResourceGraph {
 	for (const [path, node] of Object.entries(value.nodes)) {
 		if (!isPath(path) || !isRecord(node) || node.source_path !== path
 			|| typeof node.id !== 'string'
-			|| !['action', 'interaction', 'condition', 'condition_group', 'automation'].includes(String(node.kind))
+			|| !['action', 'interaction', 'condition', 'condition_group', 'automation', 'behavior', 'starting_attributes', 'configuration'].includes(String(node.kind))
 			|| node.content_hash !== value.dependency_hashes[path]
 			|| !Array.isArray(node.links)) {
 			throw new Error(`Malformed resource node: ${path}`);
@@ -72,6 +78,29 @@ export function validateGraph(value: unknown): asserts value is ResourceGraph {
 			}
 		}
 		validateValueNode(node.data, 0, { count: 0 });
+		if (node.kind === 'configuration') {
+			if (node.configuration_type !== 'input' && node.configuration_type !== 'movement') {
+				throw new Error('Unknown Configuration resource type.');
+			}
+			if (!path.startsWith('res://Framework/Content/Configuration/')
+				&& !(node.configuration_type === 'movement' && path.startsWith('res://Framework/Content/Gameplay/Profiles/'))) {
+				throw new Error('Choose a resource under Framework/Content/Configuration or a Movement profile under Framework/Content/Gameplay/Profiles.');
+			}
+			if (node.configuration_type === 'input') {
+				const keys = node.physical_keys;
+				if (!Array.isArray(keys) || keys.length > 1000 || keys.some(key =>
+					!isRecord(key) || typeof key.label !== 'string' || !key.label
+					|| typeof key.code !== 'string' || !/^[1-9]\d*$/.test(key.code))
+					|| new Set(keys.map(key => key.code)).size !== keys.length) {
+					throw new Error('Malformed physical key catalogue.');
+				}
+			}
+		}
+		if (node.kind === 'starting_attributes' && (!path.startsWith('res://Framework/Content/Gameplay/Presentation/')
+			|| !Array.isArray(node.fragment_paths) || node.fragment_paths.some(fragment =>
+				!isAuthoredFragment(fragment) || !Object.hasOwn(value.dependency_hashes as object, fragment)))) {
+			throw new Error('Malformed starting attribute fragment references.');
+		}
 		if ((node.behavior_id !== undefined && typeof node.behavior_id !== 'string')
 			|| (node.supports_effects !== undefined && typeof node.supports_effects !== 'boolean')
 			|| (node.behavior_error !== undefined && typeof node.behavior_error !== 'string')) { throw new Error('Malformed action behavior metadata.'); }
@@ -95,7 +124,7 @@ export function validateGraph(value: unknown): asserts value is ResourceGraph {
 }
 
 function validateValueNode(node: unknown, depth: number, state: { count: number }): void {
-	if (++state.count > 10_000 || depth > 64 || !isRecord(node)
+	if (++state.count > 10_000 || depth > 128 || !isRecord(node)
 		|| typeof node.label !== 'string' || typeof node.kind !== 'string'
 		|| typeof node.value_text !== 'string' || !Array.isArray(node.path)
 		|| !node.path.every(part => isRecord(part) && typeof part.text === 'string'
@@ -107,6 +136,10 @@ function validateValueNode(node: unknown, depth: number, state: { count: number 
 		|| !Array.isArray(node.choices) || !node.choices.every(item => typeof item === 'string')) {
 		throw new Error('Malformed behavior data tree.');
 	}
+	if (node.sequence !== undefined && (!isRecord(node.sequence) || typeof node.sequence.step_id !== 'string'
+		|| !['root', 'steps', 'step', 'configuration', 'requirements', 'condition', 'executor', 'argument', 'argument_data'].includes(String(node.sequence.role)))) {
+		throw new Error('Malformed Behavior step ownership metadata.');
+	}
 	for (const child of node.children) { validateValueNode(child, depth + 1, state); }
 }
 
@@ -114,6 +147,10 @@ export function isPath(value: unknown): value is string {
 	return typeof value === 'string' && value.startsWith('res://') && value.endsWith('.tres')
 		&& value.slice(6).split('/').every(part => !!part && part !== '.' && part !== '..'
 			&& !/[\\:\0]/.test(part));
+}
+
+export function isAuthoredFragment(value: unknown): value is string {
+	return isPath(value) && value.startsWith('res://Framework/Content/Gameplay/Authored/');
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -124,17 +161,21 @@ export function loadResourceGraph(
 	projectDirectory: string,
 	godotExecutable: string,
 	report: (message: string) => void,
-	resourcePath?: string
+	resourcePath?: string,
+	options: { mode?: 'browse' | 'edit'; signal?: AbortSignal } = {}
 ): Promise<ResourceGraph> {
 	return new Promise((resolve, reject) => {
 		const args = ['--headless', '--path', projectDirectory, '--script',
-			'res://Framework/Env/Authoring/Resources/resource_graph_export.gd'];
-		if (resourcePath !== undefined) { args.push('--', resourcePath); }
+			'res://Framework/Env/Authoring/Resources/Inspection/resource_graph_export.gd'];
+		if (options.signal?.aborted) { reject(inspectionCancelled()); return; }
+		if (options.mode === 'browse' && resourcePath === undefined) { reject(new Error('Browsing requires a selected resource.')); return; }
+		if (resourcePath !== undefined) { args.push('--', ...(options.mode === 'browse' ? ['browse'] : []), resourcePath); }
 		execFile(godotExecutable, args, {
 			cwd: projectDirectory, encoding: 'utf8', windowsHide: true,
-			timeout: 30_000, maxBuffer: 16 * 1024 * 1024
+			timeout: 30_000, maxBuffer: 16 * 1024 * 1024, signal: options.signal
 		}, (error, stdout, stderr) => {
 			try {
+				if (options.signal?.aborted) { throw inspectionCancelled(); }
 				if (stderr.trim()) { report(stderr.trim()); }
 				const prefix = '[resource-graph] ';
 				const lines = stdout.split(/\r?\n/).filter(line => line.startsWith(prefix));
@@ -150,6 +191,7 @@ export function loadResourceGraph(
 					throw new Error('Godot reported an error during resource inspection.');
 				}
 				validateGraph(packet.value);
+				if ((packet.value.mode === 'browse') !== (options.mode === 'browse')) { throw new Error('Resource inspection mode does not match the request.'); }
 				if (resourcePath !== undefined && (packet.value.supported === false
 					? packet.value.source_path !== resourcePath
 					: packet.value.roots.length !== 1 || packet.value.roots[0] !== resourcePath)) {
@@ -159,4 +201,8 @@ export function loadResourceGraph(
 			} catch (failure) { reject(failure); }
 		});
 	});
+}
+
+export function inspectionCancelled(): Error {
+	const error = new Error('Resource inspection cancelled.'); error.name = 'AbortError'; return error;
 }

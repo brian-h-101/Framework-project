@@ -1,16 +1,16 @@
 extends SceneTree
 
 const ConditionAssignment = preload(
-	"res://Framework/Env/Authoring/Resources/condition_assignment.gd"
+	"res://Framework/Env/Authoring/Resources/Conditions/condition_assignment.gd"
 )
 const InteractionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Interactions/interaction_resource.gd"
 )
 const ConditionGroupResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/condition_group_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_group_resource.gd"
 )
 const ActionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Actions/action_resource.gd"
 )
 
 const ACTION_PATH := "res://Framework/Content/Behavior/Action/change_health.tres"

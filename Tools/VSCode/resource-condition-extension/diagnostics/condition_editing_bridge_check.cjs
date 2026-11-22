@@ -65,7 +65,7 @@ async function main() {
 
 	const conditionText = `[gd_resource type="Resource" format=3]
 
-[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/condition_resource.gd" id="1_condition"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_resource.gd" id="1_condition"]
 
 [resource]
 script = ExtResource("1_condition")
@@ -87,7 +87,7 @@ requirement = {
 	const readerText = `extends SceneTree
 
 const ConditionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/condition_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_resource.gd"
 )
 
 

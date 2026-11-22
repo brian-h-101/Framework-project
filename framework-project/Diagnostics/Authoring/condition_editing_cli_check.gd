@@ -1,10 +1,10 @@
 extends SceneTree
 
 const ConditionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/condition_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_resource.gd"
 )
 
-const CLI_PATH := "res://Framework/Env/Authoring/Resources/condition_editing_cli.gd"
+const CLI_PATH := "res://Framework/Env/Authoring/Resources/Conditions/condition_editing_cli.gd"
 const RESULT_PREFIX := "[condition-editing-result] "
 const TEST_ROOT := "res://.godot/diagnostics/condition_editing_cli_"
 

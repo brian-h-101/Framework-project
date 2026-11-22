@@ -1,10 +1,59 @@
 import { lstat, mkdir, open, readdir, readFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { libraryRequest, validateCatalogue, type LibraryCatalogue, type LibraryEntry,
-	type SceneDraft, type DeletionPreview, SCENE_ROOTS } from './scene_library_bridge';
+	type FileDraft, type SceneDraft, type DeletionPreview, SCENE_ROOTS } from './scene_library_bridge';
 import { loadSceneGraph } from '../scene_bridge';
 import type { ProjectContext } from '../project_context';
-import { checkedLibraryPath, checkedProjectPath, directoryFingerprint, nameError, sha256 } from './library_paths';
+import { checkedLibraryPath, checkedProjectPath, directoryFingerprint, missing, nameError, sha256 } from './library_paths';
+
+const PRESET_NAME = 'starting_attributes.tres';
+
+interface PublishedFile {
+	path: string;
+	ino: number;
+	dev: number;
+	contentHash?: string;
+}
+
+function validDraft(draft: FileDraft | undefined, source: string): draft is FileDraft {
+	return !!draft && draft.source_path === source && typeof draft.source_text === 'string'
+		&& Buffer.byteLength(draft.source_text) <= 1024 * 1024
+		&& sha256(Buffer.from(draft.source_text)) === draft.content_hash
+		&& !!draft.dependency_hashes && typeof draft.dependency_hashes === 'object' && !Array.isArray(draft.dependency_hashes)
+		&& /^uid:\/\/[a-z0-9]+$/.test(draft.uid) && draft.source_text.split(/\r?\n/)[0].includes(`uid="${draft.uid}"`);
+}
+
+async function publish(path: string, draft: FileDraft, published: PublishedFile[]): Promise<void> {
+	const handle = await open(path, 'wx');
+	try {
+		const { ino, dev } = await handle.stat();
+		const owned: PublishedFile = { path, ino, dev };
+		published.push(owned);
+		await handle.writeFile(draft.source_text, 'utf8');
+		owned.contentHash = draft.content_hash;
+		await handle.sync();
+	} finally {
+		await handle.close();
+	}
+}
+
+async function rollback(published: PublishedFile[]): Promise<string[]> {
+	const retained: string[] = [];
+	for (const file of published.reverse()) {
+		try {
+			const current = await lstat(file.path);
+			if (!current.isFile() || current.isSymbolicLink() || current.ino !== file.ino || current.dev !== file.dev
+				|| (file.contentHash !== undefined && sha256(await readFile(file.path)) !== file.contentHash)) {
+				retained.push(file.path);
+				continue;
+			}
+			await unlink(file.path);
+		} catch (error) {
+			if (!missing(error)) { retained.push(file.path); }
+		}
+	}
+	return retained;
+}
 
 export class LibraryService {
 	constructor(readonly context: ProjectContext, readonly executable: string,
@@ -43,47 +92,53 @@ export class LibraryService {
 		const source = entry.source_path + '/' + name;
 		const draft = await libraryRequest(this.context.projectDirectory, this.executable, 'draft', source,
 			{ ...request, expected_parent: entry.fingerprint }, this.report) as SceneDraft;
-		if (!draft || draft.source_path !== source || typeof draft.source_text !== 'string'
-			|| Buffer.byteLength(draft.source_text) > 1024 * 1024 || sha256(Buffer.from(draft.source_text)) !== draft.content_hash
-			|| typeof draft.node_name !== 'string' || draft.node_name !== request.node_name || typeof draft.root_type !== 'string'
-			|| !draft.dependency_hashes || typeof draft.dependency_hashes !== 'object' || Array.isArray(draft.dependency_hashes)
-			|| !/^uid:\/\/[a-z0-9]+$/.test(draft.uid) || !draft.source_text.split(/\r?\n/)[0].includes(`uid="${draft.uid}"`)) {
+		if (!validDraft(draft, source) || typeof draft.node_name !== 'string'
+			|| draft.node_name !== request.node_name || typeof draft.root_type !== 'string') {
 			throw new Error('Godot returned an invalid scene draft.');
+		}
+		const isEntity = request.template === 'entity_presentation';
+		const preset = draft.starting_attributes;
+		if (isEntity ? !validDraft(preset, entry.source_path + '/' + PRESET_NAME) : preset !== undefined) {
+			throw new Error('Godot returned an invalid starting attributes draft.');
 		}
 		await this.ready();
 		await this.verifyCatalogue(catalogue);
-		for (const [dependency, expected] of Object.entries(draft.dependency_hashes ?? {})) {
-			const file = await checkedProjectPath(this.context, dependency);
-			if (!/^[a-f0-9]{64}$/.test(expected) || sha256(await readFile(file)) !== expected) {
-				throw new Error('A scene template dependency changed. Retry creation.');
-			}
-		}
+		await this.verifyDependencies(draft);
+		if (preset) { await this.verifyDependencies(preset); }
 		const parent = await this.parent(entry, name);
-		const path = join(parent, name);
-		const handle = await open(path, 'wx');
-		const owned = await handle.stat();
+		const published: PublishedFile[] = [];
 		try {
-			await handle.writeFile(draft.source_text, 'utf8');
-			await handle.sync();
-		} catch (error) {
-			await handle.close();
-			const current = await lstat(path);
-			if (current.ino === owned.ino && current.dev === owned.dev && !current.isSymbolicLink()) { await unlink(path); }
-			throw error;
-		}
-		await handle.close();
-		try {
+			if (preset) { await publish(join(parent, PRESET_NAME), preset, published); }
+			await publish(join(parent, name), draft, published);
 			const graph = await loadSceneGraph(this.context.projectDirectory, this.executable, source, this.report);
 			if (graph.dependency_hashes[source] !== draft.content_hash || graph.nodes['.'].name !== draft.node_name
 				|| graph.nodes['.'].type !== draft.root_type) { throw new Error('The newly published scene failed verification.'); }
+			if (preset) {
+				const checked = await libraryRequest(this.context.projectDirectory, this.executable, 'verify-entity', source,
+					{ definition_id: request.definition_id }, this.report);
+				if (checked !== true || sha256(await readFile(join(parent, PRESET_NAME))) !== preset.content_hash) {
+					throw new Error('The new starting attributes failed verification.');
+				}
+				await this.verifyDependencies(preset);
+			}
 			await this.ready();
 		} catch (error) {
-			const current = await lstat(path);
-			if (!current.isSymbolicLink() && current.ino === owned.ino && current.dev === owned.dev
-				&& sha256(await readFile(path)) === draft.content_hash) { await unlink(path); }
+			const retained = await rollback(published);
+			if (retained.length) {
+				throw new Error(`${String(error)} Files needing review: ${retained.join(', ')}`);
+			}
 			throw error;
 		}
 		return source;
+	}
+
+	private async verifyDependencies(draft: FileDraft): Promise<void> {
+		for (const [dependency, expected] of Object.entries(draft.dependency_hashes)) {
+			const file = await checkedProjectPath(this.context, dependency);
+			if (!/^[a-f0-9]{64}$/.test(expected) || sha256(await readFile(file)) !== expected) {
+				throw new Error('A template dependency changed. Retry creation.');
+			}
+		}
 	}
 
 	private async verifyCatalogue(catalogue: LibraryCatalogue): Promise<void> {

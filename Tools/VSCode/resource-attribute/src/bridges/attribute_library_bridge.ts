@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { validateResourcePath } from '../workspace/project_context';
 
-export const AUTHORED_ROOT = 'res://Framework/Content/Authored';
+export const AUTHORED_ROOT = 'res://Framework/Content/Gameplay/Authored';
 export interface LibraryEntry {
 	source_path: string;
 	parent_path: string;

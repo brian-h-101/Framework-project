@@ -1,7 +1,7 @@
-extends "res://Framework/Env/Setup/game_setup.gd"
+extends "res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 
 const ContentDiscovery = preload(
-	"res://Framework/Env/Setup/content_discovery.gd"
+	"res://Framework/Env/Setup/Discovery/content_discovery.gd"
 )
 
 var captured_runtime: GameRuntime

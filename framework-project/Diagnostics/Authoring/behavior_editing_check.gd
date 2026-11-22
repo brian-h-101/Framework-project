@@ -1,11 +1,11 @@
 extends SceneTree
 
-const Schema = preload("res://Framework/Env/Authoring/Resources/behavior_schema.gd")
-const Inspection = preload("res://Framework/Env/Authoring/Resources/behavior_inspection.gd")
-const Editing = preload("res://Framework/Env/Authoring/Resources/behavior_editing.gd")
+const Schema = preload("res://Framework/Env/Authoring/Resources/Behavior/behavior_schema.gd")
+const Inspection = preload("res://Framework/Env/Authoring/Resources/Inspection/behavior_inspection.gd")
+const Editing = preload("res://Framework/Env/Authoring/Resources/Behavior/behavior_editing.gd")
 const Files = preload("res://Framework/Env/Authoring/Shared/resource_files.gd")
 const Values = preload("res://Framework/Env/Authoring/Shared/resource_values.gd")
-const Library = preload("res://Framework/Env/Authoring/Resources/behavior_library.gd")
+const Library = preload("res://Framework/Env/Authoring/Resources/Library/behavior_library.gd")
 const RuntimeCore = preload("res://Framework/Infrastructure/Implementation/Runtime/runtime_core.gd")
 const AttributeEffects = preload("res://Framework/Infrastructure/Implementation/Gameplay/Executors/attribute_effects_executor.gd")
 

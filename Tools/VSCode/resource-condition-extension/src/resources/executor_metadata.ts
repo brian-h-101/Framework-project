@@ -42,7 +42,7 @@ export function validateSpecs(value: unknown): asserts value is ArgumentSpec[] {
 		|| new Set(value.map(spec => spec.name)).size !== value.length) { throw new Error('Malformed executor argument metadata.'); }
 }
 
-export function validateExecutors(executors: unknown, snapshot: unknown): void {
+export function validateExecutors(executors: unknown, snapshot: unknown, requireSnapshot = true): void {
 	if (executors === undefined && snapshot === undefined) { return; }
 	if (!Array.isArray(executors) || executors.some(entry => !record(entry) || typeof entry.id !== 'string' || !entry.id.trim()
 		|| typeof entry.label !== 'string' || typeof entry.description !== 'string' || typeof entry.supports_effects !== 'boolean')
@@ -55,6 +55,10 @@ export function validateExecutors(executors: unknown, snapshot: unknown): void {
 			&& !isExecutorScriptPath(entry.script_path)) {
 			throw new Error('Malformed executor script path.');
 		}
+	}
+	if (!requireSnapshot) {
+		if (snapshot !== undefined) { throw new Error("Browsing metadata cannot carry a write snapshot."); }
+		return;
 	}
 	if (!record(snapshot) || !record(snapshot.hashes) || !record(snapshot.directories)) { throw new Error('Missing executor source snapshot.'); }
 	for (const [path, hash] of [...Object.entries(snapshot.hashes), ...Object.entries(snapshot.directories)]) {

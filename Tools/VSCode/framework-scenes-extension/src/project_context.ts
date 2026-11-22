@@ -34,7 +34,7 @@ export async function resolveProjectContext(
 	let directory = dirname(candidate);
 	while (roots.some(root => isInside(root, directory))) {
 		if (await isFile(join(directory, 'project.godot'))) {
-			if (!await isFile(join(directory, 'Framework/Env/Authoring/Scenes/scene_graph_export.gd'))) {
+			if (!await isFile(join(directory, 'Framework/Env/Authoring/Scenes/Inspection/scene_graph_export.gd'))) {
 				throw new Error(`The nearest Godot project has no Framework Scenes exporter: ${directory}`);
 			}
 			return {

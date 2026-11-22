@@ -7,25 +7,38 @@ const Core = preload(
 	"res://Framework/Infrastructure/Implementation/Runtime/runtime_core.gd"
 )
 const Discovery = preload(
-	"res://Framework/Env/Setup/executor_discovery.gd"
+	"res://Framework/Env/Setup/Discovery/executor_discovery.gd"
 )
 const Executor = preload(
-	"res://Framework/Content/Executor/movement_2d_executor.gd"
+	"res://Framework/Content/Gameplay/Profiles/Movement/Executor/movement_2d_executor.gd"
 )
-const Action = preload(
-	"res://Framework/Content/Behavior/Action/move.tres"
-)
-
+const Intent = preload("res://Framework/Content/Universal/Movement/based/Contracts/movement_intent.gd")
+const VelocityCalculator = preload("res://Framework/Content/Universal/Movement/based/Execution/velocity_calculator.gd")
 var _passed := true
 
 
 func _initialize() -> void:
+	_check_calculator()
 	var runtime := Runtime.new(Core.new())
 	_run_check(runtime)
 	runtime.close()
 
 	print("[movement-executor] Checks passed: ", _passed)
 	quit(0 if _passed else 1)
+
+
+func _check_calculator() -> void:
+	var normalized := VelocityCalculator.calculate(Intent.axes(1, 1, 1), 12)
+	_expect("Universal calculator normalizes a three-axis intent without a runtime",
+		normalized["ok"] and is_equal_approx(normalized["value"][&"vertical"], 12.0 / sqrt(3.0)))
+	var partial := VelocityCalculator.calculate(Intent.axes(0, -0.5), 20)
+	_expect("Universal calculator preserves partial input",
+		partial["ok"] and partial["value"] == Intent.axes(0, -10))
+	_expect("Universal calculator rejects invalid intent axes and speed", (
+		not VelocityCalculator.calculate(Intent.axes(0, INF), 20)["ok"]
+		and not VelocityCalculator.calculate(Intent.axes(1.01, 0), 20)["ok"]
+		and not VelocityCalculator.calculate(Intent.axes(0, 1), -1)["ok"]
+	))
 
 
 func _run_check(runtime: Runtime) -> void:
@@ -37,8 +50,30 @@ func _run_check(runtime: Runtime) -> void:
 	):
 		return
 
-	var defined := runtime.define_action(Action.to_definition())
-	if not _expect("Move Action registered", defined["ok"]):
+	var defined := runtime.define_behavior({
+		"id": &"move_probe",
+		"configuration": {
+			"trigger": "manual",
+			"targeting": "self",
+			"interval_seconds": 1.0,
+			"cooldown_seconds": 0.0,
+		},
+		"steps": [{
+			"id": &"calculate_velocity",
+			"label": "Calculate Velocity",
+			"kind": "action",
+			"requirements": [],
+			"executor_id": Executor.BEHAVIOR_ID,
+			"arguments": {
+				&"direction_x": 0.0,
+				&"direction_y": 0.0,
+				&"speed_container": &"speed",
+				&"speed_path": ["current"],
+			},
+			"effects": [],
+		}],
+	})
+	if not _expect("Movement Behavior registered", defined["ok"]):
 		return
 
 	var containers: Dictionary[StringName, Dictionary] = {
@@ -46,6 +81,9 @@ func _run_check(runtime: Runtime) -> void:
 	}
 	runtime.define_attributes(&"movement_probe", containers)
 	var entity_id: int = runtime.spawn(&"movement_probe")
+	var bound := runtime.bind_behavior(entity_id, &"move_probe")
+	if not _expect("Movement Behavior bound", bound["ok"]):
+		return
 
 	var writes: Array = []
 	runtime.attribute_written.connect(
@@ -60,11 +98,11 @@ func _run_check(runtime: Runtime) -> void:
 	var before := runtime.snapshot_entity(entity_id)
 
 	var cases: Array[Dictionary] = [
+		{"label": "Idle", "input": [0.0, 0.0], "expected": [0.0, 0.0]},
 		{"label": "Right", "input": [1.0, 0.0], "expected": [20.0, 0.0]},
 		{"label": "Up", "input": [0.0, -1.0], "expected": [0.0, -20.0]},
 		{"label": "Partial input", "input": [0.5, 0.0], "expected": [10.0, 0.0]},
 		{"label": "Diagonal", "input": [1.0, 1.0], "expected": [sqrt(200.0), sqrt(200.0)]},
-		{"label": "Idle", "input": [0.0, 0.0], "expected": [0.0, 0.0]},
 	]
 
 	for test_case: Dictionary in cases:
@@ -80,6 +118,22 @@ func _run_check(runtime: Runtime) -> void:
 				test_case["expected"][1]
 			)
 		)
+
+	var idle := runtime.invoke_behavior(&"move_probe", entity_id, _self_target)
+	_expect(
+		"Invocation preserves the authored direction defaults",
+		idle["ok"] and _velocity_is(idle["value"]["steps"][0]["result"], 0.0, 0.0)
+	)
+
+	var unknown_step := runtime.invoke_behavior(
+		&"move_probe", entity_id, _self_target, &"missing", {&"direction_x": 1.0}
+	)
+	_expect("Unknown step is rejected", not unknown_step["ok"])
+
+	var unknown_argument := runtime.invoke_behavior(
+		&"move_probe", entity_id, _self_target, &"calculate_velocity", {&"missing": 1.0}
+	)
+	_expect("Unknown argument is rejected", not unknown_argument["ok"])
 
 	var after := runtime.snapshot_entity(entity_id)
 	_expect(
@@ -137,17 +191,17 @@ func _move(
 	x: Variant,
 	y: Variant
 ) -> Dictionary:
-	return runtime.execute_action(
-		Action.id,
-		entity_id,
-		entity_id,
-		{
-			&"direction_x": x,
-			&"direction_y": y,
-			&"speed_container": &"speed",
-			&"speed_path": ["current"],
-		}
+	var result := runtime.invoke_behavior(
+		&"move_probe", entity_id, _self_target, &"calculate_velocity",
+		{&"direction_x": x, &"direction_y": y}
 	)
+	if not result["ok"]:
+		return result
+	return result["value"]["steps"][0]["result"]
+
+
+func _self_target(entity_id: int, _mode: StringName) -> Dictionary:
+	return {"ok": true, "value": entity_id, "error": ""}
 
 
 func _velocity_is(result: Dictionary, x: float, y: float) -> bool:

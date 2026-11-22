@@ -5,34 +5,34 @@ const PresetData = preload(
 )
 
 const PlayerAttributes = preload(
-	"res://Framework/Content/Presentation/Entity/Player/starting_attributes.tres"
+	"res://Framework/Content/Gameplay/Presentation/Entity/Player/starting_attributes.tres"
 )
 const PlayerBaseline = preload(
 	"res://Diagnostics/Fixtures/Baselines/player_attributes_baseline.gd"
 )
 const EnemyAttributes = preload(
-	"res://Framework/Content/Presentation/Entity/Enemy/starting_attributes.tres"
+	"res://Framework/Content/Gameplay/Presentation/Entity/Enemy/starting_attributes.tres"
 )
 const EnemyBaseline = preload(
 	"res://Diagnostics/Fixtures/Baselines/enemy_attributes_baseline.gd"
 )
 const ContentDiscovery = preload(
-	"res://Framework/Env/Setup/content_discovery.gd"
+	"res://Framework/Env/Setup/Discovery/content_discovery.gd"
 )
 const Precognition = preload(
-	"res://Framework/Content/Authored/Entity/Attributes/Abilities/precognition.tres"
+	"res://Framework/Content/Gameplay/Authored/Entity/Attributes/Abilities/precognition.tres"
 )
 const Reflex = preload(
-	"res://Framework/Content/Authored/Entity/Attributes/Abilities/reflex.tres"
+	"res://Framework/Content/Gameplay/Authored/Entity/Attributes/Abilities/reflex.tres"
 )
 const Health = preload(
-	"res://Framework/Content/Authored/Entity/Attributes/Statistics/health.tres"
+	"res://Framework/Content/Gameplay/Authored/Entity/Attributes/Statistics/health.tres"
 )
 const Speed = preload(
-	"res://Framework/Content/Authored/Entity/Attributes/Statistics/speed.tres"
+	"res://Framework/Content/Gameplay/Authored/Entity/Attributes/Statistics/speed.tres"
 )
 const TownGuardAttributes = preload(
-	"res://Framework/Content/Presentation/Entity/TownGuard/starting_attributes.tres"
+	"res://Framework/Content/Gameplay/Presentation/Entity/TownGuard/starting_attributes.tres"
 )
 
 

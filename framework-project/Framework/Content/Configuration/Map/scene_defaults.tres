@@ -2,7 +2,7 @@
 
 [ext_resource type="Resource" path="res://Framework/Content/Configuration/Map/city_ground.tres" id="1_asf4a"]
 [ext_resource type="Resource" path="res://Framework/Content/Configuration/Lighting/city_lighting.tres" id="2_fy8fi"]
-[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/map_defaults_resource.gd" id="3_vg5s4"]
+[ext_resource type="Script" path="res://Framework/Content/Universal/Map/based/Configuration/map_defaults_resource.gd" id="3_vg5s4"]
 
 [resource]
 script = ExtResource("3_vg5s4")

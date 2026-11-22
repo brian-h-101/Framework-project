@@ -9,7 +9,7 @@ const project = path.resolve(process.argv[2] ?? '');
 const executable = process.argv[3];
 assert.ok(executable && fs.existsSync(path.join(project, 'project.godot')),
 	'Expected <Godot project directory> <Godot executable>.');
-const production = 'res://Framework/Content/Authored/Entity/Attributes/Needs/needs.tres';
+const production = 'res://Framework/Content/Gameplay/Authored/Entity/Attributes/Needs/needs.tres';
 const sourcePath = resource => path.join(project, resource.slice(6));
 const original = fs.readFileSync(sourcePath(production));
 const parent = path.join(project, '.godot', 'diagnostics');

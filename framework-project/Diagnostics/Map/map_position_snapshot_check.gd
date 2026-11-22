@@ -4,7 +4,7 @@ const GameHost = preload(
 	"res://Framework/Env/Host/game_host.gd"
 )
 const SpatialRoot2D = preload(
-	"res://Framework/Env/Map/spatial_root_2d.gd"
+	"res://Framework/Content/Universal/Map/based/Spatial2D/spatial_root_2d.gd"
 )
 const SessionCodec = preload(
 	"res://Framework/Infrastructure/API/Persistence/session_codec.gd"

@@ -35,7 +35,7 @@ let writes = [];
 let afterPrompt = () => {};
 let dirty = false;
 const bytes = Buffer.from('attribute fixture');
-const source = 'res://Framework/Content/Authored/Entity/test.tres';
+const source = 'res://Framework/Content/Gameplay/Authored/Entity/test.tres';
 const project = path.resolve(__dirname, '../../../../framework-project');
 const context = { projectDirectory: project, workspaceDirectory: path.dirname(project) };
 const resourceUri = uri(path.join(project, source.slice(6)));
@@ -215,7 +215,7 @@ async function test(label, action) { await action(); console.log(`[attribute-ext
 		const selection = new Selection(provider, output, text => statuses.push(text));
 		selection.follow({ document: { uri: resourceUri } });
 		await new Promise(resolve => setImmediate(resolve));
-		const secondUri = uri(path.join(project, 'Framework/Content/Authored/Entity/other.tres'));
+		const secondUri = uri(path.join(project, 'Framework/Content/Gameplay/Authored/Entity/other.tres'));
 		workspaceMock.attributePathInProject = async (_context, file) => file.endsWith('other.tres') ? source.replace('test.tres', 'other.tres') : source;
 		selection.follow({ document: { uri: secondUri } });
 		await new Promise(resolve => setImmediate(resolve));

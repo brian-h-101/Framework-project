@@ -14,18 +14,21 @@ Runs independently alongside the Framework Resources extension.
 The nearest `project.godot` must have these helpers:
 
 ```text
-Framework/Env/Authoring/Scenes/scene_graph.gd
-Framework/Env/Authoring/Scenes/scene_graph_export.gd
-Framework/Env/Authoring/Scenes/scene_document.gd
-Framework/Env/Authoring/Scenes/scene_references.gd
-Framework/Env/Authoring/Scenes/scene_editing.gd
-Framework/Env/Authoring/Scenes/scene_editing_cli.gd
-Framework/Env/Authoring/Scenes/scene_script.gd
-Framework/Env/Authoring/Scenes/movement_configuration_catalog.gd
-Framework/Env/Authoring/Scenes/movement_configuration_catalog_export.gd
-Framework/Env/Authoring/Scenes/scene_library.gd
-Framework/Env/Authoring/Scenes/scene_library_cli.gd
-Framework/Env/Authoring/Scenes/scene_templates.gd
+Framework/Env/Authoring/Scenes/Inspection/scene_graph.gd
+Framework/Env/Authoring/Scenes/Inspection/scene_graph_export.gd
+Framework/Env/Authoring/Scenes/Inspection/scene_property_preview.gd
+Framework/Env/Authoring/Scenes/Editing/scene_document.gd
+Framework/Env/Authoring/Scenes/Editing/scene_references.gd
+Framework/Env/Authoring/Scenes/Editing/scene_editing.gd
+Framework/Env/Authoring/Scenes/Editing/scene_editing_cli.gd
+Framework/Env/Authoring/Scenes/Editing/scene_script.gd
+Framework/Env/Authoring/Scenes/Configuration/movement_configuration_catalog.gd
+Framework/Env/Authoring/Scenes/Configuration/movement_configuration_catalog_export.gd
+Framework/Env/Authoring/Scenes/Configuration/movement_capability.gd
+Framework/Env/Authoring/Scenes/Configuration/movement_controller_catalog.gd
+Framework/Env/Authoring/Scenes/Library/scene_library.gd
+Framework/Env/Authoring/Scenes/Library/scene_library_cli.gd
+Framework/Env/Authoring/Scenes/Creation/scene_templates.gd
 ```
 
 The extension supports trusted local workspaces, parent folders, multiple workspace folders,
@@ -35,6 +38,8 @@ and multiple Godot projects. It resolves the project from the opened file.
 
 - Expand and collapse nodes to inspect the hierarchy.
 - Descriptions show native Godot types and instance filenames.
+- Expand a node's **Properties** group to see its saved native properties, resource references, and metadata.
+- Property tooltips show the native type and the scene that supplied the displayed value. Local overrides take precedence, and large values show compact previews.
 - Click a node to open its declaring scene at the saved declaration when available.
 - Right-click a node and open **Framework Scenes** for navigation commands.
 - **Open Instanced Scene**, **Open Base Scene**, and **Open Attached Script** appear when applicable.
@@ -60,7 +65,8 @@ Automations use the same Interaction permission and requirements as manual input
 Right-click a node and open **Framework Scenes**:
 
 - **Add Child Node...** searches instantiable built-in Godot Node types, including plain, 2D, 3D and UI nodes.
-- **Add Scene Instance...** searches existing `.tscn` files from the selected project.
+- **Add Scene Instance...** browses the selected project's folders. Choose **Parent Folder** to go up or **Search All Scenes...** at the project root to search by filename or path.
+- **Set Node Property...** adds or replaces a supported native value or metadata entry on a locally declared node.
 - **Rename Node...** changes a local node or local scene placement name and repairs supported local references.
 - **Remove Node...** removes a local subtree and its associated signal connections after confirmation.
 
@@ -75,6 +81,13 @@ The writer edits selected document spans, retaining other declarations, comments
 references, scene UIDs, existing node IDs, transforms, groups and metadata. New nodes receive
 fresh node IDs. Renaming a gameplay node preserves `metadata/entity_key`; adding a generic
 scene instance does not generate gameplay entity keys or other framework metadata.
+
+The property picker shows native and framework metadata keys suitable for the
+node type. It prefills saved values. For a `Polygon2D`, enter `color` as
+comma-separated red, green, blue and alpha, and enter `polygon` as successive
+X, Y coordinates. It also accepts typed custom metadata. Use **Open Structure
+Source** to edit a child owned by another scene. Script and resource references
+continue to use their dedicated commands.
 
 Supported reference repairs include descendant parent/owner paths, editable-instance paths,
 signal connection endpoints and relative NodePath values within node properties, including
@@ -93,6 +106,30 @@ operations; use Git or text editing for reverting a completed structural change.
 
 Version 0.0.3 uses scene graph protocol version 2 and requires the matching project helpers.
 
+## Configure Movement
+
+Right-click an entity root and choose **Framework Scenes → Configure Capabilities... →
+Movement**. Choose an environment when the marked body has multiple compatible
+profiles, then choose a shared Behavior
+and profile when there are multiple compatible choices. Select a controller
+for the entity. For the example game,
+Player uses `player_keyboard.tres` and Enemy uses `enemy_ai.tres`. Both use
+`Profiles/Movement/Shared/movement_2d.tres` and the `move` Behavior.
+The example Grid and 3D Physics profiles use the same Behavior. A grid is
+defined in map coordinates, with cell centers at multiples of the cell size.
+
+The review names the scene that will be saved. Selecting a Player instance in a map
+configures its shared Player presentation. The profile's environment specification
+selects a compatible adapter for a local `CharacterBody2D` or `CharacterBody3D`
+marked with `metadata/entity_spatial_root = true`. An enabled
+binding for the same Behavior is reused even if its node has a different name. Framework
+Resources edits reusable Behavior, Movement, and input definitions. The keyboard controller
+uses action names from the project's Controls resource. Add additional controller resources
+under `Framework/Content/Gameplay/Controller` for the picker to discover.
+
+Use `npm.cmd run test:movement:capability` from the extension directory to run the
+Godot authoring and keyboard checks in a temporary copy of the ExampleGame project.
+
 ## Manage Authored Library
 
 Version 0.0.5 adds the **Manage Authored Library…** folder icon between **Find a Scene**
@@ -105,14 +142,14 @@ in the picker; the active Godot project is offered first. All library operations
 restricted to these roots and their descendants:
 
 ```text
-Framework/Content/Maps
-Framework/Content/Presentation
-Framework/Content/UI/HUD
+Framework/Content/Gameplay/Maps
+Framework/Content/Gameplay/Presentation
+Framework/Content/Gameplay/UI/HUD
 ```
 
 Categories are ordinary folders. The three library roots cannot be deleted. Empty-folder
 deletion counts every file, including hidden files and presentation `.tres` files.
-Resource files remain managed by the Resource extensions. Windows reserved names,
+The Resource extensions manage reusable Resource libraries. Windows reserved names,
 duplicate sibling names, links, junctions, traversal, and nested Godot projects are rejected.
 Existing scene browsing and node editing retain their existing project scope.
 
@@ -123,6 +160,17 @@ New Scene collects a filename, root-node identifier, and a template suitable for
 | Maps | 2D map with shared ground and lighting configuration; empty Node2D; empty Node3D |
 | Presentation | Empty presentation with a searchable, instantiable native Node root |
 | UI/HUD | Unshaded Control widget; CanvasLayer at layer 10 with a full-rect, unshaded Control root |
+
+For a folder directly under `Presentation/Entity`, `Presentation/Items`, or
+`Presentation/Objects`, **Entity Presentation — With Starting Attributes**
+creates the scene and a sibling `starting_attributes.tres`. Choose a native root,
+scene filename, root name, definition ID, and shared Authored fragments. Entity
+folders preselect identity, health, and speed when available. The preset sets
+the display name from the root name, and the root carries the same definition ID.
+
+The extension verifies that Godot discovers the saved preset. Each folder has one
+starting preset, and definition IDs are unique across the three categories.
+Use **Presentation — Native Root** for additional scenes in the same folder.
 
 Creation packs new detached native nodes, saves and validates a temporary scene, assigns a
 UID, and publishes a new file exclusively. Verification reads saved scene state without
@@ -233,3 +281,12 @@ node.exe .\diagnostics\scene_library_bridge_check.cjs $sceneProject $sceneGodot
 The library diagnostic creates unique temporary categories under all three roots, checks
 all templates and deletion guards with real Godot processes, then removes only its own
 fixtures. Existing scene bytes are checked before and after the run.
+
+Unified Behavior Resources now appear in Attach Behavior Resource alongside
+legacy Interactions and Automations. A unified attachment uses
+`Content/Universal/Interaction/based/Bindings/behavior_binding.gd`; its Behavior ID and source appear
+in the scene graph tooltip. Duplicate bindings within an entity are rejected.
+
+Authoring backend scripts are grouped beneath Scenes/Creation, Editing,
+Inspection, Configuration and Library. This version uses those categorized
+entry-point paths.

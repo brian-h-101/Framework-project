@@ -1,7 +1,7 @@
 extends SceneTree
 
 const StartingAttributes = preload(
-	"res://Framework/Env/Setup/starting_attributes.gd"
+	"res://Framework/Env/Setup/Composition/starting_attributes.gd"
 )
 
 var _passed: bool = true
@@ -78,13 +78,13 @@ func _chest_definition() -> Dictionary:
 	return StartingAttributes.define(
 		&"library_chest_probe",
 		[
-			preload("res://Framework/Content/Authored/Entity/Attributes/Identity/identity.tres"),
-			preload("res://Framework/Content/Authored/Entity/Container/inventory.tres"),
-			preload("res://Framework/Content/Authored/Items/Attributes/Physical/physical.tres"),
-			preload("res://Framework/Content/Authored/Items/Attributes/Value/value.tres"),
-			preload("res://Framework/Content/Authored/Items/State/Condition/condition.tres"),
-			preload("res://Framework/Content/Authored/Objects/Attributes/Structure/structure.tres"),
-			preload("res://Framework/Content/Authored/Objects/State/Access/access.tres"),
+			preload("res://Framework/Content/Gameplay/Authored/Entity/Attributes/Identity/identity.tres"),
+			preload("res://Framework/Content/Gameplay/Authored/Entity/Container/inventory.tres"),
+			preload("res://Framework/Content/Gameplay/Authored/Items/Attributes/Physical/physical.tres"),
+			preload("res://Framework/Content/Gameplay/Authored/Items/Attributes/Value/value.tres"),
+			preload("res://Framework/Content/Gameplay/Authored/Items/State/Condition/condition.tres"),
+			preload("res://Framework/Content/Gameplay/Authored/Objects/Attributes/Structure/structure.tres"),
+			preload("res://Framework/Content/Gameplay/Authored/Objects/State/Access/access.tres"),
 		],
 		{
 			&"identity": {

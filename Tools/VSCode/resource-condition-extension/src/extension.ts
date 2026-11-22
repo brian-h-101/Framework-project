@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { editSequence } from './commands/sequence_editing_command';
 import {
 	ResourceTreeProvider,
 	type ResourceTreeElement
@@ -15,6 +16,8 @@ import { editTreeEntry, type StructuralOperation } from './commands/behavior_edi
 import { editConditionFromFile } from './commands/condition_editing_command';
 import { LibraryManager } from './library/library_manager';
 import { openExecutorScript } from './commands/executor_navigation_command';
+import { ResourceStructureCommands, type ResourceOperation } from './commands/resource_structure_command';
+import { ConfigurationCommands } from './commands/configuration_editing_command';
 
 export function activate(context: vscode.ExtensionContext): void {
 	const output = vscode.window.createOutputChannel(
@@ -23,9 +26,14 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	const provider = new ResourceTreeProvider();
 	const selection = new ResourceSelection(provider, output, message => { view.message = message; });
+	const configuration = new ConfigurationCommands(provider, output, () => selection.refresh());
 	const library = new LibraryManager(output, async (uri, removed) => {
 		if (removed) { selection.removed(uri); }
 		else { await selection.refresh(); }
+	}, () => configuration.execute('draft_movement_configuration'));
+	const resourceStructure = new ResourceStructureCommands(provider, output, async (uri, removed) => {
+		if (uri && removed) { selection.removed(uri); }
+		await selection.refresh();
 	});
 
 	let pendingOperation: Promise<void> | undefined;
@@ -212,16 +220,37 @@ export function activate(context: vscode.ExtensionContext): void {
 		)
 	);
 
+	const resourceCommands = ([
+		['openOwningResource', 'open_owner'], ['newResource', 'new_resource'],
+		['createAndLinkResource', 'create_link'], ['assignExistingResource', 'assign_resource'],
+		['replaceReference', 'replace_reference'], ['removeReference', 'remove_reference'],
+		['renameResourceFile', 'rename_file'], ['deleteResourceFile', 'delete_file']
+	] as const).map(([name, operation]) => vscode.commands.registerCommand('customTreeView.' + name,
+		(element?: ResourceTreeElement) => runOperation(() => resourceStructure.execute(operation as ResourceOperation, element))));
 	const structuralCommands = ([
 		['setAutomationInteraction', 'set_interaction'],
 		['setActionBehavior', 'set_behavior'], ['editValue', 'set'], ['addEntry', 'add'], ['renameEntry', 'rename'],
 		['removeEntry', 'remove'], ['addEffect', 'add_effect'],
+		['choosePresetFragments', 'set_fragments'], ['movePresetFragmentUp', 'fragment_up'], ['movePresetFragmentDown', 'fragment_down'],
 		['removeConditionFromGroup', 'remove_condition'], ['clearRequirements', 'clear_requirements']
 	] as const).map(([name, operation]) => vscode.commands.registerCommand(
 		'customTreeView.' + name,
 		(element?: ResourceTreeElement) => runOperation(() => editTreeEntry(
 			provider, element, operation as StructuralOperation, output, () => selection.refresh()
 		))
+	));
+	const sequenceCommands = ['add_action', 'add_group', 'rename', 'remove', 'move_up', 'move_down', 'configure', 'executor', 'condition', 'assign_condition', 'remove_condition'].map(operation =>
+		vscode.commands.registerCommand('customTreeView.sequence.' + operation,
+			(element?: ResourceTreeElement) => runOperation(() => editSequence(provider, element, operation, output, () => selection.refresh()))));
+	const configurationCommands = ([
+		['addInputBinding', 'add_input_binding'],
+		['editInputKeys', 'set_input_binding_keys'],
+		['removeInputBinding', 'remove_input_binding'],
+		['newConfigurationResource', 'draft_movement_configuration'],
+		['editMovementConfiguration', 'set_movement_configuration'],
+	] as const).map(([command, operation]) => vscode.commands.registerCommand(
+		'customTreeView.' + command,
+		(element?: ResourceTreeElement) => runOperation(() => configuration.execute(operation, element))
 	));
 	const watcher = vscode.workspace.createFileSystemWatcher('**/*.{tres,gd,godot,tscn,res,scn,gdshader}');
 	const changed = (uri: vscode.Uri): void => selection.changed(uri, pendingOperation);
@@ -238,6 +267,9 @@ export function activate(context: vscode.ExtensionContext): void {
 	);
 
 	context.subscriptions.push(
+		...configurationCommands,
+		...sequenceCommands,
+		...resourceCommands,
 		...structuralCommands,
 		...subscriptions,
 		view,

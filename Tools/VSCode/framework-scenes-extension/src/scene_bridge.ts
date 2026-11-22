@@ -1,6 +1,13 @@
 import { execFile } from 'node:child_process';
 import { validateResourcePath } from './project_context';
 
+export interface SceneProperty {
+	name: string;
+	type: string;
+	value: string;
+	source_path: string;
+}
+
 export interface SceneNode {
 	path: string;
 	name: string;
@@ -17,9 +24,12 @@ export interface SceneNode {
 	is_entity: boolean;
 	interaction_resource_path: string;
 	interaction_id: string;
+	behavior_id?: string;
+	behavior_resource_path?: string;
 	automation_id?: string;
 	automation_resource_path?: string;
 	movement_configuration_path: string;
+	movement_controller_path?: string;
 	can_assign_movement: boolean;
 	children: string[];
 	structural_scene: string;
@@ -28,6 +38,7 @@ export interface SceneNode {
 	can_add: boolean;
 	can_rename: boolean;
 	can_remove: boolean;
+	properties?: SceneProperty[];
 	references: Record<string, { source_path: string; paths: string[] }>;
 }
 
@@ -53,7 +64,7 @@ export function loadSceneGraph(
 	return new Promise((resolve, reject) => {
 		execFile(godotExecutable, [
 			'--headless', '--path', projectDirectory,
-			'--script', 'res://Framework/Env/Authoring/Scenes/scene_graph_export.gd',
+			'--script', 'res://Framework/Env/Authoring/Scenes/Inspection/scene_graph_export.gd',
 			'--', scenePath
 		], {
 			cwd: projectDirectory,
@@ -141,9 +152,10 @@ export function validateSceneGraph(value: unknown, scenePath: string): SceneGrap
 			throw new Error(`Malformed scene node: ${path}`);
 		}
 		validateNodePath(path);
-		for (const key of ['automation_id', 'automation_resource_path']) {
+		for (const key of ['automation_id', 'automation_resource_path', 'behavior_id', 'behavior_resource_path']) {
 			if (node[key] !== undefined && typeof node[key] !== 'string') { throw new Error('Malformed Automation attachment metadata.'); }
 		}
+		if (node.behavior_resource_path) { validateResourcePath(node.behavior_resource_path as string, '.tres'); }
 		if (node.automation_resource_path) { validateResourcePath(node.automation_resource_path as string, '.tres'); }
 		validateNodePath(node.source_node_path as string);
 		validateNodePath(node.structural_node_path as string);
@@ -152,11 +164,25 @@ export function validateSceneGraph(value: unknown, scenePath: string): SceneGrap
 			|| node.can_add !== ((local || path === '.') && node.type !== 'InstancePlaceholder')
 			|| node.can_attach_script !== (local && node.type !== 'InstancePlaceholder' && !node.has_script)
 			|| node.can_remove_script !== (local && node.has_script && node.script_source_path === scenePath)
-			|| node.can_assign_movement !== (local && node.type === 'CharacterBody2D'
-				&& node.script_path === 'res://Framework/Content/God/Movement/movement_2d.gd')) {
+			|| node.can_assign_movement !== (local && (
+				(node.type === 'CharacterBody2D' && node.script_path === 'res://Framework/Content/Universal/Movement/based/Physics2D/movement_body_2d.gd')
+				|| (node.type === 'CharacterBody3D' && node.script_path === 'res://Framework/Content/Universal/Movement/based/Physics3D/movement_body_3d.gd')
+			))) {
 			throw new Error(`Invalid structural capabilities: ${path}`);
 		}
 		if (node.instance_boundary !== '') { validateNodePath(node.instance_boundary as string); }
+		if (node.properties !== undefined) {
+			if (!Array.isArray(node.properties)) { throw new Error(`Invalid properties on scene node: ${path}`); }
+			const names = new Set<string>();
+			for (const property of node.properties) {
+				if (!isRecord(property) || typeof property.name !== 'string' || !property.name || names.has(property.name)
+					|| typeof property.type !== 'string' || !property.type || typeof property.value !== 'string'
+					|| typeof property.source_path !== 'string' || !dependencies.has(property.source_path)) {
+					throw new Error(`Invalid property preview on scene node: ${path}`);
+				}
+				names.add(property.name);
+			}
+		}
 		for (const reference of Object.values(node.references)) {
 			if (!isRecord(reference) || typeof reference.source_path !== 'string'
 				|| !dependencies.has(reference.source_path) || !Array.isArray(reference.paths)
@@ -184,6 +210,10 @@ export function validateSceneGraph(value: unknown, scenePath: string): SceneGrap
 		if (node.movement_configuration_path !== '') {
 			const resource = (node.movement_configuration_path as string).split('::')[0];
 			validateResourcePath(resource);
+		}
+		if (node.movement_controller_path !== undefined) {
+			if (typeof node.movement_controller_path !== 'string') { throw new Error('Invalid movement controller path.'); }
+			if (node.movement_controller_path) { validateResourcePath(node.movement_controller_path.split('::')[0]); }
 		}
 	}
 	const pending = ['.'];

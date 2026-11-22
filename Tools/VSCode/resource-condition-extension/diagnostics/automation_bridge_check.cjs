@@ -67,7 +67,7 @@ async function main() {
 		const available = await loadResourceCatalog(project, executable, report);
 		assert.ok(available.resources.some(entry => entry.kind === 'automation' && entry.source_path === source));
 		let sceneGraph = await loadSceneGraph(project, executable, scene, report);
-		const component = 'res://Framework/Content/God/Interaction/automation_behavior.gd';
+		const component = 'res://Framework/Content/Universal/Interaction/based/Legacy/automation_behavior.gd';
 		const hashes = {...sceneGraph.dependency_hashes};
 		for (const file of [source, component]) { hashes[file] = createHash('sha256').update(await fs.readFile(path.join(project, file.slice(6)))).digest('hex'); }
 		await editScene(project, executable, scene, {operation: 'attach_behavior', path: '.', name: 'AutomaticBehavior',

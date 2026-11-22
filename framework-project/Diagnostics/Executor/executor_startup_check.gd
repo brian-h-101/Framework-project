@@ -6,8 +6,8 @@ const GameRuntime = preload("res://Framework/Infrastructure/API/Runtime/game_run
 const RuntimeCore = preload("res://Framework/Infrastructure/Implementation/Runtime/runtime_core.gd")
 const GameplayExecutor = preload("res://Framework/Infrastructure/API/Gameplay/Executors/gameplay_executor.gd")
 const ExecutionContext = preload("res://Framework/Infrastructure/API/Gameplay/Executors/execution_context.gd")
-const ActionResource = preload("res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd")
-const EnvironmentSetup = preload("res://Framework/Env/Setup/game_setup.gd")
+const ActionResource = preload("res://Framework/Infrastructure/API/Gameplay/Resources/Actions/action_resource.gd")
+const EnvironmentSetup = preload("res://Framework/Env/Setup/Bootstrap/game_setup.gd")
 const Codec = preload("res://Framework/Infrastructure/API/Persistence/session_codec.gd")
 
 var _passed: bool = true
@@ -165,7 +165,7 @@ func _check_startup_and_restore() -> void:
 
 
 func _check_resource_failure() -> void:
-	var folder := "res://Framework/Content/Behavior/DiagnosticExecutors_" + Crypto.new().generate_random_bytes(8).hex_encode()
+	var folder := "res://Framework/Content/Gameplay/Profiles/Movement/Behavior/DiagnosticExecutors_" + Crypto.new().generate_random_bytes(8).hex_encode()
 	if not _expect("Diagnostic content folder is unused", not DirAccess.dir_exists_absolute(folder) and not FileAccess.file_exists(folder)):
 		return
 	if not _expect("Diagnostic content folder created", DirAccess.make_dir_absolute(folder) == OK):

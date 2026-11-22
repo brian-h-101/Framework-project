@@ -1,13 +1,11 @@
 [gd_resource type="Resource" format=3]
 
-[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/session_persistence_resource.gd" id="1_ita2x"]
+[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/Persistence/session_persistence_resource.gd" id="1"]
 
 [resource]
-script = ExtResource("1_ita2x")
-startup_mode = &"restore"
+script = ExtResource("1")
+startup_mode = &"new"
 save_path = "user://Saves/slot_01.fws"
 map_path_redirects = Dictionary[String, String]({
-	"res://Games/ExampleGame/World/city.tscn": "res://Framework/Content/Maps/city.tscn",
-	"res://Games/ExampleGame/World/city_recreated.tscn": "res://Framework/Content/Maps/city_recreated.tscn",
-	"res://Games/ExampleGame/World/item_object_check.tscn": "res://Framework/Content/Maps/item_object_check.tscn"
+	"res://Framework/Content/Maps/city.tscn": "res://Framework/Content/Gameplay/Maps/city.tscn"
 })

@@ -4,7 +4,7 @@ const GameHost = preload(
 	"res://Framework/Env/Host/game_host.gd"
 )
 const CityMap = preload(
-	"res://Framework/Content/Maps/city.tscn"
+	"res://Framework/Content/Gameplay/Maps/city.tscn"
 )
 
 var _host := GameHost.new()

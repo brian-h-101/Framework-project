@@ -1,15 +1,19 @@
 extends SceneTree
 
-const Graph = preload("res://Framework/Env/Authoring/Scenes/scene_graph.gd")
-const Editing = preload("res://Framework/Env/Authoring/Scenes/scene_editing.gd")
-const Catalog = preload("res://Framework/Env/Authoring/Scenes/movement_configuration_catalog.gd")
+const Graph = preload("res://Framework/Env/Authoring/Scenes/Inspection/scene_graph.gd")
+const Editing = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_editing.gd")
+const Catalog = preload("res://Framework/Env/Authoring/Scenes/Configuration/movement_configuration_catalog.gd")
 const Entry = preload("res://Framework/Infrastructure/API/Runtime/game_entry.gd")
-const Setup = preload("res://Framework/Env/Setup/game_setup.gd")
-const CONFIG := "res://Framework/Content/Configuration/Movement/player_movement.tres"
-const ADAPTER := "res://Framework/Content/God/Movement/movement_2d.gd"
-const PLAYER := "res://Framework/Content/Presentation/Entity/Player/player_2d.tscn"
-const MAP := "res://Framework/Content/Maps/city_recreated.tscn"
-const WRONG_TYPE := "res://Framework/Content/Behavior/Condition/actor_strength.tres"
+const Setup = preload("res://Framework/Env/Setup/Bootstrap/game_setup.gd")
+const TargetResolver = preload("res://Framework/Content/Universal/Targeting/based/Spatial2D/target_resolver_2d.gd")
+const Controls = preload("res://Framework/Content/Configuration/Input/controls.tres")
+const InputConfiguration = preload("res://Framework/Env/Input/input_configuration.gd")
+const CONFIG := "res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_2d.tres"
+const CONTROLLER := "res://Framework/Content/Gameplay/Controller/player_keyboard.tres"
+const ADAPTER := "res://Framework/Content/Universal/Movement/based/Physics2D/movement_body_2d.gd"
+const PLAYER := "res://Framework/Content/Gameplay/Presentation/Entity/Player/player_2d.tscn"
+const MAP := "res://Framework/Content/Gameplay/Maps/city.tscn"
+const WRONG_TYPE := "res://Framework/Content/Gameplay/Profiles/Movement/Behavior/move.tres"
 
 var _passed := true
 var _folder := ""
@@ -22,7 +26,7 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	for path in [CONFIG, ADAPTER, PLAYER, MAP, WRONG_TYPE]:
+	for path in [CONFIG, CONTROLLER, ADAPTER, PLAYER, MAP, WRONG_TYPE]:
 		_originals[path] = FileAccess.get_sha256(path)
 	var catalog := Catalog.read()
 	_check("Catalogue includes only typed movement configurations", catalog["ok"])
@@ -30,7 +34,9 @@ func _run() -> void:
 		var paths: Array[String] = []
 		for entry: Dictionary in catalog["value"]["configurations"]:
 			paths.append(entry["source_path"])
-			_check("Catalogue tracks the chosen Action", entry["action_id"] == "move" and entry["behavior_id"] == "movement_2d")
+			if entry["source_path"] == CONFIG:
+				_check("Catalogue tracks the chosen velocity step and Behavior",
+					entry["action_id"] == "calculate_velocity" and entry["behavior_id"] == "move")
 		var sorted := paths.duplicate()
 		sorted.sort()
 		_check("Catalogue is sorted and finds the nested movement folder", paths == sorted and paths.has(CONFIG))
@@ -41,28 +47,31 @@ func _run() -> void:
 		return
 	var first := _folder.path_join("first.tres")
 	var second := _folder.path_join("second.tres")
-	var action_path := _folder.path_join("move.tres")
+	var behavior_path := _folder.path_join("move.tres")
 	var invalid_path := _folder.path_join("invalid.tres")
 	var authored: Resource = load(CONFIG)
-	var local_action: Resource = authored.movement_action.duplicate(true)
-	_save(action_path, local_action)
+	var local_behavior: Resource = authored.movement_behavior.duplicate(true)
+	_save(behavior_path, local_behavior)
 	var first_config: Resource = authored.duplicate(true)
-	first_config.movement_action = ResourceLoader.load(action_path, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP)
+	first_config.movement_behavior = ResourceLoader.load(behavior_path, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP)
+	first_config.environment_spec = null
 	first_config.pixels_per_unit = 10.0
 	_save(first, first_config)
 	var second_config: Resource = first_config.duplicate(true)
-	second_config.pixels_per_unit = 20.0
+	second_config.set_environment_scale(20.0)
 	_save(second, second_config)
 	var invalid: Resource = first_config.duplicate(true)
 	invalid.pixels_per_unit = 0.0
 	_save(invalid_path, invalid)
 	var scene := _folder.path_join("entity.tscn")
 	var uid := ResourceUID.id_to_text(ResourceUID.create_id())
-	var original := ("[gd_scene load_steps=2 format=3 uid=\"%s\"]\n\n" % uid
+	var original := ("[gd_scene load_steps=3 format=3 uid=\"%s\"]\n\n" % uid
 		+ "[ext_resource type=\"Script\" path=\"%s\" id=\"adapter\"]\n\n" % ADAPTER
+		+ "[ext_resource type=\"Resource\" path=\"%s\" id=\"controller\"]\n\n" % CONTROLLER
 		+ "[node name=\"Entity\" type=\"Node2D\" unique_id=101]\nmetadata/entity_key = &\"player\"\n\n"
 		+ "[node name=\"Locomotion\" type=\"CharacterBody2D\" parent=\".\" unique_id=102]\n"
-		+ "script = ExtResource(\"adapter\")\nposition = Vector2(17, 23) ; keep this comment\nmetadata/entity_spatial_root = true\n\n"
+		+ "script = ExtResource(\"adapter\")\ncontroller = ExtResource(\"controller\")\n"
+		+ "position = Vector2(17, 23) ; keep this comment\nmetadata/entity_spatial_root = true\n\n"
 		+ "[node name=\"Status\" type=\"Marker2D\" parent=\"Locomotion\" unique_id=103]\nposition = Vector2(0, -20)\n")
 	_write(scene, original.replace("\n", "\r\n"))
 	var request := _request(scene, "Locomotion", first)
@@ -77,7 +86,7 @@ func _run() -> void:
 		and saved.contains("unique_id=102") and saved.contains("unique_id=103")
 		and saved.contains("position = Vector2(17, 23) ; keep this comment")
 		and saved.contains("metadata/entity_key = &\"player\"") and saved.contains("metadata/entity_spatial_root = true")
-		and saved.contains("load_steps=3") and saved.contains("\r\n") and not saved.replace("\r\n", "").contains("\n"))
+		and saved.contains("load_steps=4") and saved.contains("\r\n") and not saved.replace("\r\n", "").contains("\n"))
 	_reject("Repeated assignment", scene, _request(scene, "Locomotion", first))
 	_reject("Unrelated node", scene, _request(scene, "Locomotion/Status", second))
 	_reject("Wrong Resource type", scene, _request(scene, "Locomotion", WRONG_TYPE))
@@ -87,11 +96,11 @@ func _run() -> void:
 	missing["expected_hashes"].erase(ADAPTER)
 	_reject("Uninspected adapter", scene, missing)
 	missing = _request(scene, "Locomotion", second)
-	missing["expected_hashes"].erase(action_path)
-	_reject("Uninspected Action dependency", scene, missing)
+	missing["expected_hashes"].erase(behavior_path)
+	_reject("Uninspected Behavior dependency", scene, missing)
 	var stale := _request(scene, "Locomotion", second)
-	_write(action_path, FileAccess.get_file_as_string(action_path) + "\n; changed Action dependency\n", false)
-	_reject("Changed Action dependency", scene, stale)
+	_write(behavior_path, FileAccess.get_file_as_string(behavior_path) + "\n; changed Behavior dependency\n", false)
+	_reject("Changed Behavior dependency", scene, stale)
 	stale = _request(scene, "Locomotion", second)
 	_write(second, FileAccess.get_file_as_string(second) + "\n; changed configuration\n", false)
 	_reject("Changed configuration", scene, stale)
@@ -122,6 +131,12 @@ func _check_runtime(scene: String, first: String, second: String) -> void:
 	_check("Runtime starts with the Content executor", started["ok"])
 	if not started["ok"]:
 		return
+	InputConfiguration.apply(Controls.read()["value"])
+	entry.world_bridge.configure_behavior_targeting(
+		func(id: int, mode: StringName) -> Dictionary:
+			return TargetResolver.resolve_entity(entry.world_bridge, id, mode)
+	)
+	var entity_id := entry.runtime.spawn(&"player")
 	var velocities: Array[float] = []
 	for configuration in [first, second]:
 		var graph := Graph.read(scene)
@@ -132,15 +147,17 @@ func _check_runtime(scene: String, first: String, second: String) -> void:
 		var entity := packed.instantiate()
 		var body := entity.get_node("Locomotion") as CharacterBody2D
 		body.call("configure_entity", entry.world_bridge, entity)
-		var bound := entry.world_bridge.bind_entity(entry.entity_ids[&"player"], entity)
+		var bound := entry.world_bridge.bind_entity(entity_id, entity)
 		_check("Saved entity binds to its persistent runtime identity", bound["ok"])
+		_check("Shared Behavior binds to the entity", entry.world_bridge.bind_behavior(entity, &"move")["ok"])
 		root.add_child(entity)
-		body.set_physics_process(false)
-		var calculated: Dictionary = body.call("_execute_movement", Vector2.RIGHT)
-		_check("Saved configuration invokes the movement Action", calculated["ok"])
-		if calculated["ok"]:
-			velocities.append(calculated["value"].x)
-		entry.world_bridge.unbind_entity(entry.entity_ids[&"player"])
+		Input.action_press(&"move_right")
+		await physics_frame
+		await physics_frame
+		Input.action_release(&"move_right")
+		_check("Saved profile invokes the movement Behavior", body.velocity.x > 0.0)
+		velocities.append(body.velocity.x)
+		entry.world_bridge.unbind_entity(entity_id)
 		entity.free()
 	_check("Changing the assigned configuration changes runtime pixel velocity", velocities.size() == 2
 		and velocities[0] > 0.0 and is_equal_approx(velocities[1], velocities[0] * 2.0))

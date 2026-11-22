@@ -4,7 +4,7 @@ const FragmentResource = preload("res://Framework/Infrastructure/API/Entity/Reso
 const Inspection = preload("res://Framework/Env/Authoring/Attributes/attribute_inspection.gd")
 const Editing = preload("res://Framework/Env/Authoring/Attributes/attribute_editing.gd")
 const Values = preload("res://Framework/Env/Authoring/Attributes/attribute_values.gd")
-const NEEDS = "res://Framework/Content/Authored/Entity/Attributes/Needs/needs.tres"
+const NEEDS = "res://Framework/Content/Gameplay/Authored/Entity/Attributes/Needs/needs.tres"
 const CONFIGURATION = "res://Framework/Content/Configuration/Map/city_ground.tres"
 
 var _passed := true

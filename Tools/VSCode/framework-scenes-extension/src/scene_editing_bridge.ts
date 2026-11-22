@@ -8,6 +8,7 @@ export type SceneOperation =
 	| 'assign_movement'
 	| 'attach_script'
 	| 'remove_script'
+	| 'set_property'
 	| 'rename'
 	| 'remove';
 export interface SceneEdit {
@@ -19,8 +20,12 @@ export interface SceneEdit {
 	instance_scene?: string;
 	interaction_resource?: string;
 	automation_resource?: string;
+	behavior_resource?: string;
 	movement_configuration?: string;
 	script_path?: string;
+	property_name?: string;
+	property_type?: NodePropertyType;
+	property_value?: string;
 }
 export interface SceneEditResult {
 	scene_path: string;
@@ -36,10 +41,42 @@ export interface ScriptInspection {
 	dependency_hashes: Record<string, string>;
 }
 
+export const NODE_PROPERTY_TYPES = [
+	'bool', 'int', 'float', 'String', 'StringName', 'Vector2', 'Vector2i',
+	'Vector3', 'Vector3i', 'Color', 'PackedVector2Array'
+] as const;
+export type NodePropertyType = typeof NODE_PROPERTY_TYPES[number];
+
+export interface NodeProperty {
+	name: string;
+	type: NodePropertyType;
+	saved: boolean;
+	value: string;
+}
+
+export async function inspectNodeProperties(project: string, executable: string, source: string, path: string,
+	report: (message: string) => void): Promise<NodeProperty[]> {
+	validateResourcePath(source, '.tscn');
+	const value = await runSceneEditing(project, executable, ['inspect-properties', source, path], undefined, report);
+	const seen = new Set<string>();
+	if (!Array.isArray(value) || value.length > 10000 || !value.every(property => {
+		if (!isRecord(property) || typeof property.name !== 'string' || !property.name || seen.has(property.name)
+			|| !NODE_PROPERTY_TYPES.includes(property.type as NodePropertyType)
+			|| typeof property.saved !== 'boolean' || typeof property.value !== 'string') {
+			return false;
+		}
+		seen.add(property.name);
+		return true;
+	})) {
+		throw new Error('Malformed scene property catalogue.');
+	}
+	return value as NodeProperty[];
+}
+
 export async function inspectScript(project: string, executable: string, source: string, nativeType: string,
 	report: (message: string) => void): Promise<ScriptInspection> {
 	validateResourcePath(source, '.gd');
-	const value = await run(project, executable, ['inspect-script', source, nativeType], undefined, report);
+	const value = await runSceneEditing(project, executable, ['inspect-script', source, nativeType], undefined, report);
 	if (!isRecord(value) || value.script_path !== source || typeof value.base_type !== 'string' || !value.base_type
 		|| !isRecord(value.dependency_hashes) || !Object.hasOwn(value.dependency_hashes, source)
 		|| Object.keys(value.dependency_hashes).length > 1000) { throw new Error('Malformed script inspection result.'); }
@@ -52,7 +89,7 @@ export async function inspectScript(project: string, executable: string, source:
 
 export async function nodeTypes(project: string, executable: string,
 	report: (message: string) => void): Promise<string[]> {
-	const value = await run(project, executable, ['node-types'], undefined, report);
+	const value = await runSceneEditing(project, executable, ['node-types'], undefined, report);
 	if (!Array.isArray(value) || !value.every(item => typeof item === 'string' && item.length > 0)
 		|| new Set(value).size !== value.length || value.length > 10000) {
 		throw new Error('Malformed native node type catalogue.');
@@ -63,7 +100,7 @@ export async function nodeTypes(project: string, executable: string,
 export async function editScene(project: string, executable: string, source: string,
 	request: SceneEdit, report: (message: string) => void): Promise<SceneEditResult> {
 	validateResourcePath(source, '.tscn');
-	const value = await run(project, executable, ['edit', source], request, report);
+	const value = await runSceneEditing(project, executable, ['edit', source], request, report);
 	if (!isRecord(value) || value.scene_path !== source || value.operation !== request.operation
 		|| value.path !== request.path || typeof value.new_path !== 'string'
 		|| typeof value.content_hash !== 'string' || !/^[a-f0-9]{64}$/.test(value.content_hash)) {
@@ -72,7 +109,7 @@ export async function editScene(project: string, executable: string, source: str
 	return value as unknown as SceneEditResult;
 }
 
-function run(project: string, executable: string, args: string[], request: SceneEdit | undefined,
+export function runSceneEditing(project: string, executable: string, args: string[], request: object | undefined,
 	report: (message: string) => void): Promise<unknown> {
 	const input = request === undefined ? '' : JSON.stringify(request);
 	if (Buffer.byteLength(input, 'utf8') > 1024 * 1024) {
@@ -80,7 +117,7 @@ function run(project: string, executable: string, args: string[], request: Scene
 	}
 	return new Promise((resolve, reject) => {
 		const child = execFile(executable, ['--headless', '--path', project,
-			'--script', 'res://Framework/Env/Authoring/Scenes/scene_editing_cli.gd', '--', ...args],
+			'--script', 'res://Framework/Env/Authoring/Scenes/Editing/scene_editing_cli.gd', '--', ...args],
 		{ cwd: project, encoding: 'utf8', windowsHide: true, timeout: 30000, maxBuffer: 16 * 1024 * 1024 },
 		(error, stdout, stderr) => {
 			try {

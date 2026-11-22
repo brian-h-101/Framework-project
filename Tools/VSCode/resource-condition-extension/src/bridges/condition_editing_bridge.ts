@@ -1,6 +1,6 @@
 import { execFile } from 'node:child_process';
 
-export type ConditionValueType = 'int' | 'float';
+export type ConditionValueType = 'int' | 'float' | 'bool';
 
 export interface ConditionComparisonEdit {
 	operator: string;
@@ -14,7 +14,7 @@ export interface ConditionComparisonResult extends ConditionComparisonEdit {
 }
 
 const CLI_SCRIPT =
-	'res://Framework/Env/Authoring/Resources/condition_editing_cli.gd';
+	'res://Framework/Env/Authoring/Resources/Conditions/condition_editing_cli.gd';
 
 const RESULT_PREFIX = '[condition-editing-result] ';
 
@@ -43,6 +43,7 @@ export async function getConditionComparison(
 		|| (
 			valueType !== 'int'
 			&& valueType !== 'float'
+			&& valueType !== 'bool'
 		)
 		|| typeof valueText !== 'string'
 		|| valueText.length === 0
@@ -92,6 +93,7 @@ export async function setConditionComparison(
 		|| (
 			valueType !== 'int'
 			&& valueType !== 'float'
+			&& valueType !== 'bool'
 		)
 		|| valueType !== request.value_type
 		|| typeof valueText !== 'string'

@@ -4,7 +4,7 @@ const Entry = preload(
 	"res://Framework/Infrastructure/API/Runtime/game_entry.gd"
 )
 const Setup = preload(
-	"res://Framework/Env/Setup/game_setup.gd"
+	"res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 )
 const Interaction = preload(
 	"res://Diagnostics/Fixtures/BehaviorEditing/visual_interaction.tres"

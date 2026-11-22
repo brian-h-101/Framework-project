@@ -11,10 +11,10 @@ const { editScene } = require('../out/scene_editing_bridge.js');
 const project = path.resolve(process.argv[2] ?? '');
 const executable = process.argv[3];
 assert.ok(executable && fs.existsSync(path.join(project, 'project.godot')), 'Expected <project directory> <Godot executable>.');
-const configuration = 'res://Framework/Content/Configuration/Movement/player_movement.tres';
-const adapter = 'res://Framework/Content/God/Movement/movement_2d.gd';
-const production = [configuration, adapter, 'res://Framework/Content/Behavior/Action/move.tres',
-	'res://Framework/Content/Presentation/Entity/Player/player_2d.tscn', 'res://Framework/Content/Maps/city_recreated.tscn'];
+const configuration = 'res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_2d.tres';
+const adapter = 'res://Framework/Content/Universal/Movement/based/Physics2D/movement_body_2d.gd';
+const production = [configuration, adapter, 'res://Framework/Content/Gameplay/Profiles/Movement/Behavior/move.tres',
+	'res://Framework/Content/Gameplay/Presentation/Entity/Player/player_2d.tscn', 'res://Framework/Content/Gameplay/Maps/city.tscn'];
 const file = resource => path.join(project, resource.slice(6));
 const originals = new Map(production.map(resource => [resource, fs.readFileSync(file(resource))]));
 const parent = path.join(project, '.godot/diagnostics'); fs.mkdirSync(parent, { recursive: true });
@@ -50,9 +50,9 @@ const check = label => console.log(`[movement-assignment-bridge] ${label}: true`
 		fs.writeFileSync(file(selected), originals.get(configuration).toString('utf8').replace('pixels_per_unit = 10.0', 'pixels_per_unit = 20.0'));
 		const catalog = await loadMovementConfigurations(project, executable, report);
 		const candidate = catalog.find(entry => entry.source_path === selected);
-		assert.ok(candidate); assert.equal(candidate.action_id, 'move'); assert.equal(candidate.behavior_id, 'movement_2d');
-		assert.ok(Object.hasOwn(candidate.dependency_hashes, 'res://Framework/Content/Behavior/Action/move.tres'));
-		check('Real catalogue discovers a new nested configuration and its Action dependency');
+		assert.ok(candidate); assert.equal(candidate.action_id, 'calculate_velocity'); assert.equal(candidate.behavior_id, 'move');
+		assert.ok(Object.hasOwn(candidate.dependency_hashes, 'res://Framework/Content/Gameplay/Profiles/Movement/Behavior/move.tres'));
+		check('Real catalogue discovers a nested profile and its Behavior dependency');
 		const context = { projectDirectory: project, workspaceDirectory: path.dirname(project) };
 		const errors = []; let cancel = false; let refreshes = 0; let prompts = 0;
 		const disposable = () => ({ dispose() {} });
@@ -75,7 +75,10 @@ const check = label => console.log(`[movement-assignment-bridge] ${label}: true`
 		const provider = new SceneTreeProvider();
 		const { ensureWorkspace } = load('scene_selection.js', { vscode: api, './scene_tree_provider': { projectUri } });
 		const { SceneEditingCommands } = load('scene_editing_command.js', { vscode: api,
-			'./scene_tree_provider': { projectUri }, './scene_selection': { ensureWorkspace } });
+			'./scene_tree_provider': { projectUri }, './scene_selection': { ensureWorkspace },
+			'./scene_property_prompt': load('scene_property_prompt.js', { vscode: api }),
+			'./scene_instance_picker': load('scene_instance_picker.js', { vscode: api })
+		});
 		let graph = await loadSceneGraph(project, executable, scene, report);
 		provider.setGraph(context, graph);
 		const command = new SceneEditingCommands(provider, { appendLine: report }, async () => {

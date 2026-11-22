@@ -4,7 +4,7 @@ const Entry = preload("res://Framework/Infrastructure/API/Runtime/game_entry.gd"
 const Setup = preload("res://Diagnostics/Fixtures/Setup/automation_setup.gd")
 const AutoStrike = preload("res://Framework/Content/Behavior/Automation/auto_strike.tres")
 const Codec = preload("res://Framework/Infrastructure/API/Persistence/session_codec.gd")
-const System = preload("res://Framework/Infrastructure/Implementation/Gameplay/automation_system.gd")
+const System = preload("res://Framework/Infrastructure/Implementation/Gameplay/Automation/automation_system.gd")
 
 var _passed := true
 var _target := {"id": 0, "available": true}

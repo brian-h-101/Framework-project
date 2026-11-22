@@ -4,16 +4,16 @@ const GameHost = preload(
 	"res://Framework/Env/Host/game_host.gd"
 )
 const CityMap = preload(
-	"res://Framework/Content/Maps/city.tscn"
+	"res://Framework/Content/Gameplay/Maps/city.tscn"
 )
 const EntityStatusLayer2D = preload(
-	"res://Framework/Content/God/UI/entity_status_layer_2d.gd"
+	"res://Framework/Content/Universal/UI/based/Spatial2D/entity_status_layer_2d.gd"
 )
 const UIAnchor2D = preload(
-	"res://Framework/Env/Presentation/ui_anchor_2d.gd"
+	"res://Framework/Content/Universal/UI/based/Spatial2D/ui_anchor_2d.gd"
 )
 const TargetPoint2D = preload(
-	"res://Framework/Env/Targeting/target_point_2d.gd"
+	"res://Framework/Content/Universal/Targeting/based/Spatial2D/target_point_2d.gd"
 )
 var _host := GameHost.new()
 var _bound_events: Array[int] = []

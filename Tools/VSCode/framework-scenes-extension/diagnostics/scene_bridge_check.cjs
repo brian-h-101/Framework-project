@@ -12,11 +12,11 @@ async function main() {
 	}
 	const projectDirectory = resolve(project);
 	const sources = [
-		'Framework/Content/Maps/city_recreated.tscn',
-		'Framework/Content/Presentation/Entity/Player/player_2d.tscn',
-		'Framework/Content/Presentation/Entity/Enemy/enemy_2d.tscn',
+		'Framework/Content/Gameplay/Maps/city_recreated.tscn',
+		'Framework/Content/Gameplay/Presentation/Entity/Player/player_2d.tscn',
+		'Framework/Content/Gameplay/Presentation/Entity/Enemy/enemy_2d.tscn',
 		'Framework/Content/Camera/player_camera_2d.tscn',
-		'Framework/Content/UI/HUD/ui_root.tscn',
+		'Framework/Content/Gameplay/UI/HUD/ui_root.tscn',
 		'Diagnostics/Fixtures/SceneGraph/inherited.tscn',
 		'Diagnostics/Fixtures/SceneGraph/composed.tscn'
 	];
@@ -29,7 +29,7 @@ async function main() {
 		assert.ok(graph.nodes['.'].name);
 		if (source.endsWith('city_recreated.tscn')) {
 			assert.equal(graph.nodes['Player/View2D/FollowCamera'].type, 'Camera2D');
-			assert.equal(graph.nodes['Enemy/View2D/Body'].source_path, 'res://Framework/Content/Presentation/Entity/Enemy/enemy_2d.tscn');
+			assert.equal(graph.nodes['Enemy/View2D/Body'].source_path, 'res://Framework/Content/Gameplay/Presentation/Entity/Enemy/enemy_2d.tscn');
 		}
 		console.log(`[scene-bridge-check] Loaded ${Object.keys(graph.nodes).length} node(s): ${source}`);
 	}

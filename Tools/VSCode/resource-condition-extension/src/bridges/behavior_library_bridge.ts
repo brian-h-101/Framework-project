@@ -2,7 +2,17 @@ import { execFile } from 'node:child_process';
 import { validateResourcePath } from '../workspace/project_context';
 import { validateExecutors, validateSpecs, type ArgumentSpec, type ExecutorDescriptor, type ExecutorSnapshot } from '../resources/executor_metadata';
 
-export const BEHAVIOR_ROOT = 'res://Framework/Content/Behavior';
+export const PROFILES_ROOT = 'res://Framework/Content/Gameplay/Profiles';
+
+export function isBehaviorPath(source: string): boolean {
+	if (!source.startsWith(PROFILES_ROOT + '/')) { return false; }
+	const [category, folder] = source.slice(PROFILES_ROOT.length + 1).split('/');
+	return Boolean(category) && folder === 'Behavior';
+}
+
+export function isBehaviorRoot(source: string): boolean {
+	return isBehaviorPath(source) && source.slice(PROFILES_ROOT.length + 1).split('/').length === 2;
+}
 export interface LibraryEntry {
 	source_path: string;
 	parent_path: string;
@@ -10,7 +20,7 @@ export interface LibraryEntry {
 	kind: 'root' | 'folder' | 'resource' | 'blocked';
 	fingerprint: string;
 	supported: boolean;
-	resource_kind?: 'action' | 'condition' | 'condition_group' | 'interaction' | 'automation' | '';
+	resource_kind?: 'action' | 'condition' | 'condition_group' | 'interaction' | 'automation' | 'behavior' | '';
 	id?: string;
 	valid?: boolean;
 	argument_specs?: ArgumentSpec[];
@@ -25,8 +35,17 @@ export interface DeletionPreview {
 	hashes: Record<string, string>;
 	directories: Record<string, string>;
 }
+export interface RenamePreview {
+	source_path: string;
+	destination_path: string;
+	id: string;
+	uid: string;
+	changes: { source_path: string; source_text: string }[];
+	hashes: Record<string, string>;
+	directories: Record<string, string>;
+}
 
-export function libraryRequest(project: string, executable: string, operation: 'catalogue' | 'draft' | 'deletion-preview',
+export function libraryRequest(project: string, executable: string, operation: 'catalogue' | 'draft' | 'deletion-preview' | 'rename-preview' | 'rename',
 	source: string | undefined, request: Record<string, unknown>, report: (message: string) => void,
 	signal?: AbortSignal): Promise<unknown> {
 	if (source !== undefined) { validateResourcePath(source, '.tres'); }
@@ -34,7 +53,7 @@ export function libraryRequest(project: string, executable: string, operation: '
 	if (Buffer.byteLength(input) > 1024 * 1024) { throw new Error('Library requests cannot exceed 1 MiB.'); }
 	return new Promise((resolve, reject) => {
 		const args = ['--headless', '--path', project, '--script',
-			'res://Framework/Env/Authoring/Resources/behavior_library_cli.gd', '--', operation];
+			'res://Framework/Env/Authoring/Resources/Library/behavior_library_cli.gd', '--', operation];
 		if (source !== undefined) { args.push(source); }
 		const child = execFile(executable, args, { cwd: project, encoding: 'utf8', windowsHide: true,
 			timeout: 60_000, maxBuffer: 16 * 1024 * 1024, signal }, (error, stdout, stderr) => {
@@ -57,7 +76,7 @@ export function libraryRequest(project: string, executable: string, operation: '
 
 export function validateCatalogue(value: unknown): LibraryCatalogue {
 	const catalogue = value as LibraryCatalogue;
-	if (!catalogue || catalogue.version !== 1 || catalogue.root_path !== BEHAVIOR_ROOT
+	if (!catalogue || catalogue.version !== 1 || catalogue.root_path !== PROFILES_ROOT
 		|| !Array.isArray(catalogue.entries) || catalogue.entries.length > 10001) {
 		throw new Error('Malformed authored library catalogue.');
 	}
@@ -71,12 +90,13 @@ export function validateCatalogue(value: unknown): LibraryCatalogue {
 			throw new Error('Malformed authored library entry.');
 		}
 		validateResourcePath(entry.source_path);
-		if ((entry.source_path !== BEHAVIOR_ROOT && !entry.source_path.startsWith(BEHAVIOR_ROOT + '/'))
+		const category = entry.kind === 'folder' && entry.parent_path === PROFILES_ROOT;
+		if ((entry.source_path !== PROFILES_ROOT && !category && !isBehaviorPath(entry.source_path))
 			|| seen.has(entry.source_path) || entry.name !== entry.source_path.split('/').at(-1)) {
 			throw new Error('Invalid or repeated authored library path.');
 		}
 		if (entry.kind === 'root') {
-			if (entry.source_path !== BEHAVIOR_ROOT || entry.parent_path !== '') { throw new Error('Invalid library root.'); }
+			if (entry.source_path !== PROFILES_ROOT || entry.parent_path !== '') { throw new Error('Invalid library root.'); }
 		} else {
 			const parent = seen.get(entry.parent_path);
 			if (!parent || !['root', 'folder'].includes(parent.kind)
@@ -84,9 +104,11 @@ export function validateCatalogue(value: unknown): LibraryCatalogue {
 				throw new Error('Invalid library parent relationship.');
 			}
 		}
-		if (entry.kind === 'resource' && !entry.source_path.endsWith('.tres')) { throw new Error('Invalid library resource.'); }
+		if (entry.kind === 'resource' && (!isBehaviorPath(entry.source_path) || !entry.source_path.endsWith('.tres'))) {
+			throw new Error('Invalid library resource.');
+		}
 		if (entry.kind === 'resource' && (typeof entry.id !== 'string' || typeof entry.valid !== 'boolean'
-			|| !['', 'action', 'condition', 'condition_group', 'interaction', 'automation'].includes(entry.resource_kind ?? '?')
+			|| !['', 'action', 'condition', 'condition_group', 'interaction', 'automation', 'behavior'].includes(entry.resource_kind ?? '?')
 			|| !Array.isArray(entry.argument_specs) || !entry.argument_specs.every(spec => spec && typeof spec.name === 'string'
 				&& typeof spec.numeric === 'boolean'))) { throw new Error('Invalid behavior schema information.'); }
 		seen.set(entry.source_path, entry);

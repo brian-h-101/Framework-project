@@ -20,12 +20,12 @@ export async function openExecutorScript(
 
 		const selected = provider.resolve(element);
 
-		if (selected.data || selected.resource.kind !== 'action') {
+		if (!(selected.resource.kind === 'behavior' && selected.data?.sequence?.role === 'executor') && (selected.data || selected.resource.kind !== 'action')) {
 			throw new Error('Choose the Action resource row.');
 		}
 
 		const executor = selected.graph.executors?.find(
-			entry => entry.id === selected.resource.behavior_id
+			entry => entry.id === (selected.data?.sequence?.executor_id ?? selected.resource.behavior_id)
 		);
 		const source = executor?.script_path;
 

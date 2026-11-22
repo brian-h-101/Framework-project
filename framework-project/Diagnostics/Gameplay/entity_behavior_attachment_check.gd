@@ -4,10 +4,10 @@ const GameHost = preload(
 	"res://Framework/Env/Host/game_host.gd"
 )
 const Behavior = preload(
-	"res://Framework/Content/God/Interaction/interaction_behavior.gd"
+	"res://Framework/Content/Universal/Interaction/based/Bindings/behavior_binding.gd"
 )
 const InteractionInput = preload(
-	"res://Framework/Content/God/Interaction/interaction_input.gd"
+	"res://Framework/Content/Universal/Interaction/based/Input2D/behavior_input.gd"
 )
 const Controls = preload(
 	"res://Framework/Content/Configuration/Input/controls.tres"
@@ -55,12 +55,12 @@ func _check_attachment() -> bool:
 	if behavior == null or behavior.content == null:
 		return false
 
-	if behavior.content.action == null:
+	if behavior.content.steps.is_empty():
 		return false
 
 	print(
 		"[behavior-attachment] Executor behavior: ",
-		behavior.content.action.behavior_id
+		behavior.content.steps[0].executor_id
 	)
 
 	print(
@@ -90,12 +90,12 @@ func _check_attachment() -> bool:
 
 	return (
 		behavior.content.id == &"strike"
-		and behavior.content.resource_path == "res://Framework/Content/Behavior/Interaction/strike.tres"
-		and behavior.content.action.behavior_id == &"change_health"
-		and behavior.content.action.effects.is_empty()
+		and behavior.content.resource_path == "res://Framework/Content/Behavior/Sequence/strike.tres"
+		and behavior.content.steps[0].executor_id == &"change_health"
+		and behavior.content.steps[0].effects.is_empty()
 		and before["ok"]
 		and result["ok"]
 		and after["ok"]
 		and after["value"] == before["value"] - 10
-		and result["value"] == after["value"]
+		and result["value"][0]["result"]["value"]["executed"] == 1
 	)

@@ -1,8 +1,8 @@
 extends SceneTree
 
-const Graph = preload("res://Framework/Env/Authoring/Scenes/scene_graph.gd")
-const Editing = preload("res://Framework/Env/Authoring/Scenes/scene_editing.gd")
-const Document = preload("res://Framework/Env/Authoring/Scenes/scene_document.gd")
+const Graph = preload("res://Framework/Env/Authoring/Scenes/Inspection/scene_graph.gd")
+const Editing = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_editing.gd")
+const Document = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_document.gd")
 const BASE = "res://Diagnostics/Fixtures/SceneGraph/base.tscn"
 const INHERITED = "res://Diagnostics/Fixtures/SceneGraph/inherited.tscn"
 const COMPOSED = "res://Diagnostics/Fixtures/SceneGraph/composed.tscn"
@@ -17,7 +17,7 @@ var _hashes := {}
 func _initialize() -> void:
 	for path in [BASE, INHERITED, COMPOSED, PROBE]:
 		_hashes[path] = FileAccess.get_sha256(path)
-	for path in [BASE, INHERITED, COMPOSED, "res://Framework/Content/Maps/city_recreated.tscn", "res://Framework/Content/Presentation/Entity/Player/player_2d.tscn", "res://Framework/Content/UI/HUD/ui_root.tscn"]:
+	for path in [BASE, INHERITED, COMPOSED, "res://Framework/Content/Gameplay/Maps/city_recreated.tscn", "res://Framework/Content/Gameplay/Presentation/Entity/Player/player_2d.tscn", "res://Framework/Content/Gameplay/UI/HUD/ui_root.tscn"]:
 		_check("Document parser accepts existing scene: %s" % String(path).get_file(), Document.parse(FileAccess.get_file_as_string(path))["ok"])
 	var inherited := Graph.read(INHERITED)
 	var composed := Graph.read(COMPOSED)
@@ -88,7 +88,7 @@ func _initialize() -> void:
 	_edit("Rename editable scene placement", indexed, "rename", "Placement", {"name": "Moved"})
 	_check("Editable paths are repaired", FileAccess.get_file_as_string(indexed).contains("[editable path=\"Moved\"]"))
 	var real_map := _folder.path_join("map_environment.tscn")
-	var city := "res://Framework/Content/Maps/city_recreated.tscn"
+	var city := "res://Framework/Content/Gameplay/Maps/city_recreated.tscn"
 	_hashes[city] = FileAccess.get_sha256(city)
 	_write(real_map, "[gd_scene format=3]\n[ext_resource type=\"PackedScene\" path=\"%s\" id=\"map\"]\n[node name=\"CheckMap\" instance=ExtResource(\"map\")]\n[node name=\"LocalProbe\" type=\"Marker2D\" parent=\".\"]\n" % city)
 	_edit("Rename local addition alongside real map dependencies", real_map, "rename", "LocalProbe", {"name": "RenamedProbe"})

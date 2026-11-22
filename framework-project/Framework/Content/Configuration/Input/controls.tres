@@ -1,28 +1,19 @@
 [gd_resource type="Resource" format=3]
 
-[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/controls_resource.gd" id="1_fohhn"]
+[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/Input/controls_resource.gd" id="1_3catr"]
 
 [resource]
-script = ExtResource("1_fohhn")
+script = ExtResource("1_3catr")
 bindings = Array[Dictionary]([{
-	"action": &"primary_interaction",
-	"interaction": &"strike",
-	"keys": [32],
-	"targeting": &"nearest"
-}, {
 	"action": &"move_left",
-	"keys": [65, 4194319]
+	"keys": Array[int]([4194319, 65])
 }, {
 	"action": &"move_right",
-	"keys": [68, 4194321]
+	"keys": Array[int]([4194321, 68])
 }, {
 	"action": &"move_up",
-	"keys": [87, 4194320]
+	"keys": Array[int]([4194320, 87])
 }, {
 	"action": &"move_down",
-	"keys": [83, 4194322]
-}, {
-	"action": &"save_game",
-	"command": &"save_session",
-	"keys": [4194336]
+	"keys": Array[int]([4194322, 83])
 }])

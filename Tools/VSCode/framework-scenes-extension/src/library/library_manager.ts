@@ -61,6 +61,9 @@ export class LibraryManager {
 				const details = await sceneDetails(choice.entry.source_path, context.projectDirectory, service.executable, message => this.output.appendLine(message));
 				if (!details) { return; }
 				source = await service.createScene(choice.entry, details.filename, details.request, catalogue);
+				if (details.request.template === 'entity_presentation') {
+					this.output.appendLine(`[library] Created ${choice.entry.source_path}/starting_attributes.tres`);
+				}
 			} else {
 				const preview = action.operation === 'delete-resource' ? await service.previewDeletion(choice.entry) : undefined;
 				if (preview?.consumers.length) {

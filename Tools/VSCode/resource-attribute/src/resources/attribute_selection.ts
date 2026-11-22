@@ -64,7 +64,7 @@ export class AttributeSelection implements vscode.Disposable {
 		const dirty = vscode.workspace.textDocuments.some(document => document.isDirty
 			&& document.uri.toString() === this.selected?.toString());
 		this.status(dirty ? 'Showing saved values. Save or revert text edits before editing attributes.'
-			: this.unsupported ? 'Open a container fragment Resource from Content/Authored.' : undefined);
+			: this.unsupported ? 'Open a container fragment Resource from Content/Gameplay/Authored.' : undefined);
 	}
 
 	workspaceChanged(): void {

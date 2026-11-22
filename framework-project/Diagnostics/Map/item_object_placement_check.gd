@@ -4,10 +4,10 @@ const GameHost = preload(
 	"res://Framework/Env/Host/game_host.gd"
 )
 const EntityStatusLayer2D = preload(
-	"res://Framework/Content/God/UI/entity_status_layer_2d.gd"
+	"res://Framework/Content/Universal/UI/based/Spatial2D/entity_status_layer_2d.gd"
 )
 const CheckMap = preload(
-	"res://Framework/Content/Maps/item_object_check.tscn"
+	"res://Framework/Content/Gameplay/Maps/item_object_check.tscn"
 )
 
 var _host := GameHost.new()

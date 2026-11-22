@@ -14,7 +14,7 @@ const resource = name => 'res://' + path.relative(project, path.join(temporary, 
 const fixture = path.join(temporary, 'map.tscn'); const templateFile = path.join(temporary, 'template.tscn');
 const scene = resource('map.tscn'); const template = resource('template.tscn');
 const script = resource('probe.gd');
-const production = path.join(project, 'Framework/Content/Maps/city_recreated.tscn');
+const production = path.join(project, 'Framework/Content/Gameplay/Maps/city_recreated.tscn');
 const productionBytes = fs.readFileSync(production);
 fs.writeFileSync(fixture, '[gd_scene format=3]\n[node name="Map" type="Node2D" unique_id=100]\nmetadata/entity_key = &"stable_key"\n[node name="Props" type="Node2D" parent="." unique_id=101]\n[node name="Lamp" type="Node2D" parent="Props" unique_id=102]\nposition = Vector2(3, 4)\n[node name="Watcher" type="RemoteTransform2D" parent="."]\nremote_path = NodePath("../Props/Lamp")\n');
 fs.writeFileSync(templateFile, '[gd_scene format=3]\n[node name="Template" type="Node2D"]\n[node name="Marker" type="Marker2D" parent="."]\n');
@@ -77,7 +77,7 @@ const check = label => console.log(`[scene-editing-bridge] ${label}: true`);
 		assert.deepEqual(fs.readFileSync(fixture), saved);
 		check('Borrowed nodes, cycles and stale dependencies are rejected');
 		const malformed = spawnSync(executable, ['--headless', '--path', project, '--script',
-			'res://Framework/Env/Authoring/Scenes/scene_editing_cli.gd', '--', 'edit', scene],
+			'res://Framework/Env/Authoring/Scenes/Editing/scene_editing_cli.gd', '--', 'edit', scene],
 			{ input: '{invalid json', encoding: 'utf8', windowsHide: true, timeout: 30000 });
 		assert.equal(malformed.status, 1); assert.match(malformed.stdout, /Expected a scene edit JSON object/);
 		assert.deepEqual(fs.readFileSync(fixture), saved);

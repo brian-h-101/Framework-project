@@ -224,3 +224,43 @@ func _on_core_attribute_written(
 	attribute_name: StringName
 ) -> void:
 	attribute_written.emit(entity_id, container_id, attribute_name)
+
+func define_behavior(definition: Dictionary) -> Dictionary:
+	return _core.define_behavior(definition)
+
+func read_behavior(id: StringName) -> Dictionary:
+	return _core.read_behavior(id)
+
+func bind_behavior(entity_id: int, id: StringName, enabled: bool = true) -> Dictionary:
+	return _core.bind_behavior(entity_id, id, enabled)
+
+func behavior_bindings(entity_id: int) -> Dictionary:
+	return _core.behavior_bindings(entity_id)
+
+func set_behavior_enabled(entity_id: int, id: StringName, enabled: bool) -> Dictionary:
+	return _core.set_behavior_enabled(entity_id, id, enabled)
+
+func unbind_behavior(entity_id: int, id: StringName) -> Dictionary:
+	return _core.unbind_behavior(entity_id, id)
+
+func select_target(actor: int, target: int) -> Dictionary:
+	return _core.select_target(actor, target)
+
+func selected_target(actor: int) -> int:
+	return _core.selected_target(actor)
+
+func invoke_behavior(id: StringName, actor: int, resolve_target: Callable,
+		step_id: StringName = &"", step_arguments: Dictionary = {}) -> Dictionary:
+	return _core.invoke_behavior(id, actor, resolve_target, step_id, step_arguments)
+
+func emit_behavior_event(actor: int, event_id: StringName, resolve_target: Callable) -> Dictionary:
+	return _core.emit_behavior_event(actor, event_id, resolve_target)
+
+func advance_behaviors(delta: float, resolve_target: Callable) -> Dictionary:
+	return _core.advance_behaviors(delta, resolve_target)
+
+func snapshot_behaviors(entity_ids: Dictionary[StringName, int]) -> Dictionary:
+	return _core.snapshot_behaviors(entity_ids)
+
+func restore_behaviors(records: Variant, entity_ids: Dictionary[StringName, int]) -> Dictionary:
+	return _core.restore_behaviors(records, entity_ids)

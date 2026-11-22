@@ -85,10 +85,10 @@ async function main() {
 
 	console.log('[graph-bridge] Existing catalogue call works: true');
 	for (const source of [
-		'res://Framework/Content/Authored/Entity/Attributes/Abilities/reflex.tres',
-		'res://Framework/Content/Authored/Entity/Attributes/Identity/identity.tres',
+		'res://Framework/Content/Gameplay/Authored/Entity/Attributes/Abilities/reflex.tres',
+		'res://Framework/Content/Gameplay/Authored/Entity/Attributes/Identity/identity.tres',
 		'res://Framework/Content/Configuration/Lighting/city_lighting.tres',
-		'res://Framework/Content/Presentation/Entity/Player/starting_attributes.tres'
+		'res://Framework/Content/Gameplay/Presentation/Entity/Player/starting_attributes.tres'
 	]) {
 		const file = path.join(projectDirectory, source.slice(6));
 		const before = fs.readFileSync(file);
@@ -108,7 +108,7 @@ async function main() {
 	const fixtureSource = 'res://' + path.relative(projectDirectory, fixtureFile).split(path.sep).join('/');
 	try {
 		fs.writeFileSync(fixtureFile, '[gd_resource type="Resource" format=3]\n\n'
-			+ '[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd" id="1"]\n\n'
+			+ '[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Actions/action_resource.gd" id="1"]\n\n'
 			+ '[resource]\nscript = ExtResource("1")\n', { flag: 'wx' });
 		await assert.rejects(() => loadResourceGraph(projectDirectory, godotExecutable, report, fixtureSource), /empty authored ID/);
 		console.log('[graph-bridge] A behavior Resource with no authored ID remains an error: true');

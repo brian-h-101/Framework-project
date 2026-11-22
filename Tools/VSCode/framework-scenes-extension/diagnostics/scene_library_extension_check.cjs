@@ -13,6 +13,10 @@ const entry = (source, kind, extra = {}) => ({ source_path: source, parent_path:
 const catalogue = { version: 1, root_paths: [...SCENE_ROOTS], entries: SCENE_ROOTS.flatMap(root => [entry(root, 'root'),
 	entry(root + '/Empty', 'folder'), entry(root + '/Used', 'folder', { fingerprint: 'a'.repeat(64) }),
 	entry(root + '/Link', 'blocked', { fingerprint: '' }), entry(root + '/scene.tscn', 'resource')]) };
+const entityFolder = SCENE_ROOTS[1] + '/Entity/Player';
+catalogue.entries.push(entry(SCENE_ROOTS[1] + '/Entity', 'folder', { fingerprint: 'b'.repeat(64) }),
+	entry(entityFolder, 'folder', { fingerprint: 'c'.repeat(64) }));
+const health = 'res://Framework/Content/Gameplay/Authored/Entity/Attributes/Statistics/health.tres';
 const calls = [], picks = [], inputs = [], messages = [], trash = [], opened = [], changes = [];
 let onPrompt, consumers = [], discoveries = 0;
 const api = {
@@ -43,6 +47,9 @@ function load(file) {
 	const local = name => {
 		if (name === 'vscode') return api;
 		if (name === './library_service') return { LibraryService: Service };
+		if (name === './scene_library_bridge') return { SCENE_ROOTS, libraryRequest: async (_project, _exe, operation) => {
+			assert.equal(operation, 'attribute-fragments'); return [health];
+		} };
 		if (name === '../scene_editing_bridge') return { nodeTypes: async () => ['Node', 'Node2D', 'Node3D', 'CharacterBody2D'] };
 		if (name === '../project_context') return { ...require('../out/project_context'), resolveProjectContext: async file => ({ projectDirectory: path.dirname(file), workspaceDirectory: path.dirname(project) }) };
 		return name.startsWith('.') ? load(path.resolve(path.dirname(file), name + '.js')) : require(name);
@@ -83,6 +90,22 @@ async function main() {
 	assert.deepEqual(scenes.map(call => call[4].template), ['map_2d', 'empty_3d', 'presentation', 'control', 'hud']);
 	assert.equal(scenes[2][4].root_type, 'CharacterBody2D'); assert.equal(opened.length, 5);
 	check('Scene prompts expose only appropriate templates and open the created file');
+	picks.push(op('New Scene'), destination(entityFolder), op('Entity Presentation'), 'Node2D', (items, options) => {
+		assert.equal(options.canPickMany, true); assert.equal(items[0].picked, true); return items;
+	});
+	inputs.push('player_2d.tscn', 'Player', 'player');
+	await manager.execute();
+	assert.deepEqual(calls.at(-1)[4], {
+		template: 'entity_presentation', node_name: 'Player', root_type: 'Node2D',
+		definition_id: 'player', fragments: [health]
+	});
+	check('Entity creation sends the definition and selected shared fragments');
+	const beforeCancelledEntity = calls.length;
+	picks.push(op('New Scene'), destination(entityFolder), op('Entity Presentation'), 'Node2D', undefined);
+	inputs.push('player_2d.tscn', 'Player', 'player');
+	await manager.execute();
+	assert.equal(calls.length, beforeCancelledEntity);
+	check('Cancelling the entity fragment picker writes neither file');
 	const writes = calls.length;
 	for (const sequence of [[], [destination(SCENE_ROOTS[0])], [destination(SCENE_ROOTS[0]), op('Empty 2D')]]) {
 		picks.push(op('New Scene'), ...sequence); await manager.execute(); picks.length = 0;

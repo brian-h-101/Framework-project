@@ -93,6 +93,10 @@ func restore_session(
 	if not automations["ok"]:
 		stop()
 		return automations
+	var behaviors := runtime.restore_behaviors(snapshot.get("behaviors", {}), entity_ids)
+	if not behaviors["ok"]:
+		stop()
+		return behaviors
 	world_bridge = WorldBridge.new(core)
 
 	return {
@@ -133,6 +137,12 @@ func snapshot_session() -> Dictionary:
 	# Omit empty state to retain the shape of existing entity-only snapshots.
 	if not automations["value"].is_empty():
 		snapshot["automations"] = automations["value"]
+
+	var behaviors := runtime.snapshot_behaviors(entity_ids)
+	if not behaviors["ok"]:
+		return behaviors
+	if not behaviors["value"].is_empty():
+		snapshot["behaviors"] = behaviors["value"]
 
 	if captured_clock["value"] != null:
 		snapshot["clock"] = captured_clock["value"]

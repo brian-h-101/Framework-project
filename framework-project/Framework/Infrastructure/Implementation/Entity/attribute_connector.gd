@@ -122,6 +122,11 @@ func compare(
 
 		b = right_result.value
 
+	if typeof(a) == TYPE_BOOL or typeof(b) == TYPE_BOOL:
+		if typeof(a) != TYPE_BOOL or typeof(b) != TYPE_BOOL or operator not in ["==", "!="]:
+			return _failure("Boolean comparisons require two booleans and == or !=.")
+		return {"ok": true, "value": a == b if operator == "==" else a != b, "error": ""}
+
 	if (
 		typeof(a) not in [TYPE_INT, TYPE_FLOAT]
 		or typeof(b) not in [TYPE_INT, TYPE_FLOAT]

@@ -9,11 +9,8 @@ const Core = preload(
 const Bridge = preload(
 	"res://Framework/Infrastructure/API/Bootstrap/world_bridge.gd"
 )
-const Executor = preload(
-	"res://Framework/Content/Executor/change_health_executor.gd"
-)
 const Action = preload(
-	"res://Framework/Content/Behavior/Action/change_health.tres"
+	"res://Diagnostics/Fixtures/GameplayResources/change_health.tres"
 )
 
 
@@ -58,10 +55,7 @@ func _run_check(
 	target_node: Node,
 	unbound_node: Node
 ) -> bool:
-	var registered := runtime.register_executor(
-		Executor.BEHAVIOR_ID, Executor.new()
-	)
-	if not registered["ok"]:
+	if not runtime.has_executor(Action.behavior_id):
 		return false
 
 	var defined := runtime.define_action(Action.to_definition())
@@ -111,7 +105,7 @@ func _run_check(
 
 	if not (
 		result["ok"]
-		and result["value"] == 90
+		and result["value"] == [90]
 		and target_health["ok"]
 		and target_health["value"] == 90
 		and notified
@@ -127,7 +121,7 @@ func _run_check(
 
 	if not (
 		self_result["ok"]
-		and self_result["value"] == 95
+		and self_result["value"] == [95]
 		and writes == [[actor_node, &"health", &"current"]]
 	):
 		return false

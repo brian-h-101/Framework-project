@@ -188,3 +188,28 @@ func bound_entity_ids() -> Array[int]:
 
 func _failure(message: String) -> Dictionary:
 	return {"ok": false, "value": null, "error": message}
+
+func bind_behavior(node: Node, id: StringName, enabled: bool = true) -> Dictionary:
+	return _failure("World bridge is closed.") if _closed else _runtime.bind_behavior(entity_for(node), id, enabled)
+
+func emit_behavior_event(node: Node, event: StringName, resolver: Callable) -> Dictionary:
+	return _failure("World bridge is closed.") if _closed else _runtime.emit_behavior_event(entity_for(node), event, resolver)
+
+func invoke_behavior(
+	node: Node,
+	id: StringName,
+	resolver: Callable,
+	step_id: StringName = &"",
+	step_arguments: Dictionary = {}
+) -> Dictionary:
+	if _closed:
+		return _failure("World bridge is closed.")
+	return _runtime.invoke_behavior(id, entity_for(node), resolver, step_id, step_arguments)
+
+func select_behavior_target(actor: Node, target: Node) -> Dictionary:
+	if _closed or (target != null and entity_for(target) == 0):
+		return _failure("Selected target is not bound or bridge is closed.")
+	return _runtime.select_target(entity_for(actor), entity_for(target) if target != null else 0)
+
+func selected_behavior_target(actor: Node) -> Node:
+	return null if _closed else node_for(_runtime.selected_target(entity_for(actor)))

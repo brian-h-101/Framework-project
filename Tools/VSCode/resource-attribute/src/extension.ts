@@ -30,7 +30,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		['newSubcategory', 'category'], ['newAttributeResource', 'resource'],
 		['deleteResource', 'delete-resource'], ['deleteCategory', 'delete-category']] as const).map(([name, operation]) =>
 		vscode.commands.registerCommand('resourceAttribute.' + name, (element: LibraryElement) => run(() => libraryCommands.execute(operation, element))));
-	const libraryWatcher = vscode.workspace.createFileSystemWatcher('**/Framework/Content/Authored/**');
+	const libraryWatcher = vscode.workspace.createFileSystemWatcher('**/Framework/Content/Gameplay/Authored/**');
 	const projectWatcher = vscode.workspace.createFileSystemWatcher('**/project.godot');
 	const refreshLibrary = (): void => library.schedule(pendingOperation);
 	const librarySubscriptions = [libraryWatcher, projectWatcher,
@@ -44,7 +44,7 @@ export function activate(context: vscode.ExtensionContext): void {
 	const find = vscode.commands.registerCommand('resourceAttribute.findResource', async () => {
 		try {
 			if (!vscode.workspace.isTrusted) { throw new Error('Attribute discovery requires a trusted workspace.'); }
-			const uris = await vscode.workspace.findFiles('**/Framework/Content/Authored/**/*.tres', '**/{.git,.godot,node_modules,out}/**');
+			const uris = await vscode.workspace.findFiles('**/Framework/Content/Gameplay/Authored/**/*.tres', '**/{.git,.godot,node_modules,out}/**');
 			const items = uris.filter(uri => uri.scheme === 'file').map(uri => ({
 				label: uri.path.slice(uri.path.lastIndexOf('/') + 1), description: vscode.workspace.asRelativePath(uri, true), uri
 			})).sort((left, right) => left.description.localeCompare(right.description));

@@ -1,7 +1,7 @@
 extends RefCounted
 
 const RegistryCore = preload(
-	"res://Framework/Infrastructure/Implementation/Gameplay/executor_registry_core.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/Registry/executor_registry_core.gd"
 )
 
 var _core := RegistryCore.new()

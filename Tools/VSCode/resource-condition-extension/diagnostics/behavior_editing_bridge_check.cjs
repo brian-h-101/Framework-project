@@ -22,7 +22,7 @@ async function main() {
 	try {
 		await fs.writeFile(path.join(folder, 'interaction.tres'), `[gd_resource type="Resource" format=3]
 
-[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd" id="1"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Gameplay/Resources/Interactions/interaction_resource.gd" id="1"]
 [ext_resource type="Resource" path="res://Framework/Content/Behavior/Action/change_health.tres" id="2"]
 [ext_resource type="Resource" path="res://Framework/Content/Behavior/Condition/can_strike.tres" id="3"]
 

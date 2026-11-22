@@ -173,7 +173,7 @@ function runAssignment(
 				'--path',
 				projectDirectory,
 				'--script',
-				'res://Framework/Env/Authoring/Resources/condition_assignment_cli.gd',
+				'res://Framework/Env/Authoring/Resources/Conditions/condition_assignment_cli.gd',
 				'--',
 				operation,
 				destinationPath,

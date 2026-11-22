@@ -90,8 +90,8 @@ async function until(predicate) {
 
 async function main() {
 	check('Movement catalogue validates typed descriptions and dependency hashes', () => {
-		const resource = 'res://Framework/Content/Configuration/Movement/player_movement.tres';
-		const entry = { source_path: resource, action_id: 'move', behavior_id: 'movement_2d', dependency_hashes: { [resource]: 'a'.repeat(64) } };
+		const resource = 'res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_2d.tres';
+		const entry = { source_path: resource, action_id: 'calculate_velocity', behavior_id: 'move', dependency_hashes: { [resource]: 'a'.repeat(64) } };
 		const catalog = () => ({ version: 1, configurations: [structuredClone(entry)] });
 		assert.equal(validateMovementConfigurations(catalog())[0].source_path, resource);
 		for (const mutate of [
@@ -156,7 +156,7 @@ async function main() {
 		const camera = join(project, 'Scenes/camera.tscn');
 		const write = async (path, text = '') => { await fs.mkdir(dirname(path), { recursive: true }); await fs.writeFile(path, text); };
 		for (const path of [join(project, 'project.godot'),
-			join(project, 'Framework/Env/Authoring/Scenes/scene_graph_export.gd'), first, second, camera]) {
+			join(project, 'Framework/Env/Authoring/Scenes/Inspection/scene_graph_export.gd'), first, second, camera]) {
 			await write(path);
 		}
 		for (const [label, roots] of [
@@ -185,15 +185,45 @@ async function main() {
 		treeGraph.dependency_hashes['res://linked.tscn'] = '0'.repeat(64);
 		treeGraph.nodes.Left.instance_path = 'res://linked.tscn';
 		treeGraph.nodes.Left.script_path = 'res://movement.gd';
+		treeGraph.nodes['Left/Body'].properties = [
+			{ name: 'color', type: 'Color', value: 'Color(0.2, 0.6, 1, 1)', source_path: 'res://linked.tscn' }
+		];
+		treeGraph.nodes.Left.properties = [
+			{ name: 'position', type: 'Vector2', value: 'Vector2(320, 360)', source_path: 'res://scene.tscn' }
+		];
 		Object.assign(treeGraph.nodes.Left, { has_script: true, script_source_path: 'res://scene.tscn', can_attach_script: false, can_remove_script: true });
 		provider.setGraph(context, validateSceneGraph(treeGraph, 'res://scene.tscn'));
 		const root = provider.getChildren()[0];
 		const left = provider.getChildren(root)[0];
 		check('Tree exposes nested children and contextual navigation', () => {
-			assert.equal(provider.getTreeItem(left).contextValue, 'scene_node_instance_scripted_add_rename_remove_detach_script');
+			assert.equal(provider.getTreeItem(left).contextValue, 'scene_node_instance_scripted_add_rename_remove_detach_script_set_property');
 			assert.equal(provider.getChildren(left)[0].path, 'Left/Body');
 			assert.equal(provider.getParent(left).path, '.');
 			assert.equal(provider.getTreeItem(left).command.command, 'frameworkScenes.openDeclaration');
+		});
+		check('Saved properties appear in an expandable group without changing scene child order', () => {
+			const [body, placement] = provider.getChildren(left);
+			assert.equal(body.path, 'Left/Body');
+			assert.equal(provider.getTreeItem(placement).label, 'Properties');
+			assert.equal(provider.getTreeItem(placement).collapsibleState, vscode.TreeItemCollapsibleState.Collapsed);
+			const [position] = provider.getChildren(placement);
+			assert.equal(provider.getTreeItem(position).description, 'Vector2(320, 360)');
+			assert.deepEqual(provider.getParent(placement), left);
+			assert.deepEqual(provider.getParent(position), placement);
+			assert.equal(provider.getChildren(position).length, 0);
+			assert.throws(() => provider.resolve(position), /current node/);
+			const [inherited] = provider.getChildren(provider.getChildren(body)[0]);
+			const item = provider.getTreeItem(inherited);
+			assert.equal(item.label, 'color');
+			assert.match(item.description, /inherited/);
+			assert.match(item.tooltip, /Saved in: res:\/\/linked\.tscn/);
+		});
+		check('Property previews must name a dependency and have unique keys per node', () => {
+			const invalid = structuredClone(treeGraph);
+			invalid.nodes.Left.properties[0].source_path = 'res://unrelated.tscn';
+			assert.throws(() => validateSceneGraph(invalid, 'res://scene.tscn'), /Invalid property preview/);
+			invalid.nodes.Left.properties = [treeGraph.nodes.Left.properties[0], treeGraph.nodes.Left.properties[0]];
+			assert.throws(() => validateSceneGraph(invalid, 'res://scene.tscn'), /Invalid property preview/);
 		});
 		provider.clear();
 		check('Old context-menu items are rejected after refresh', () => assert.throws(() => provider.resolve(left)));

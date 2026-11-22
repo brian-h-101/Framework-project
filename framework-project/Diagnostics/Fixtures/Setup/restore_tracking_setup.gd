@@ -1,4 +1,4 @@
-extends "res://Framework/Env/Setup/game_setup.gd"
+extends "res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 
 var captured_runtime: GameRuntime
 var create_entities_called: bool = false

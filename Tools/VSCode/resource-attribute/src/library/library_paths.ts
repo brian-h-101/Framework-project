@@ -36,7 +36,7 @@ export async function checkedProjectPath(context: ProjectContext, source: string
 
 export async function checkedAuthoredPath(context: ProjectContext, source: string, kind: 'directory' | 'file'): Promise<string> {
 	if (source !== AUTHORED_ROOT && !source.startsWith(AUTHORED_ROOT + '/')) {
-		throw new Error('Choose a path inside Framework/Content/Authored.');
+		throw new Error('Choose a path inside Framework/Content/Gameplay/Authored.');
 	}
 	const path = await checkedProjectPath(context, source);
 	const info = await lstat(path);

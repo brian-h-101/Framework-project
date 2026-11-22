@@ -1,7 +1,7 @@
 extends SceneTree
 
 const InteractionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Interactions/interaction_resource.gd"
 )
 const ExistingInteraction = preload(
 	"res://Diagnostics/Fixtures/GameplayBaselines/strike.gd"

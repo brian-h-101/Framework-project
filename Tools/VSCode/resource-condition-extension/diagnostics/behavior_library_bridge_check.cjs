@@ -4,7 +4,7 @@ const path = require('node:path');
 const { randomBytes } = require('node:crypto');
 const { execFileSync } = require('node:child_process');
 const { LibraryService } = require('../out/library/library_service.js');
-const { BEHAVIOR_ROOT, libraryRequest } = require('../out/bridges/behavior_library_bridge.js');
+const { PROFILES_ROOT, libraryRequest } = require('../out/bridges/behavior_library_bridge.js');
 const { loadResourceCatalog } = require('../out/bridges/resource_catalog_bridge.js');
 const { checkedBehaviorPath, nameError } = require('../out/library/library_paths.js');
 const { addConditionToGroup } = require('../out/bridges/condition_assignment_bridge.js');
@@ -19,10 +19,14 @@ async function main() {
 	const context = { projectDirectory: project, workspaceDirectory: path.dirname(project) };
 	const service = new LibraryService(context, executable, message => { if (/^(SCRIPT ERROR|ERROR):/m.test(message)) { throw new Error(message); } });
 	const before = await service.catalogue();
+	const behaviorRoot = PROFILES_ROOT + '/Movement/Behavior';
+	assert.equal(before.root_path, PROFILES_ROOT);
+	assert.ok(before.entries.some(entry => entry.source_path === behaviorRoot + '/move.tres' && entry.id === 'move'));
+	assert.ok(before.entries.every(entry => !/\/(Shared|Executor)(\/|$)/.test(entry.source_path)));
 	const production = new Map(await Promise.all(before.entries.filter(e => e.kind === 'resource')
 		.map(async e => [e.source_path, await fs.readFile(path.join(project, e.source_path.slice(6)))])));
 	const name = 'DiagnosticBehavior_' + randomBytes(8).toString('hex');
-	const root = BEHAVIOR_ROOT + '/' + name;
+	const root = behaviorRoot + '/' + name;
 	const ownedRoot = path.join(project, root.slice(6));
 	let created = false;
 	const current = () => service.catalogue();
@@ -34,10 +38,10 @@ async function main() {
 	const trashCalls = [];
 	const trash = async file => { trashCalls.push(file); await fs.unlink(file); };
 	try {
-		await service.createCategory(before.entries[0], name); created = true;
+		await service.createCategory(await get(behaviorRoot), name); created = true;
 		await service.createCategory(await get(root), 'Nested');
 		const nested = root + '/Nested';
-		await assert.rejects(service.createCategory(await get(BEHAVIOR_ROOT), name.toUpperCase()), /already exists/);
+		await assert.rejects(service.createCategory(await get(behaviorRoot), name.toUpperCase()), /already exists/);
 		await assert.rejects(service.createCategory(await get(root), '../escape'), /leading dot|reserved/);
 		assert.ok(nameError('COM¹')); assert.ok(nameError('NUL.tres')); assert.ok(nameError('bad.'));
 		check('Categories, nested categories, Windows names, and duplicate siblings');
@@ -145,8 +149,9 @@ async function main() {
 		await assert.rejects(service.deleteResource(entry, preview, trash), /references changed/);
 		check('New consumers and changed file bytes invalidate deletion previews');
 		await assert.rejects(service.deleteEmptyCategory(await get(root), trash), /empty category/);
-		await assert.rejects(service.deleteEmptyCategory(await get(BEHAVIOR_ROOT), trash), /root cannot/);
-		await assert.rejects(checkedBehaviorPath(context, BEHAVIOR_ROOT + '/../Authored', 'directory'), /canonical/);
+		await assert.rejects(service.deleteEmptyCategory(await get(behaviorRoot), trash), /root cannot/);
+		await assert.rejects(checkedBehaviorPath(context, behaviorRoot + '/../Shared', 'directory'), /canonical/);
+		await assert.rejects(checkedBehaviorPath(context, PROFILES_ROOT + '/Movement/Shared', 'directory'), /choose a path/i);
 		check('Nonempty folders, root deletion, and traversal are protected');
 		const empty = root + '/Empty'; await service.createCategory(await get(root), 'Empty');
 		const hiddenFile = path.join(project, empty.slice(6), '.keep'); await fs.writeFile(hiddenFile, 'hidden');
@@ -167,7 +172,7 @@ async function main() {
 	} finally {
 		if (created) {
 			assert.equal(await fs.realpath(ownedRoot), ownedRoot);
-			assert.equal(path.dirname(ownedRoot), path.join(project, BEHAVIOR_ROOT.slice(6)));
+			assert.equal(path.dirname(ownedRoot), path.join(project, behaviorRoot.slice(6)));
 			await fs.rm(ownedRoot, { recursive: true });
 		}
 		for (const [source, bytes] of production) { assert.deepEqual(await fs.readFile(path.join(project, source.slice(6))), bytes); }

@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { prepareEditGraph } from '../resources/edit_context';
 import { createHash } from 'node:crypto';
 import { relative } from 'node:path';
 import { editBehavior, type BehaviorEdit } from '../bridges/behavior_editing_bridge';
@@ -8,9 +9,11 @@ import { promptKey, promptValue, promptEffect } from '../resources/value_prompts
 import { pickExecutor } from '../resources/executor_picker';
 import { argumentTypes } from '../resources/executor_metadata';
 import { pickResource } from '../resources/resource_picker';
+import { pickPresetFragments } from '../resources/preset_fragment_picker';
 
 export type StructuralOperation = 'set' | 'add' | 'rename' | 'remove' | 'add_effect'
-	| 'remove_condition' | 'clear_requirements' | 'set_behavior' | 'set_interaction';
+	| 'remove_condition' | 'clear_requirements' | 'set_behavior' | 'set_interaction'
+	| 'set_fragments' | 'fragment_up' | 'fragment_down';
 
 export async function editTreeEntry(
 	provider: ResourceTreeProvider,
@@ -22,7 +25,8 @@ export async function editTreeEntry(
 	try {
 		if (!element || element.cycle) { throw new Error('Choose an editable row in Framework Resources.'); }
 		const selected = provider.resolve(element);
-		const { graph, data, resource, projectRoot } = selected;
+		const { data, resource, projectRoot } = selected;
+		let graph = selected.graph;
 		const context = await resolveProjectContext(selected.uri.fsPath,
 			(vscode.workspace.workspaceFolders ?? []).filter(folder => folder.uri.scheme === 'file').map(folder => folder.uri.fsPath));
 		if (relative(context.projectDirectory, projectRoot.fsPath) !== '') {
@@ -35,13 +39,13 @@ export async function editTreeEntry(
 				throw new Error('The trusted project workspace changed. Refresh and retry.');
 			}
 		};
-		const ensureReady = async (): Promise<void> => {
+		const ensureReady = async (added: Record<string, string> = {}): Promise<void> => {
 			ensureSession();
-			for (const [path, expected] of Object.entries({ ...graph.dependency_hashes, ...graph.executor_snapshot?.hashes })) {
+			for (const [path, expected] of Object.entries({ ...added, ...graph.dependency_hashes, ...graph.executor_snapshot?.hashes })) {
 				const uri = vscode.Uri.joinPath(projectRoot, ...path.slice(6).split('/'));
 				if (vscode.workspace.textDocuments.some(document => document.isDirty
 					&& document.uri.scheme === 'file' && relative(uri.fsPath, document.uri.fsPath) === '')) {
-					throw new Error(`Save or revert '${path}' before editing behavior resources.`);
+					throw new Error(`Save or revert '${path}' before editing resources.`);
 				}
 				const actual = createHash('sha256').update(await vscode.workspace.fs.readFile(uri)).digest('hex');
 				if (actual !== expected) { throw new Error(`Resource changed: ${path}. Refresh and retry.`); }
@@ -52,10 +56,36 @@ export async function editTreeEntry(
 		const executable = vscode.workspace.getConfiguration('godotTools', projectRoot)
 			.get<string>('editorPath.godot4')?.trim();
 		if (!executable) { throw new Error('Configure godotTools.editorPath.godot4 for this workspace first.'); }
+		graph = await prepareEditGraph(graph, context.projectDirectory, executable, message => output.appendLine(message));
+		await ensureReady();
 		let source = resource.source_path;
 		const request: BehaviorEdit = { operation, expected_hashes: graph.dependency_hashes,
-			catalog_paths: graph.catalog_paths, catalog_seed: graph.roots[0], executor_snapshot: graph.executor_snapshot };
-		if (operation === 'set_interaction') {
+			catalog_paths: graph.catalog_paths, catalog_seed: graph.roots[0], executor_snapshot: graph.executor_snapshot, step_id: data?.sequence?.step_id };
+		const isPreset = resource.kind === 'starting_attributes';
+		if (isPreset) { request.presentation_preset = true; }
+		if (operation === 'set_fragments' || operation === 'fragment_up' || operation === 'fragment_down') {
+			if (!isPreset || !resource.fragment_paths || (data && data.path[0]?.text !== 'Fragments')) {
+				throw new Error('Choose an attribute fragment in a starting preset.');
+			}
+			request.operation = 'set_fragments';
+			if (operation === 'set_fragments') {
+				const selection = await pickPresetFragments(context.projectDirectory, executable, resource.fragment_paths,
+					message => output.appendLine(message));
+				if (!selection) { return; }
+				request.fragment_paths = selection.paths;
+				request.expected_hashes = { ...selection.hashes, ...graph.dependency_hashes };
+			} else {
+				const segment = data?.path[1];
+				const index = segment?.kind === 'index' ? Number(segment.text) : -1;
+				const next = index + (operation === 'fragment_up' ? -1 : 1);
+				const paths = [...resource.fragment_paths];
+				if (!Number.isInteger(index) || index < 0 || index >= paths.length || next < 0 || next >= paths.length) {
+					throw new Error('Choose a fragment that can move in that direction.');
+				}
+				[paths[index], paths[next]] = [paths[next], paths[index]];
+				request.fragment_paths = paths;
+			}
+		} else if (operation === 'set_interaction') {
 			if (data || resource.kind !== 'automation') { throw new Error('Choose an Automation Resource.'); }
 			const chosen = await pickResource(context, executable, 'interaction', output, 'Automation — Interaction');
 			if (!chosen) { return; }
@@ -85,13 +115,13 @@ export async function editTreeEntry(
 				'Clear this interaction’s requirements? Invocation will no longer check this group. The group file is preserved.',
 				{ modal: true }, 'Clear Requirements') !== 'Clear Requirements') { return; }
 		} else if (operation === 'add_effect') {
-			if (resource.kind !== 'action' || resource.supports_effects === false || (data && !data.can_add_effect)) { throw new Error('Choose an action that supports attribute effects.'); }
+			if ((resource.kind !== 'action' && resource.kind !== 'behavior') || resource.supports_effects === false || (data && !data.can_add_effect)) { throw new Error('Choose an action that supports attribute effects.'); }
 			request.effect = await promptEffect();
 			if (!request.effect) { return; }
 		} else {
 			if (!data || !(operation === 'set' ? data.editable : operation === 'add' ? data.can_add
 				: operation === 'rename' ? data.can_rename : data.can_remove)) {
-				throw new Error('This operation is unavailable for the selected behavior entry.');
+				throw new Error('This operation is unavailable for the selected entry.');
 			}
 			request.path = data.path;
 			if (operation === 'add' && data.kind === 'Dictionary' || operation === 'rename') {
@@ -101,8 +131,11 @@ export async function editTreeEntry(
 			if (operation === 'set' || operation === 'add') {
 				const spec = operation === 'add' && resource.kind === 'interaction' && data.path.length === 1
 					? resource.argument_specs?.find(spec => spec.name === request.key?.text) : undefined;
-				const value = await promptValue(operation === 'set' ? data : spec ? { kind: spec.allowed_types[0], value_text: '',
-					allowed_types: argumentTypes(spec), choices: [] } : undefined);
+				const addsContainer = operation === 'add' && isPreset && data.path.length === 1 && data.path[0].text === 'Overrides';
+				const container = { kind: 'Dictionary', value_text: '', allowed_types: ['Dictionary'], choices: [] };
+				const value = await promptValue(operation === 'set' ? data : addsContainer ? container
+					: spec ? { kind: spec.allowed_types[0], value_text: '', allowed_types: argumentTypes(spec), choices: [] } : undefined,
+				isPreset && data.path[0]?.text === 'Effective Attributes' ? 'Override Value' : 'Value');
 				if (!value) { return; }
 				Object.assign(request, value);
 			}
@@ -110,7 +143,7 @@ export async function editTreeEntry(
 				`Remove '${data.label}' and its nested data from ${source.split('/').at(-1)}?`,
 				{ modal: true }, 'Remove Entry') !== 'Remove Entry') { return; }
 		}
-		await ensureReady();
+		await ensureReady(request.expected_hashes);
 		output.appendLine(`[structure] ${operation}: ${source}`);
 		await editBehavior(context.projectDirectory, executable, source, request, message => output.appendLine(message));
 		output.appendLine(`[structure] Saved ${source}.`);

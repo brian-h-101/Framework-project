@@ -5,7 +5,10 @@ import { nameError } from './library_paths';
 import { pickExecutor } from '../resources/executor_picker';
 import { argumentTypes } from '../resources/executor_metadata';
 
+const BEHAVIOR_TYPE = { label: 'Behavior (Configuration + Steps)', resourceKind: 'behavior' };
+
 const TYPES = [
+	BEHAVIOR_TYPE,
 	{ label: 'Action', resourceKind: 'action' }, { label: 'Condition', resourceKind: 'condition' },
 	{ label: 'Condition Group', resourceKind: 'condition_group' }, { label: 'Interaction', resourceKind: 'interaction' },
 	{ label: 'Automation', resourceKind: 'automation' }
@@ -21,11 +24,12 @@ async function reference(catalogue: LibraryCatalogue, kind: string, optional = f
 }
 
 async function numericValue(title: string): Promise<{ value_type: string; value_text: string } | undefined> {
-	return promptValue({ kind: 'int', value_text: '10', allowed_types: ['int', 'float'], choices: [] }, title);
+	return promptValue({ kind: 'int', value_text: '10', allowed_types: ['int', 'float', 'bool'], choices: [] }, title);
 }
 
-export async function creationDetails(catalogue: LibraryCatalogue): Promise<{ filename: string; request: Record<string, unknown> } | undefined> {
-	const type = await vscode.window.showQuickPick(TYPES, { title: 'New Behavior Resource — Type', ignoreFocusOut: true });
+export async function creationDetails(catalogue: LibraryCatalogue, resourceKind?: string): Promise<{ filename: string; request: Record<string, unknown> } | undefined> {
+	const type = resourceKind ? TYPES.find(type => type.resourceKind === resourceKind)
+		: await vscode.window.showQuickPick([BEHAVIOR_TYPE], { title: 'New Behavior Resource — Type', ignoreFocusOut: true });
 	if (!type) { return; }
 	const filename = await vscode.window.showInputBox({ title: `New ${type.label} — Filename`, value: 'new_resource.tres', ignoreFocusOut: true,
 		validateInput: name => nameError(name) ?? (name.endsWith('.tres') ? undefined : 'Use a .tres filename.') });

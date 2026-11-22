@@ -1,17 +1,17 @@
 extends SceneTree
 
-const EntityContent = preload("res://Framework/Env/Setup/entity_definitions.gd")
+const EntityContent = preload("res://Framework/Env/Setup/Definitions/entity_definitions.gd")
 const Baseline = preload("res://Diagnostics/Fixtures/Baselines/entity_starting_baseline.gd")
-const StartingAttributes = preload("res://Framework/Env/Setup/starting_attributes.gd")
-const ContentDiscovery = preload("res://Framework/Env/Setup/content_discovery.gd")
+const StartingAttributes = preload("res://Framework/Env/Setup/Composition/starting_attributes.gd")
+const ContentDiscovery = preload("res://Framework/Env/Setup/Discovery/content_discovery.gd")
 const GameEntry = preload("res://Framework/Infrastructure/API/Runtime/game_entry.gd")
-const EnvironmentSetup = preload("res://Framework/Env/Setup/game_setup.gd")
+const EnvironmentSetup = preload("res://Framework/Env/Setup/Bootstrap/game_setup.gd")
 const Startup = preload("res://Framework/Content/Configuration/Session/startup.tres")
 const ContainerFragmentResource = preload(
 	"res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd"
 )
 const Health = preload(
-	"res://Framework/Content/Authored/Entity/Attributes/Statistics/health.tres"
+	"res://Framework/Content/Gameplay/Authored/Entity/Attributes/Statistics/health.tres"
 )
 const OutsideLibrary = preload(
 	"res://Diagnostics/Fixtures/ContainerFragments/outside_library.tres"
@@ -71,7 +71,7 @@ func _initialize() -> void:
 		not outside.get("ok", true)
 	))
 
-	var missing_path := "res://Framework/Content/Authored/Entity/Attributes/Missing/missing.tres"
+	var missing_path := "res://Framework/Content/Gameplay/Authored/Entity/Attributes/Missing/missing.tres"
 	var missing_resource := ContainerFragmentResource.new()
 	missing_resource.take_over_path(missing_path)
 	var missing := StartingAttributes.define(
@@ -148,7 +148,7 @@ func _initialize() -> void:
 func _check_registered_libraries() -> void:
 	var collision := ContentDiscovery.starting_definitions_in(
 		PackedStringArray([
-			"res://Framework/Content/Presentation/Items",
+			"res://Framework/Content/Gameplay/Presentation/Items",
 			"res://Diagnostics/Fixtures/DuplicateStartingDefinitions/Objects",
 		])
 	)

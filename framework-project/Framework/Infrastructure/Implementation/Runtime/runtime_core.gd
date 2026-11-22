@@ -17,11 +17,11 @@ const AttributeConnector = preload(
 )
 
 const EffectExecutor = preload(
-	"res://Framework/Infrastructure/Implementation/Gameplay/effect_executor.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/Execution/effect_executor.gd"
 )
 
 const ActionExecutor = preload(
-	"res://Framework/Infrastructure/Implementation/Gameplay/action_executor.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/Execution/action_executor.gd"
 )
 const ExecutorRegistry = preload(
 	"res://Framework/Infrastructure/API/Gameplay/executor_registry.gd"
@@ -30,26 +30,28 @@ const ExecutionContext = preload(
 	"res://Framework/Infrastructure/API/Gameplay/Executors/execution_context.gd"
 )
 const ExecutionContextCore = preload(
-	"res://Framework/Infrastructure/Implementation/Gameplay/execution_context_core.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/Execution/execution_context_core.gd"
 )
 const AttributeEffectsExecutor = preload(
 	"res://Framework/Infrastructure/Implementation/Gameplay/Executors/attribute_effects_executor.gd"
 )
-const ExecutorContract = preload("res://Framework/Infrastructure/Implementation/Gameplay/executor_contract.gd")
+const ExecutorContract = preload("res://Framework/Infrastructure/Implementation/Gameplay/Registry/executor_contract.gd")
 
 const InteractionExecutor = preload(
-	"res://Framework/Infrastructure/Implementation/Gameplay/interaction_executor.gd"
+	"res://Framework/Infrastructure/Implementation/Gameplay/Execution/interaction_executor.gd"
 )
 
 const SessionClock = preload(
 	"res://Framework/Infrastructure/Implementation/Runtime/session_clock.gd"
 )
-const AutomationSystem = preload("res://Framework/Infrastructure/Implementation/Gameplay/automation_system.gd")
+const AutomationSystem = preload("res://Framework/Infrastructure/Implementation/Gameplay/Automation/automation_system.gd")
 
 var _definitions: Dictionary[StringName, EntityDefinition] = {}
 var _entity_definition_ids: Dictionary[int, StringName] = {}
 var _actions: Dictionary[StringName, Dictionary] = {}
 var _interactions: Dictionary[StringName, Dictionary] = {}
+const BehaviorSystem = preload("res://Framework/Infrastructure/Implementation/Gameplay/Behavior/behavior_system.gd")
+var _behaviors := BehaviorSystem.new()
 var _automations := AutomationSystem.new()
 
 var _registry := EntityRegistry.new()
@@ -109,6 +111,7 @@ func close() -> void:
 	_actions.clear()
 	_interactions.clear()
 	_automations.close()
+	_behaviors.close()
 	_execution_context.close()
 	_executor_registry.close()
 
@@ -700,3 +703,51 @@ func _failure(message: String) -> Dictionary:
 		"value": null,
 		"error": message,
 	}
+
+func define_behavior(definition: Dictionary) -> Dictionary:
+	return _behaviors.define_behavior(definition, _describe_behavior_executor)
+
+func _describe_behavior_executor(id: StringName) -> Dictionary:
+	return _failure("Game runtime is closed.") if _closed else _executor_registry.describe(id)
+
+func read_behavior(id: StringName) -> Dictionary:
+	return _behaviors.read_behavior(id)
+
+func bind_behavior(entity_id: int, id: StringName, enabled: bool = true) -> Dictionary:
+	return _behaviors.bind(entity_id, id, enabled) if has_entity(entity_id) else _failure("Unknown Behavior entity.")
+
+func behavior_bindings(entity_id: int) -> Dictionary:
+	return _behaviors.bindings(entity_id) if has_entity(entity_id) else _failure("Unknown Behavior entity.")
+
+func set_behavior_enabled(entity_id: int, id: StringName, enabled: bool) -> Dictionary:
+	return _behaviors.set_enabled(entity_id, id, enabled) if has_entity(entity_id) else _failure("Unknown Behavior entity.")
+
+func unbind_behavior(entity_id: int, id: StringName) -> Dictionary:
+	return _behaviors.unbind(entity_id, id) if has_entity(entity_id) else _failure("Unknown Behavior entity.")
+
+func select_target(actor: int, target: int) -> Dictionary:
+	return _behaviors.select_target(actor, target) if has_entity(actor) and (target == 0 or has_entity(target)) else _failure("Unknown selection entity.")
+
+func selected_target(actor: int) -> int:
+	return _behaviors.selected_target(actor)
+
+func invoke_behavior(id: StringName, actor: int, resolve_target: Callable,
+		step_id: StringName = &"", step_arguments: Dictionary = {}) -> Dictionary:
+	return _behaviors.invoke(id, actor, resolve_target, has_entity, connector,
+		_action_executor, step_id, step_arguments)
+
+func emit_behavior_event(actor: int, event_id: StringName, resolve_target: Callable) -> Dictionary:
+	if not has_entity(actor):
+		return _failure("Unknown Behavior actor.")
+	return _behaviors.emit_event(actor, event_id, func(id: StringName, entity: int) -> Dictionary: return invoke_behavior(id, entity, resolve_target))
+
+func advance_behaviors(delta: float, resolve_target: Callable) -> Dictionary:
+	return _behaviors.advance(delta, func(id: StringName, actor: int) -> Dictionary: return invoke_behavior(id, actor, resolve_target))
+
+func snapshot_behaviors(entity_ids: Dictionary[StringName, int]) -> Dictionary:
+	var checked := snapshot_entities(entity_ids)
+	return _behaviors.snapshot(entity_ids) if checked["ok"] else checked
+
+func restore_behaviors(records: Variant, entity_ids: Dictionary[StringName, int]) -> Dictionary:
+	var checked := snapshot_entities(entity_ids)
+	return _behaviors.restore(records, entity_ids) if checked["ok"] else checked

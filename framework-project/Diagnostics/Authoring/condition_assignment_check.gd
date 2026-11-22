@@ -1,10 +1,10 @@
 extends SceneTree
 
 const ConditionAssignment = preload(
-	"res://Framework/Env/Authoring/Resources/condition_assignment.gd"
+	"res://Framework/Env/Authoring/Resources/Conditions/condition_assignment.gd"
 )
 const ConditionGroupResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/condition_group_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_group_resource.gd"
 )
 
 const CONDITION_PATH := (

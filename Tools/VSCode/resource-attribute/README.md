@@ -25,7 +25,7 @@ Escape at either picker cancels without creating or deleting anything.
 
 Authored Library discovers Framework Godot projects in the opened workspace,
 including projects beneath a parent folder and multiple workspace roots. Each
-project has its own `Framework/Content/Authored` root. Empty categories are shown.
+project has its own `Framework/Content/Gameplay/Authored` root. Empty categories are shown.
 Opening a Resource is not required to discover the library.
 
 Right-click a library entry and open **Authored Library**:
@@ -41,7 +41,7 @@ Right-click a library entry and open **Authored Library**:
 Categories are ordinary folders, with no catalogue scripts or category registry.
 Any category beneath Authored can supply starting fragments, including new names
 such as `Vehicles/Statistics`. The runtime and authoring helper share the root
-policy in `Framework/Env/Setup/authored_library.gd`. Creating a resource makes it
+policy in `Framework/Env/Setup/Library/authored_library.gd`. Creating a resource makes it
 available for explicit selection; it does not assign it to a starting profile or
 change existing saved entity state.
 
@@ -144,7 +144,7 @@ authored resources must remain byte-for-byte unchanged.
 ## Visual checkpoint
 
 Install the packaged VSIX, run **Developer: Reload Window**, and open
-`Content/Authored/Entity/Attributes/Needs/needs.tres`. Expand `needs → hunger` and
+`Content/Gameplay/Authored/Entity/Attributes/Needs/needs.tres`. Expand `needs → hunger` and
 verify the values and types. Open `Diagnostics/Fixtures/Attributes/visual_check.tres`
 to exercise edit, add, rename, remove and Escape cancellation. This fixture is
 separate from gameplay content. Verify the saved text and refreshed tree

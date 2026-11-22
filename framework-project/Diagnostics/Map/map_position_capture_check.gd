@@ -1,7 +1,7 @@
 extends SceneTree
 
 const SpatialRoot2D = preload(
-	"res://Framework/Env/Map/spatial_root_2d.gd"
+	"res://Framework/Content/Universal/Map/based/Spatial2D/spatial_root_2d.gd"
 )
 
 var _passed: bool = true

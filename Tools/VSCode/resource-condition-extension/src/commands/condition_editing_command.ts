@@ -156,8 +156,8 @@ export async function editConditionFromFile(
 		}
 
 		const typeOptions = current.value_type === 'int'
-			? ['int', 'float']
-			: ['float', 'int'];
+			? ['int', 'float', 'bool']
+			: current.value_type === 'bool' ? ['bool', 'int', 'float'] : ['float', 'int', 'bool'];
 
 		const valueType = await vscode.window.showQuickPick(
 			typeOptions,
@@ -168,7 +168,7 @@ export async function editConditionFromFile(
 			}
 		);
 
-		if (valueType !== 'int' && valueType !== 'float') {
+		if (valueType !== 'int' && valueType !== 'float' && valueType !== 'bool') {
 			return;
 		}
 

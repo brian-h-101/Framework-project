@@ -1,0 +1,20 @@
+[gd_resource type="Resource" format=3 uid="uid://dtfvmw28govgb"]
+
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd" id="1_qph0p"]
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Authored/Entity/Attributes/Identity/identity.tres" id="2_y5pi5"]
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Authored/Entity/Attributes/Statistics/health.tres" id="3_mppsq"]
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Authored/Entity/Attributes/Statistics/speed.tres" id="4_p3xmo"]
+[ext_resource type="Script" path="res://Framework/Infrastructure/API/Entity/Resources/starting_attributes_resource.gd" id="5_djvrn"]
+
+[resource]
+script = ExtResource("5_djvrn")
+id = &"enemy"
+fragments = Array[ExtResource("1_qph0p")]([ExtResource("2_y5pi5"), ExtResource("3_mppsq"), ExtResource("4_p3xmo")])
+overrides = {
+	&"health": {
+		"current": 100
+	},
+	&"identity": {
+		"name": "Enemy"
+	}
+}

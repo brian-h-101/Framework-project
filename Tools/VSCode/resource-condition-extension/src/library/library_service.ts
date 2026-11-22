@@ -1,7 +1,7 @@
 import { lstat, mkdir, open, readdir, readFile, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { libraryRequest, validateCatalogue, type LibraryCatalogue, type LibraryEntry,
-	type ResourceDraft, type DeletionPreview, BEHAVIOR_ROOT } from '../bridges/behavior_library_bridge';
+	type ResourceDraft, type DeletionPreview, type RenamePreview, isBehaviorRoot } from '../bridges/behavior_library_bridge';
 import { loadResourceGraph } from '../bridges/resource_bridge';
 import type { ProjectContext } from '../workspace/project_context';
 import { checkedBehaviorPath, checkedProjectPath, directoryFingerprint, nameError, sha256 } from './library_paths';
@@ -89,7 +89,9 @@ export class LibraryService {
 	private async verifyCatalogue(catalogue: LibraryCatalogue): Promise<void> {
 		for (const entry of catalogue.entries) {
 			if (entry.kind === 'blocked') { continue; }
-			const path = await checkedBehaviorPath(this.context, entry.source_path, entry.kind === 'resource' ? 'file' : 'directory');
+			const path = entry.kind === 'resource'
+				? await checkedBehaviorPath(this.context, entry.source_path, 'file')
+				: await checkedProjectPath(this.context, entry.source_path);
 			const hash = entry.kind === 'resource' ? sha256(await readFile(path)) : await directoryFingerprint(path);
 			if (hash !== entry.fingerprint) { throw new Error('The Behavior library changed. Refresh and retry.'); }
 		}
@@ -129,8 +131,37 @@ export class LibraryService {
 		await trash(path);
 	}
 
+	async previewRename(entry: LibraryEntry, name: string): Promise<RenamePreview> {
+		if (entry.kind !== 'resource' || !entry.supported || nameError(name) || !name.endsWith('.tres')) { throw new Error('Choose a behavior Resource and a valid .tres filename.'); }
+		await this.ready(true);
+		await checkedBehaviorPath(this.context, entry.source_path, 'file');
+		const preview = await libraryRequest(this.context.projectDirectory, this.executable, 'rename-preview', entry.source_path,
+			{ name, expected_hash: entry.fingerprint }, this.report) as RenamePreview;
+		const destination = entry.parent_path + '/' + name;
+		if (!preview || preview.source_path !== entry.source_path || preview.destination_path !== destination
+			|| preview.id !== entry.id || typeof preview.uid !== 'string' || !Array.isArray(preview.changes)
+			|| !preview.hashes || preview.hashes[entry.source_path] !== entry.fingerprint || !preview.directories) {
+			throw new Error('Invalid Resource rename preview.');
+		}
+		return preview;
+	}
+
+	async renameResource(entry: LibraryEntry, preview: RenamePreview): Promise<string> {
+		await this.ready(true);
+		if (preview.source_path !== entry.source_path || preview.hashes[entry.source_path] !== entry.fingerprint
+			|| preview.destination_path.slice(0, preview.destination_path.lastIndexOf('/')) !== entry.parent_path) { throw new Error('Rename selection changed. Refresh and retry.'); }
+		const name = preview.destination_path.split('/').at(-1)!;
+		if (nameError(name) || !name.endsWith('.tres')) { throw new Error('Invalid rename destination.'); }
+		await checkedBehaviorPath(this.context, entry.source_path, 'file');
+		const result = await libraryRequest(this.context.projectDirectory, this.executable, 'rename', entry.source_path,
+			{ name, expected_hash: entry.fingerprint, expected_snapshot: { hashes: preview.hashes, directories: preview.directories } }, this.report) as Record<string, unknown>;
+		if (result.source_path !== entry.source_path || result.destination_path !== preview.destination_path
+			|| result.id !== entry.id || result.uid !== preview.uid) { throw new Error('Rename result does not match the inspected Resource.'); }
+		return preview.destination_path;
+	}
+
 	async deleteEmptyCategory(entry: LibraryEntry, trash: (path: string) => Promise<void>): Promise<void> {
-		if (entry.kind !== 'folder' || entry.source_path === BEHAVIOR_ROOT) { throw new Error('The Behavior library root cannot be deleted.'); }
+		if (entry.kind !== 'folder' || isBehaviorRoot(entry.source_path)) { throw new Error('The Behavior library root cannot be deleted.'); }
 		await this.ready(true);
 		const path = await checkedBehaviorPath(this.context, entry.source_path, 'directory');
 		if ((await readdir(path)).length || await directoryFingerprint(path) !== entry.fingerprint) {

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { createHash } from 'node:crypto';
 import { relative } from 'node:path';
-import { editScene, nodeTypes, inspectScript } from './scene_editing_bridge';
+import { editScene, nodeTypes, inspectScript, inspectNodeProperties } from './scene_editing_bridge';
 import type { SceneEdit, SceneOperation } from './scene_editing_bridge';
 import { loadSceneGraph } from './scene_bridge';
 import { loadResourceCatalog } from './resource_catalog_bridge';
@@ -9,6 +9,8 @@ import { loadMovementConfigurations } from './movement_configuration_bridge';
 import { SceneTreeProvider, projectUri } from './scene_tree_provider';
 import type { SceneTreeElement } from './scene_tree_provider';
 import { ensureWorkspace } from './scene_selection';
+import { promptNodeProperty } from './scene_property_prompt';
+import { pickSceneInstance } from './scene_instance_picker';
 import { scenePathInProject, isInside, resolveProjectContext, validateResourcePath } from './project_context';
 
 export class SceneEditingCommands {
@@ -30,6 +32,9 @@ export class SceneEditingCommands {
 			}
 			if (operation === 'assign_movement' && !node.can_assign_movement) {
 				throw new Error('Open the movement body’s structure source scene to assign its configuration.');
+			}
+			if (operation === 'set_property' && (node.structural_scene !== graph.source_path || node.type === 'InstancePlaceholder')) {
+				throw new Error('Open the structure source scene to set properties on this node.');
 			}
 			if ((operation === 'attach_script' && !node.can_attach_script)
 				|| (operation === 'remove_script' && !node.can_remove_script)) {
@@ -67,7 +72,13 @@ export class SceneEditingCommands {
 			};
 			await ready();
 			const request: SceneEdit = { operation, path: node.path, expected_hashes: hashes };
-			if (operation === 'remove') {
+			if (operation === 'set_property') {
+				const properties = await inspectNodeProperties(context.projectDirectory, executable, graph.source_path,
+					node.path, text => this.output.appendLine(text));
+				const change = await promptNodeProperty(node.name, properties);
+				if (!change) { return; }
+				Object.assign(request, change);
+			} else if (operation === 'remove') {
 				const descendants = Object.keys(graph.nodes).filter(path => path.startsWith(node.path + '/')).length;
 				const chosen = await vscode.window.showWarningMessage(
 					`Remove '${node.name}' and ${descendants} descendant(s) from ${graph.source_path}? Connections to the subtree are also removed.`,
@@ -126,11 +137,13 @@ export class SceneEditingCommands {
 				const configurations = await loadMovementConfigurations(context.projectDirectory, executable,
 					text => this.output.appendLine(text));
 				await ready();
-				const items = configurations.filter(entry => entry.source_path !== node.movement_configuration_path)
+				const items = configurations
+					.filter(entry => entry.source_path !== node.movement_configuration_path
+						&& (entry.body_type === undefined || entry.body_type === node.type))
 					.map(entry => ({ label: entry.source_path.split('/').pop()!, description: entry.action_id,
 						detail: `${entry.source_path} · ${entry.behavior_id}`, entry }));
 				if (items.length === 0) {
-					void vscode.window.showInformationMessage('No other movement configurations are available under Framework/Content/Configuration.');
+					void vscode.window.showInformationMessage('No other movement configurations are compatible with this body.');
 					return;
 				}
 				const chosen = await vscode.window.showQuickPick(items, {
@@ -154,17 +167,9 @@ export class SceneEditingCommands {
 					request.node_type = chosen;
 					suggested = chosen;
 				} else if (operation === 'add_instance') {
-					const uris = await vscode.workspace.findFiles('**/*.tscn', '**/{.git,.godot,node_modules,out}/**');
-					const items = uris.filter(uri => uri.scheme === 'file' && isInside(context.projectDirectory, uri.fsPath))
-						.map(uri => ({ label: uri.path.slice(uri.path.lastIndexOf('/') + 1),
-							description: vscode.workspace.asRelativePath(uri, true), uri }))
-						.sort((left, right) => left.description.localeCompare(right.description));
-					const chosen = await vscode.window.showQuickPick(items, {
-						title: 'Add Scene Instance', placeHolder: 'Search scene names and paths',
-						matchOnDescription: true, ignoreFocusOut: true
-					});
+					const chosen = await pickSceneInstance(context, graph.source_path);
 					if (!chosen) { return; }
-					const scene = await scenePathInProject(context, chosen.uri.fsPath);
+					const scene = await scenePathInProject(context, chosen.fsPath);
 					ensureWorkspace(context);
 					const candidate = await loadSceneGraph(context.projectDirectory, executable, scene,
 						text => this.output.appendLine(text));
@@ -176,8 +181,8 @@ export class SceneEditingCommands {
 					suggested = candidate.nodes['.'].name;
 				} else if (operation === 'attach_behavior') {
 					const required = new Set<string>([
-						'res://Framework/Content/God/Interaction/interaction_behavior.gd',
-						'res://Framework/Content/God/Interaction/automation_behavior.gd'
+						'res://Framework/Content/Universal/Interaction/based/Legacy/interaction_behavior.gd',
+						'res://Framework/Content/Universal/Interaction/based/Legacy/automation_behavior.gd'
 					]);
 					const pending = [node.path];
 
@@ -190,6 +195,7 @@ export class SceneEditingCommands {
 						if (current.interaction_id && current.interaction_resource_path) {
 							required.add(current.interaction_resource_path.split('::')[0]);
 						}
+						if (current.behavior_id && current.behavior_resource_path) { required.add(current.behavior_resource_path.split('::')[0]); }
 						if (current.automation_id && current.automation_resource_path) { required.add(current.automation_resource_path.split('::')[0]); }
 						pending.push(...current.children);
 					}
@@ -203,11 +209,11 @@ export class SceneEditingCommands {
 					}
 
 					await ready();
-					this.output.appendLine('[catalog] Loading Interaction and Automation resources...');
+					this.output.appendLine('[catalog] Loading Behavior resources...');
 					const catalog = await loadResourceCatalog(context.projectDirectory, executable,
 						text => this.output.appendLine(text));
 					const candidates = catalog.resources
-						.filter(entry => entry.kind === 'interaction' || entry.kind === 'automation')
+						.filter(entry => entry.kind === 'behavior' || entry.kind === 'interaction' || entry.kind === 'automation')
 						.sort((left, right) => left.source_path.localeCompare(right.source_path));
 					const items = await Promise.all(candidates.map(async entry => ({
 						label: entry.source_path.split('/').pop()!,
@@ -221,7 +227,7 @@ export class SceneEditingCommands {
 
 					await ready();
 					if (items.length === 0) {
-						void vscode.window.showInformationMessage('No Interaction or Automation resources are available.');
+						void vscode.window.showInformationMessage('No Behavior resources are available.');
 						return;
 					}
 					const chosen = await vscode.window.showQuickPick(items, {
@@ -236,7 +242,12 @@ export class SceneEditingCommands {
 						throw new Error('The selected behavior Resource changed. Refresh and retry.');
 					}
 					hashes[chosen.source_path] = chosen.content_hash;
-					if (chosen.resourceKind === 'automation') { request.automation_resource = chosen.source_path; }
+					if (chosen.resourceKind === 'behavior') {
+						const binding = 'res://Framework/Content/Universal/Interaction/based/Bindings/behavior_binding.gd';
+						hashes[binding] = await readHash(binding);
+						request.behavior_resource = chosen.source_path;
+					}
+					else if (chosen.resourceKind === 'automation') { request.automation_resource = chosen.source_path; }
 					else { request.interaction_resource = chosen.source_path; }
 					suggested = chosen.id.split('_')
 						.map(part => part.charAt(0).toUpperCase() + part.slice(1))

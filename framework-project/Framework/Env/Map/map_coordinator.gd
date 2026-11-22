@@ -6,8 +6,8 @@ const WorldBridge = preload(
 const GameRuntime = preload(
 	"res://Framework/Infrastructure/API/Runtime/game_runtime.gd"
 )
-const SpatialRoot2D = preload(
-	"res://Framework/Env/Map/spatial_root_2d.gd"
+const MapPositions = preload(
+	"res://Framework/Env/Map/map_positions.gd"
 )
 var _map_parent: Node
 var _active_map: Node
@@ -52,7 +52,7 @@ func load_map(
 
 	var placements: Array[Dictionary] = prepared["value"]
 
-	var prepared_positions := _prepare_position_restores(
+	var prepared_positions := MapPositions.prepare_restores(
 		next_map,
 		placements,
 		saved_positions
@@ -75,22 +75,10 @@ func load_map(
 
 	_map_parent.add_child(_active_map)
 
-	for restoration in position_restores:
-		var entity_node: Node = restoration["node"]
-		var map_position: Vector2 = restoration["position"]
-
-		var restored := SpatialRoot2D.restore_position(
-			entity_node,
-			_active_map as Node2D,
-			map_position
-		)
-		if not restored["ok"]:
-			var message: String = (
-				"Cannot restore position for '%s': %s"
-				% [restoration["key"], restored["error"]]
-			)
-			unload_map()
-			return _failure(message)
+	var restored := MapPositions.restore(_active_map, position_restores)
+	if not restored["ok"]:
+		unload_map()
+		return restored
 
 	return {"ok": true, "value": _active_map, "error": ""}
 
@@ -134,115 +122,12 @@ func snapshot_map() -> Dictionary:
 		"scene_path": scene_path,
 	}
 
-	if map_root is Node2D:
-		var captured := _snapshot_positions_2d(map_root as Node2D)
-		if not captured["ok"]:
-			return captured
-
-		map_record["positions_2d"] = captured["value"]
+	var captured := MapPositions.snapshot(map_root, _entity_ids, _bound_entity_ids, _bridge.node_for)
+	if not captured["ok"]:
+		return captured
+	map_record.merge(captured["value"])
 
 	return {"ok": true, "value": map_record, "error": ""}
-
-func _snapshot_positions_2d(map_root: Node2D) -> Dictionary:
-	var positions: Dictionary[StringName, Vector2] = {}
-	var entity_keys := _entity_ids.keys()
-	entity_keys.sort_custom(func(left: StringName, right: StringName) -> bool:
-		return String(left) < String(right)
-	)
-
-	for entity_key: StringName in entity_keys:
-		var entity_id: int = _entity_ids[entity_key]
-		if not _bound_entity_ids.has(entity_id):
-			continue
-
-		var entity_node := _bridge.node_for(entity_id)
-		if entity_node == null:
-			continue
-
-		var captured := SpatialRoot2D.capture_position(
-			entity_node,
-			map_root
-		)
-		if not captured["ok"]:
-			return _failure(
-				"Cannot capture position for '%s': %s"
-				% [entity_key, captured["error"]]
-			)
-
-		if captured["value"] != null:
-			positions[entity_key] = captured["value"]
-
-	return {"ok": true, "value": positions, "error": ""}
-
-func _prepare_position_restores(
-	map_root: Node,
-	placements: Array[Dictionary],
-	saved_positions: Dictionary
-) -> Dictionary:
-	if not saved_positions.is_empty() and not (map_root is Node2D):
-		return _failure("Saved 2D positions require a Node2D map.")
-
-	var pending_positions: Dictionary[StringName, Vector2] = {}
-
-	for saved_key in saved_positions:
-		if typeof(saved_key) not in [TYPE_STRING, TYPE_STRING_NAME]:
-			return _failure("Saved position keys must be text.")
-
-		var entity_key := StringName(saved_key)
-		if entity_key == &"":
-			return _failure("Saved position key cannot be empty.")
-
-		if pending_positions.has(entity_key):
-			return _failure("Duplicate saved position key: %s" % entity_key)
-
-		var position_value: Variant = saved_positions[saved_key]
-		if typeof(position_value) != TYPE_VECTOR2:
-			return _failure(
-				"Saved position for '%s' must be Vector2." % entity_key
-			)
-
-		var position: Vector2 = position_value
-		if not position.is_finite():
-			return _failure(
-				"Saved position for '%s' must be finite." % entity_key
-			)
-
-		pending_positions[entity_key] = position
-
-	var restores: Array[Dictionary] = []
-
-	for placement in placements:
-		var entity_key: StringName = placement["key"]
-		if not pending_positions.has(entity_key):
-			continue
-
-		var entity_node: Node = placement["node"]
-		var discovered := SpatialRoot2D.find_for(entity_node)
-		if not discovered["ok"]:
-			return _failure(
-				"Cannot restore position for '%s': %s"
-				% [entity_key, discovered["error"]]
-			)
-
-		if discovered["value"] == null:
-			return _failure(
-				"Entity '%s' has no enabled 2D spatial root." % entity_key
-			)
-
-		restores.append({
-			"node": entity_node,
-			"key": entity_key,
-			"position": pending_positions[entity_key],
-		})
-		pending_positions.erase(entity_key)
-
-	if not pending_positions.is_empty():
-		return _failure(
-			"Saved position has no placement in this map: %s"
-			% pending_positions.keys()[0]
-		)
-
-	return {"ok": true, "value": restores, "error": ""}
 
 func _prepare_map_entities(map_root: Node) -> Dictionary:
 	var nodes: Array[Node] = [map_root]
@@ -339,19 +224,19 @@ func _bind_map_entities(placements: Array[Dictionary]) -> Dictionary:
 
 func _configure_entity_components(
 	entity_node: Node,
-	parent_node: Node
+	component: Node
 ) -> void:
-	for component in parent_node.get_children():
-		if component.has_meta(&"entity_key"):
-			continue
+	if component != entity_node and component.has_meta(&"entity_key"):
+		return
 
-		if component.has_method(&"configure_entity"):
-			component.call(&"configure_entity", _bridge, entity_node)
+	if component.has_method(&"configure_entity"):
+		component.call(&"configure_entity", _bridge, entity_node)
 
-		if component.has_method(&"configure_controls"):
-			component.call(&"configure_controls", _controls)
+	if component.has_method(&"configure_controls"):
+		component.call(&"configure_controls", _controls)
 
-		_configure_entity_components(entity_node, component)
+	for child in component.get_children():
+		_configure_entity_components(entity_node, child)
 
 func _configure_runtime_components(map_root: Node) -> void:
 	var nodes: Array[Node] = [map_root]

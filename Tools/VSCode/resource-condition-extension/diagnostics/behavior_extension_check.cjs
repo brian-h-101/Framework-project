@@ -13,6 +13,9 @@ let onPrompt;
 let readBytes = bytes;
 let refreshes = 0;
 const loads = [];
+const editInspections = [];
+let editGraph;
+let fragmentSelection;
 const uri = file => {
 	const value = pathToFileURL(file);
 	return { scheme: 'file', fsPath: fileURLToPath(value), path: value.pathname, toString: () => value.href };
@@ -45,16 +48,22 @@ function load(file) {
 	cache.set(file, mod);
 	const localRequire = name => {
 		if (name === 'vscode') { return api; }
-		if (name.endsWith('/resource_bridge') && file.endsWith('resource_selection.js')) {
-			return { loadResourceGraph: (...args) => new Promise((resolve, reject) => loads.push({ args, resolve, reject })) };
+		if (name.endsWith('/resource_browse_bridge') && file.endsWith('resource_selection.js')) {
+			return { ResourceBrowsePool: class { load(...args) { return new Promise((resolve, reject) => loads.push({ args, resolve, reject })); } invalidate() {} dispose() {} } };
+		}
+		if (name.endsWith('/resource_bridge') && file.endsWith('edit_context.js')) {
+			return { loadResourceGraph: async (...args) => { editInspections.push(args); return editGraph; } };
 		}
 		if (name.endsWith('/behavior_editing_bridge')) {
 			return { editBehavior: async (projectArg, executable, source, request) => {
 				calls.push({ projectArg, executable, source, request }); return { source_path: source, content_hash: hash };
 			} };
 		}
+		if (name.endsWith('/preset_fragment_picker')) {
+			return { pickPresetFragments: async () => fragmentSelection };
+		}
 		if (name.endsWith('/project_context')) {
-			return { resolveProjectContext: async () => ({ projectDirectory: project, workspaceDirectory: project }) };
+			return { resolveProjectContext: async () => ({ projectDirectory: project, workspaceDirectory: project }), isInside: (base, file) => !path.relative(base, file).startsWith("..") };
 		}
 		if (name.startsWith('.')) { return load(path.resolve(path.dirname(file), name + '.js')); }
 		return require(name);
@@ -67,7 +76,7 @@ const { ResourceTreeProvider } = load(path.join(out, 'tree/resource_tree_provide
 const { editTreeEntry } = load(path.join(out, 'commands/behavior_editing_command.js'));
 const { scalarError } = load(path.join(out, 'resources/value_prompts.js'));
 const { ResourceSelection } = load(path.join(out, 'resources/resource_selection.js'));
-const base = 'res://Framework/Content/Behavior/';
+const base = 'res://Framework/Content/Gameplay/Profiles/Movement/Behavior/';
 const names = { interaction: base + 'Interaction/test.tres', action: base + 'Action/test.tres', group: base + 'Condition/group.tres', condition: base + 'Condition/test.tres' };
 const part = (text, kind = 'String') => ({ kind, text });
 const node = (label, kind, route, flags = {}, children = []) => ({ label, kind, path: route,
@@ -149,8 +158,21 @@ async function main() {
 	const stale = r.root; provider.setGraph(uri(project), structuredClone(graph));
 	assert.throws(() => provider.resolve(stale), /stale/);
 	check('Old tree revisions are rejected', true);
+	const browsing = { ...structuredClone(graph), mode: 'browse', catalog_paths: [], executors: [] };
+	editGraph = { ...structuredClone(graph), executors: [], executor_snapshot: { hashes: { 'res://executor.gd': hash }, directories: {} } };
+	provider.setGraph(uri(project), browsing);
+	const browseAmount = provider.getChildren(provider.getChildren(provider.getChildren()[0]).at(-1))[0];
+	onPrompt = () => { assert.equal(editInspections.length, 1); assert.equal(calls.length, beforeCancel); };
+	picks.push('int'); inputs.push('43'); await run(browseAmount, 'set'); onPrompt = undefined;
+	check('Editing a browsing row prepares full source validation before prompting', calls.at(-1).request.executor_snapshot === editGraph.executor_snapshot
+		&& calls.at(-1).request.catalog_paths.length > 0 && editInspections[0][3] === names.interaction);
+	const editedCount = calls.length;
+	editGraph = structuredClone(editGraph); editGraph.nodes[names.interaction].id = 'external_change';
+	await run(browseAmount, 'set');
+	check('Changed metadata between browsing and editing prevents prompts and writes', calls.length === editedCount && errors.at(-1).includes('changed since'));
+
 	const pkg = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
-	for (const name of ['addEntry', 'renameEntry', 'removeEntry', 'editValue', 'addEffect', 'removeConditionFromGroup', 'clearRequirements']) {
+	for (const name of ['addEntry', 'renameEntry', 'removeEntry', 'editValue', 'addEffect', 'removeReference', 'clearRequirements', 'newResource', 'createAndLinkResource', 'assignExistingResource', 'replaceReference', 'renameResourceFile', 'deleteResourceFile', 'openOwningResource']) {
 		assert.ok(pkg.contributes.commands.some(command => command.command === 'customTreeView.' + name));
 		assert.ok(pkg.contributes.menus['customTreeView.resourceMenu'].some(command => command.command === 'customTreeView.' + name));
 	}
@@ -176,7 +198,7 @@ async function main() {
 	finishOperation(); await tick();
 	assert.equal(loads.length, 3); loads[2].resolve(graph); await tick();
 	check('Saved dependency changes refresh the resource tree', published.length === 2);
-	const attribute = 'res://Framework/Content/Authored/Entity/Attributes/Abilities/reflex.tres';
+	const attribute = 'res://Framework/Content/Gameplay/Authored/Entity/Attributes/Abilities/reflex.tres';
 	const unsupported = { version: 2, supported: false, source_path: attribute, roots: [], nodes: {},
 		dependency_hashes: { [attribute]: hash }, catalog_paths: [] };
 	const { validateGraph } = load(path.join(out, 'bridges/resource_bridge.js'));
@@ -186,25 +208,105 @@ async function main() {
 	selection.follow({ document: { uri: uri(path.join(project, attribute.slice(6))) } }); await tick();
 	loads[3].resolve(unsupported); await tick();
 	check('Attribute schemas clear the behavior view without an error popup', published.length === 2
-		&& errors.length === errorsBeforeUnsupported && statuses.at(-1).includes('Open an action'));
+		&& errors.length === errorsBeforeUnsupported && statuses.at(-1).includes('Open a Behavior'));
 	selection.updateStatus();
-	check('Unsupported selections retain their explanatory view message', statuses.at(-1).includes('Open an action'));
+	check('Unsupported selections retain their explanatory view message', statuses.at(-1).includes('Open a Behavior'));
 	selection.follow({ document: { uri: uri(path.join(project, names.interaction.slice(6))) } }); await tick();
-	loads[4].resolve(graph); await tick();
+	check('Returning to an unchanged resource uses the cached graph', loads.length === 4);
 	check('Returning to a behavior Resource restores its graph', published.length === 3 && statuses.at(-1) === undefined);
 	selection.follow({ document: { uri: uri(path.join(project, names.action.slice(6))) } }); await tick();
-	loads[5].reject(new Error('Behavior Resource has an empty authored ID.')); await tick();
+	loads[4].reject(new Error('Behavior Resource has an empty authored ID.')); await tick();
 	check('Malformed behavior Resources still report errors', errors.length === errorsBeforeUnsupported + 1
 		&& errors.at(-1).includes('empty authored ID'));
 	selection.follow({ document: { uri: uri(path.join(project, names.interaction.slice(6))) } }); await tick();
+	const reload = selection.refresh(); await tick();
 	selection.removed(uri(path.join(project, names.interaction.slice(6))));
-	loads[6].resolve(graph); await tick(); await selection.refresh();
-	check('Deleting the selected Resource clears details and discards pending loads', published.length === 3
-		&& loads.length === 7 && statuses.at(-1).includes('Open a framework'));
+	loads[5].resolve(graph); await reload; await tick(); await selection.refresh();
+	check('Deleting the selected Resource clears details and discards pending loads', published.length === 4
+		&& loads.length === 6 && statuses.at(-1).includes('Open a framework'));
 	selection.dispose();
 	await executorChecks();
+	await startingPresetChecks();
+	configurationChecks();
 	provider.dispose();
 	console.log('[behavior-extension] Checks passed: true');
+}
+
+function configurationChecks() {
+	const { validateGraph } = load(path.join(out, 'bridges/resource_bridge.js'));
+	const configuration = source => ({
+		version: 2, mode: 'browse', roots: [source], catalog_paths: [],
+		dependency_hashes: { [source]: hash },
+		nodes: { [source]: {
+			...resource(source, 'configuration', [], [
+				node('Bindings', 'Array', [part('Bindings')], { mutable: false })
+			]),
+			configuration_type: 'input',
+			physical_keys: [{ label: 'W', code: '87' }, { label: 'Up Arrow', code: '4194320' }]
+		} }
+	});
+	const controls = configuration('res://Framework/Content/Configuration/Input/controls.tres');
+	validateGraph(controls);
+	provider.setGraph(uri(project), controls);
+	const root = provider.getChildren()[0];
+	const bindings = provider.getTreeItem(provider.getChildren(root)[0]);
+	check('Configuration offers typed binding and creation commands',
+		bindings.label === 'Bindings' && bindings.contextValue === 'behavior_data|open_owner|input_bindings'
+		&& provider.getTreeItem(root).contextValue === 'configuration|new_configuration');
+	assert.throws(() => validateGraph(configuration(names.action)), /Content\/Configuration/);
+	const profilePath = 'res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_2d.tres';
+	const profile = configuration(profilePath);
+	profile.nodes[profilePath].configuration_type = 'movement';
+	delete profile.nodes[profilePath].physical_keys;
+	validateGraph(profile);
+	provider.setGraph(uri(project), profile);
+	assert.match(provider.getTreeItem(provider.getChildren()[0]).contextValue, /movement_configuration/);
+	assert.throws(() => validateGraph(configuration(profilePath)), /Content\/Configuration/);
+	check('Profiles accepts Movement while Input stays under Configuration', true);
+}
+
+async function startingPresetChecks() {
+	const source = 'res://Framework/Content/Gameplay/Presentation/Entity/Player/starting_attributes.tres';
+	const health = 'res://Framework/Content/Gameplay/Authored/Entity/Attributes/Statistics/health.tres';
+	const speed = 'res://Framework/Content/Gameplay/Authored/Entity/Attributes/Statistics/speed.tres';
+	const fragments = node('Fragments', 'Array', [part('Fragments')], {}, [
+		node('[0]', 'String', [part('Fragments'), part('0', 'index')]),
+		node('[1]', 'String', [part('Fragments'), part('1', 'index')])
+	]);
+	const id = node('Definition ID', 'StringName', [part('Definition ID')]);
+	const attr = node('current', 'int', [part('Effective Attributes'), part('health', 'StringName'), part('current')], { editable: true });
+	const effective = node('Effective Attributes', 'Dictionary', [part('Effective Attributes')], {}, [
+		node('health', 'Dictionary', [part('Effective Attributes'), part('health', 'StringName')], {}, [attr])
+	]);
+	const preset = { version: 2, roots: [source], catalog_paths: [],
+		dependency_hashes: { [source]: hash, [health]: hash, [speed]: hash },
+		nodes: { [source]: { ...resource(source, 'starting_attributes', [], [id, fragments, effective]), fragment_paths: [health, speed] } } };
+	provider.setGraph(uri(project), { ...preset, mode: 'browse' });
+	editGraph = preset;
+	const root = provider.getChildren()[0];
+	const [idRow, fragmentRow, effectiveRow] = provider.getChildren(root);
+	check('Starting preset menus offer fragment editing and keep the definition ID protected',
+		provider.getTreeItem(root).contextValue.includes('|choose_fragments')
+		&& !provider.getTreeItem(idRow).contextValue.includes('|edit')
+		&& provider.getTreeItem(provider.getChildren(fragmentRow)[0]).contextValue.includes('|fragment_down'));
+	const valueRow = provider.getChildren(provider.getChildren(effectiveRow)[0])[0];
+	picks.push('int'); inputs.push('75');
+	await run(valueRow, 'set');
+	check('Preset values use the guarded presentation edit route',
+		calls.at(-1).request.presentation_preset === true
+		&& calls.at(-1).request.path[0].text === 'Effective Attributes'
+		&& calls.at(-1).request.value_text === '75');
+	await run(provider.getChildren(fragmentRow)[0], 'fragment_down');
+	check('Moving a fragment submits the edited composition order',
+		JSON.stringify(calls.at(-1).request.fragment_paths) === JSON.stringify([speed, health]));
+	const before = calls.length;
+	await run(fragmentRow, 'set_fragments');
+	check('Cancelling fragment selection leaves the preset untouched', calls.length === before);
+	fragmentSelection = { paths: [speed], hashes: { [speed]: hash } };
+	await run(fragmentRow, 'set_fragments');
+	check('Fragment selection forwards the selected paths and inspected hashes',
+		calls.at(-1).request.fragment_paths[0] === speed && calls.at(-1).request.expected_hashes[speed] === hash);
+	fragmentSelection = undefined;
 }
 main().catch(error => { console.error(error); process.exitCode = 1; });
 
@@ -220,7 +322,7 @@ async function executorChecks() {
 	check('Custom action displays behavior without Add Effect', provider.getTreeItem(r.action).description === '[direct_health]'
 		&& !provider.getTreeItem(r.action).contextValue.includes('|add_effect'));
 	check('Actions without script metadata hide executor navigation', !provider.getTreeItem(r.action).contextValue.includes('|open_executor'));
-	descriptor.script_path = 'res://Framework/Content/Executor/direct_health_executor.gd';
+	descriptor.script_path = 'res://Framework/Content/Gameplay/Profiles/Movement/Executor/movement_2d_executor.gd';
 	const navigationRows = rows();
 	const navigationItem = provider.getTreeItem(navigationRows.action);
 	check('Registered script paths enable navigation and appear in the tooltip', navigationItem.contextValue.includes('|open_executor')
@@ -255,4 +357,33 @@ async function executorChecks() {
 	check('Executor navigation has a conditional curated menu entry', pkg.contributes.commands.some(c => c.command === 'customTreeView.openExecutorScript')
 		&& pkg.contributes.menus['customTreeView.resourceMenu'].some(c => c.command === 'customTreeView.openExecutorScript' && c.when.includes('open_executor'))
 		&& pkg.contributes.menus.commandPalette.some(c => c.command === 'customTreeView.openExecutorScript' && c.when === 'false'));
+	const { editSequence } = load(path.join(out, 'commands/sequence_editing_command.js'));
+	const sequencePath = base + 'Sequence/probe.tres';
+	const sequenceGraph = structuredClone(graph);
+	const configuration = node('Configuration', 'Behavior', [], {sequence: {role: 'configuration', step_id: ''}});
+	const step = node('Damage [ACTION]', 'Behavior', [], {sequence: {role: 'step', step_id: 'damage', step_kind: 'action', label: 'Damage'}});
+	const steps = node('Steps [SEQUENCE]', 'Behavior', [], {sequence: {role: 'steps', step_id: ''}}, [step]);
+	sequenceGraph.roots = [sequencePath];
+	sequenceGraph.dependency_hashes[sequencePath] = hash;
+	sequenceGraph.nodes[sequencePath] = {id: 'probe', kind: 'behavior', source_path: sequencePath, content_hash: hash, links: [], data: node('data', 'Dictionary', [], {}, [configuration, steps])};
+	provider.setGraph(uri(project), sequenceGraph);
+	const sequenceRoot = provider.getChildren()[0];
+	const [configurationRow, stepsRow] = provider.getChildren(sequenceRoot);
+	const stepRow = provider.getChildren(stepsRow)[0];
+	check('Unified tree exposes owned Configuration and Steps roles', provider.getTreeItem(stepsRow).contextValue.includes('sequence_add') && provider.getTreeItem(stepRow).tooltip.includes('Step ID: damage'));
+	inputs.push('Renamed Damage');
+	await editSequence(provider, stepRow, 'rename', report, async () => {refreshes++;});
+	check('Step rename addresses its owning file and stable ID', calls.at(-1).source === sequencePath && calls.at(-1).request.step_id === 'damage' && calls.at(-1).request.label === 'Renamed Damage');
+	await editSequence(provider, stepRow, 'move_up', report, async () => {});
+	check('Reordering submits the sibling direction', calls.at(-1).request.operation === 'sequence_move' && calls.at(-1).request.direction === -1);
+	const beforeCancel = calls.length;
+	inputs.push(undefined);
+	await editSequence(provider, stepRow, 'rename', report, async () => {});
+	check('Cancelling a sequence prompt performs no write', calls.length === beforeCancel);
+	api.workspace.isTrusted = false;
+	await editSequence(provider, stepRow, 'rename', report, async () => {});
+	check('Untrusted sequence edits are blocked', calls.length === beforeCancel);
+	api.workspace.isTrusted = true;
+	check('Sequence commands belong to the expanded curated menu', pkg.contributes.menus['customTreeView.resourceMenu'].filter(item => item.command?.startsWith('customTreeView.sequence.')).length === 11);
+
 }

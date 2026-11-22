@@ -1,6 +1,6 @@
 [gd_resource type="Resource" format=3]
 
-[ext_resource type="Script" path="res://Framework/Env/Configuration/Resources/ground_resource.gd" id="1_oefcf"]
+[ext_resource type="Script" path="res://Framework/Content/Universal/Map/based/Configuration/ground_resource.gd" id="1_oefcf"]
 [ext_resource type="Texture2D" path="res://Games/ExampleGame/Tiles/ground.svg" id="2_ocy1l"]
 
 [resource]

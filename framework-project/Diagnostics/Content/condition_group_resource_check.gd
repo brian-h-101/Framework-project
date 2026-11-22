@@ -1,7 +1,7 @@
 extends SceneTree
 
 const ConditionGroupResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/condition_group_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Conditions/condition_group_resource.gd"
 )
 const ExistingInteraction = preload(
 	"res://Diagnostics/Fixtures/GameplayBaselines/strike.gd"

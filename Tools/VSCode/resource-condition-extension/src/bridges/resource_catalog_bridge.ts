@@ -5,7 +5,8 @@ export type ResourceKind =
 	| 'condition'
 	| 'condition_group'
 	| 'interaction'
-	| 'automation';
+	| 'automation'
+	| 'behavior';
 
 export interface ResourceCatalogEntry {
 	id: string;
@@ -33,7 +34,7 @@ export function loadResourceCatalog(
 				'--path',
 				projectDirectory,
 				'--script',
-				'res://Framework/Env/Authoring/Resources/resource_catalog_export.gd'
+				'res://Framework/Env/Authoring/Resources/Inspection/resource_catalog_export.gd'
 			],
 			{
 				cwd: projectDirectory,
@@ -151,6 +152,7 @@ function isResourceKind(value: unknown): value is ResourceKind {
 		|| value === 'condition_group'
 		|| value === 'interaction'
 		|| value === 'automation'
+		|| value === 'behavior'
 	);
 }
 

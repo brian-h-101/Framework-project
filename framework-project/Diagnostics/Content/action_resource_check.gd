@@ -1,7 +1,7 @@
 extends SceneTree
 
 const ActionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/action_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Actions/action_resource.gd"
 )
 const ExistingAction = preload(
 	"res://Diagnostics/Fixtures/GameplayBaselines/change_health.gd"

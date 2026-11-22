@@ -1,0 +1,35 @@
+[gd_scene format=3 uid="uid://b1yio7wsswx0u"]
+
+[ext_resource type="Script" path="res://Framework/Content/Universal/Movement/based/Physics2D/movement_body_2d.gd" id="attached_script"]
+
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_2d.tres" id="movement_content"]
+
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Controller/enemy_ai.tres" id="movement_controller"]
+
+[ext_resource type="Script" path="res://Framework/Content/Universal/Interaction/based/Bindings/behavior_binding.gd" id="behavior_script"]
+[ext_resource type="Resource" path="res://Framework/Content/Gameplay/Profiles/Movement/Behavior/move.tres" id="behavior_content"]
+
+[node name="Enemy" type="Node2D" unique_id=1788959101]
+metadata/entity_definition = &"enemy"
+
+[node name="View2D" parent="." unique_id=1933198955 type="CharacterBody2D"]
+script = ExtResource("attached_script")
+metadata/entity_spatial_root = true
+content = ExtResource("movement_content")
+controller = ExtResource("movement_controller")
+
+[node name="Body" parent="View2D" unique_id=1650022353 type="Polygon2D"]
+metadata/casts_shadow = true
+color = Color(0.9, 0.25, 0.2, 1)
+polygon = PackedVector2Array(-16, -16, 16, -16, 16, 16, -16, 16)
+
+[node name="StatusAnchor" parent="View2D" unique_id=1169077379 type="Marker2D"]
+metadata/ui_anchor_role = &"status"
+
+[node name="TargetPoint" parent="View2D" unique_id=449368166 type="Marker2D"]
+metadata/interaction_target = true
+
+[node name="MoveBehavior" parent="." unique_id=94232943 type="Node"]
+script = ExtResource("behavior_script")
+content = ExtResource("behavior_content")
+

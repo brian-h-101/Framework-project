@@ -1,6 +1,6 @@
 [gd_scene load_steps=2 format=3]
 
-[ext_resource type="Script" path="res://Framework/Content/God/Movement/movement_2d.gd" id="1_movement"]
+[ext_resource type="Script" path="res://Framework/Content/Universal/Movement/based/Physics2D/movement_body_2d.gd" id="1_movement"]
 
 [node name="VisualEntity" type="Node2D"]
 metadata/entity_definition = &"player"

@@ -1,6 +1,6 @@
 extends RefCounted
 
-const Policy = preload("res://Framework/Env/Setup/authored_library.gd")
+const Policy = preload("res://Framework/Env/Setup/Library/authored_library.gd")
 const Fragment = preload("res://Framework/Infrastructure/API/Entity/Resources/container_fragment_resource.gd")
 const Shared = preload("res://Framework/Env/Authoring/Shared/resource_library_files.gd")
 const Values = preload("res://Framework/Env/Authoring/Shared/resource_values.gd")

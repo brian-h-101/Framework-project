@@ -4,10 +4,10 @@ const GameEntry = preload(
 	"res://Framework/Infrastructure/API/Runtime/game_entry.gd"
 )
 const GameSetup = preload(
-	"res://Framework/Env/Setup/game_setup.gd"
+	"res://Framework/Env/Setup/Bootstrap/game_setup.gd"
 )
 const ConditionEditing = preload(
-	"res://Framework/Env/Authoring/Resources/condition_editing.gd"
+	"res://Framework/Env/Authoring/Resources/Conditions/condition_editing.gd"
 )
 
 const CONDITION_PATH := (

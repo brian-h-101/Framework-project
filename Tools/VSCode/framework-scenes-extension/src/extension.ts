@@ -6,6 +6,7 @@ import type { SceneTreeElement } from './scene_tree_provider';
 import { SceneSelection, ensureWorkspace, workspaceDirectories } from './scene_selection';
 import { declarationLine } from './scene_navigation';
 import { SceneEditingCommands } from './scene_editing_command';
+import { configureMovementCapability } from './movement_capability_command';
 import { LibraryManager } from './library/library_manager';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -109,8 +110,11 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('frameworkScenes.openDeclaration', (node: SceneTreeElement) => navigate(node, 'declaration')),
 		vscode.commands.registerCommand('frameworkScenes.openStructure', (node: SceneTreeElement) => navigate(node, 'structure')),
 		vscode.commands.registerCommand('frameworkScenes.addNode', (node: SceneTreeElement) => runOperation(() => editing.execute('add_node', node))),
+	vscode.commands.registerCommand('frameworkScenes.setNodeProperty', (node: SceneTreeElement) => runOperation(() => editing.execute('set_property', node))),
 		vscode.commands.registerCommand('frameworkScenes.addInstance', (node: SceneTreeElement) => runOperation(() => editing.execute('add_instance', node))),
 		vscode.commands.registerCommand('frameworkScenes.attachBehavior', (node: SceneTreeElement) => runOperation(() => editing.execute('attach_behavior', node))),
+		vscode.commands.registerCommand('frameworkScenes.configureCapabilities', (node: SceneTreeElement) =>
+			runOperation(() => configureMovementCapability(provider, node, output, () => selection.refresh()))),
 		vscode.commands.registerCommand('frameworkScenes.assignMovement', (node: SceneTreeElement) => runOperation(() => editing.execute('assign_movement', node))),
 		vscode.commands.registerCommand('frameworkScenes.attachScript', (node: SceneTreeElement) => runOperation(() => editing.execute('attach_script', node))),
 		vscode.commands.registerCommand('frameworkScenes.removeScript', (node: SceneTreeElement) => runOperation(() => editing.execute('remove_script', node))),

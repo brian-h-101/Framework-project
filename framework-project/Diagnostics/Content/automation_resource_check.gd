@@ -1,10 +1,10 @@
 extends SceneTree
 
 const AutomationResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/automation_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Automation/automation_resource.gd"
 )
 const InteractionResource = preload(
-	"res://Framework/Infrastructure/API/Gameplay/Resources/interaction_resource.gd"
+	"res://Framework/Infrastructure/API/Gameplay/Resources/Interactions/interaction_resource.gd"
 )
 
 var _passed := true

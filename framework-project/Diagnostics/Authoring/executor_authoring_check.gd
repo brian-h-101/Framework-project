@@ -4,10 +4,10 @@ const Setup = preload("res://Diagnostics/Fixtures/Setup/executor_authoring_setup
 const Runtime = preload("res://Framework/Infrastructure/API/Runtime/game_runtime.gd")
 const Core = preload("res://Framework/Infrastructure/Implementation/Runtime/runtime_core.gd")
 const Executor = preload("res://Framework/Infrastructure/API/Gameplay/Executors/gameplay_executor.gd")
-const Schema = preload("res://Framework/Env/Authoring/Resources/behavior_schema.gd")
-const Inspection = preload("res://Framework/Env/Authoring/Resources/behavior_inspection.gd")
-const Editing = preload("res://Framework/Env/Authoring/Resources/behavior_editing.gd")
-const Assignment = preload("res://Framework/Env/Authoring/Resources/condition_assignment.gd")
+const Schema = preload("res://Framework/Env/Authoring/Resources/Behavior/behavior_schema.gd")
+const Inspection = preload("res://Framework/Env/Authoring/Resources/Inspection/behavior_inspection.gd")
+const Editing = preload("res://Framework/Env/Authoring/Resources/Behavior/behavior_editing.gd")
+const Assignment = preload("res://Framework/Env/Authoring/Resources/Conditions/condition_assignment.gd")
 const Files = preload("res://Framework/Env/Authoring/Shared/resource_files.gd")
 
 class MetadataExecutor extends Executor:

@@ -6,11 +6,8 @@ const Runtime = preload(
 const Core = preload(
 	"res://Framework/Infrastructure/Implementation/Runtime/runtime_core.gd"
 )
-const Executor = preload(
-	"res://Framework/Content/Executor/change_health_executor.gd"
-)
 const Action = preload(
-	"res://Framework/Content/Behavior/Action/change_health.tres"
+	"res://Diagnostics/Fixtures/GameplayResources/change_health.tres"
 )
 
 
@@ -35,13 +32,10 @@ func _initialize() -> void:
 
 
 func _run_check(runtime: Runtime) -> bool:
-	var registered := runtime.register_executor(
-		Executor.BEHAVIOR_ID,
-		Executor.new()
-	)
-	print("[direct-action] Executor registered: ", registered["ok"])
+	var registered := runtime.has_executor(Action.behavior_id)
+	print("[direct-action] Executor registered: ", registered)
 
-	if not registered["ok"]:
+	if not registered:
 		return false
 
 	var defined := runtime.define_action(Action.to_definition())
@@ -77,7 +71,7 @@ func _run_check(runtime: Runtime) -> bool:
 
 	if not (
 		result["ok"]
-		and result["value"] == 90
+		and result["value"] == [90]
 		and target_health["ok"]
 		and target_health["value"] == 90
 		and actor_health["ok"]

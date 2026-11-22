@@ -2,7 +2,7 @@
 	"name": "resource-condition-extension",
 	"displayName": "Resource Condition Extension",
 	"description": "Inspect and structurally edit framework actions, interactions, conditions, and nested data.",
-	"version": "0.0.11",
+	"version": "0.0.29",
 	"publisher": "framework-tools",
 	"type": "commonjs",
 	"capabilities": {
@@ -23,10 +23,12 @@
 		"vscode:prepublish": "npm run compile",
 		"package:list": "vsce ls --no-dependencies",
 		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license",
-		"test": "npm run compile && node diagnostics/behavior_extension_check.cjs && node diagnostics/resource_drag_and_drop_check.cjs && node diagnostics/behavior_library_extension_check.cjs",
+		"test": "npm run compile && node diagnostics/behavior_extension_check.cjs && node diagnostics/resource_drag_and_drop_check.cjs && node diagnostics/behavior_library_extension_check.cjs && node diagnostics/resource_structure_extension_check.cjs && node diagnostics/resource_performance_check.cjs",
 		"test:bridge": "node diagnostics/behavior_editing_bridge_check.cjs",
 		"test:library:bridge": "node diagnostics/behavior_library_bridge_check.cjs",
-		"test:automation:bridge": "node diagnostics/automation_bridge_check.cjs"
+		"test:automation:bridge": "node diagnostics/automation_bridge_check.cjs",
+		"test:structure:bridge": "node diagnostics/resource_structure_bridge_check.cjs",
+		"test:browsing:bridge": "node diagnostics/resource_browsing_bridge_check.cjs"
 	},
 	"contributes": {
 		"viewsContainers": {
@@ -101,12 +103,12 @@
 			},
 			{
 				"command": "customTreeView.renameEntry",
-				"title": "Rename Entry...",
+				"title": "Rename Data Key",
 				"category": "Resource Conditions"
 			},
 			{
 				"command": "customTreeView.removeEntry",
-				"title": "Remove Entry...",
+				"title": "Remove Data Entry",
 				"category": "Resource Conditions"
 			},
 			{
@@ -126,7 +128,7 @@
 			},
 			{
 				"command": "customTreeView.manageBehaviorLibrary",
-				"title": "Manage Behavior Library?",
+				"title": "Manage Behavior Library",
 				"category": "Resource Conditions",
 				"icon": "$(folder-opened)"
 			},
@@ -139,6 +141,126 @@
 				"command": "customTreeView.setAutomationInteraction",
 				"title": "Set Automation Interaction...",
 				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.openOwningResource",
+				"title": "Open Owning Resource",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.newResource",
+				"title": "New Resource",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.createAndLinkResource",
+				"title": "Create and Link Resource",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.assignExistingResource",
+				"title": "Assign Existing Resource",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.replaceReference",
+				"title": "Replace Reference",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.removeReference",
+				"title": "Remove Reference",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.renameResourceFile",
+				"title": "Rename Resource File",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.deleteResourceFile",
+				"title": "Delete Resource",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.sequence.add_action",
+				"title": "Add Action Step"
+			},
+			{
+				"command": "customTreeView.sequence.add_group",
+				"title": "Add Group Step"
+			},
+			{
+				"command": "customTreeView.sequence.rename",
+				"title": "Rename Step"
+			},
+			{
+				"command": "customTreeView.sequence.remove",
+				"title": "Remove Step"
+			},
+			{
+				"command": "customTreeView.sequence.move_up",
+				"title": "Move Step Up"
+			},
+			{
+				"command": "customTreeView.sequence.move_down",
+				"title": "Move Step Down"
+			},
+			{
+				"command": "customTreeView.sequence.configure",
+				"title": "Edit Configuration"
+			},
+			{
+				"command": "customTreeView.sequence.executor",
+				"title": "Select Executor and Arguments"
+			},
+			{
+				"command": "customTreeView.sequence.condition",
+				"title": "Add or Edit Inline Condition"
+			},
+			{
+				"command": "customTreeView.sequence.assign_condition",
+				"title": "Assign Existing Condition"
+			},
+			{
+				"command": "customTreeView.sequence.remove_condition",
+				"title": "Remove Condition"
+			},
+			{
+				"command": "customTreeView.choosePresetFragments",
+				"title": "Choose Attribute Fragments...",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.movePresetFragmentUp",
+				"title": "Move Fragment Up",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.movePresetFragmentDown",
+				"title": "Move Fragment Down",
+				"category": "Resource Conditions"
+			},
+			{
+				"command": "customTreeView.addInputBinding",
+				"title": "Add Binding..."
+			},
+			{
+				"command": "customTreeView.editInputKeys",
+				"title": "Edit Keys..."
+			},
+			{
+				"command": "customTreeView.removeInputBinding",
+				"title": "Remove Binding..."
+			},
+			{
+				"command": "customTreeView.newConfigurationResource",
+				"title": "New Configuration Resource...",
+				"category": "Framework Resources"
+			},
+			{
+				"command": "customTreeView.editMovementConfiguration",
+				"title": "Edit Movement Configuration..."
 			}
 		],
 		"submenus": [
@@ -192,6 +314,110 @@
 				{
 					"command": "customTreeView.setAutomationInteraction",
 					"when": "false"
+				},
+				{
+					"command": "customTreeView.openOwningResource",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.newResource",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.createAndLinkResource",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.assignExistingResource",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.replaceReference",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.removeReference",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.renameResourceFile",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.deleteResourceFile",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.add_action",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.add_group",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.rename",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.remove",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.move_up",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.move_down",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.configure",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.executor",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.condition",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.assign_condition",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.sequence.remove_condition",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.choosePresetFragments",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.movePresetFragmentUp",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.movePresetFragmentDown",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.addInputBinding",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.editInputKeys",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.removeInputBinding",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.editMovementConfiguration",
+					"when": "false"
 				}
 			],
 			"view/title": [
@@ -209,7 +435,7 @@
 			"view/item/context": [
 				{
 					"submenu": "customTreeView.resourceMenu",
-					"when": "view == customTreeView.resources && viewItem =~ /^(automation|interaction|action|condition_group|condition|behavior_data)([|]|$)/",
+					"when": "view == customTreeView.resources && viewItem =~ /^(behavior|sequence|automation|interaction|action|condition_group|condition|behavior_data|starting_attributes|configuration)([|]|$)/",
 					"group": "framework@1"
 				}
 			],
@@ -221,72 +447,182 @@
 				{
 					"command": "customTreeView.openExecutorScript",
 					"when": "viewItem =~ /[|]open_executor([|]|$)/",
-					"group": "1_open@2"
-				},
-				{
-					"command": "customTreeView.setInteractionAction",
-					"when": "viewItem =~ /^interaction([|]|$)/",
-					"group": "2_assign@1"
-				},
-				{
-					"command": "customTreeView.setInteractionRequirements",
-					"when": "viewItem =~ /^interaction([|]|$)/",
-					"group": "2_assign@2"
-				},
-				{
-					"command": "customTreeView.addConditionToGroup",
-					"when": "viewItem =~ /^condition_group([|]|$)/",
-					"group": "2_assign@1"
+					"group": "1_open@3"
 				},
 				{
 					"command": "customTreeView.editCondition",
 					"when": "viewItem =~ /^condition([|]|$)/",
-					"group": "3_edit@1"
+					"group": "4_data@1"
 				},
 				{
 					"command": "customTreeView.editValue",
 					"when": "viewItem =~ /[|]edit([|]|$)/",
-					"group": "4_structure"
+					"group": "4_data@2"
 				},
 				{
 					"command": "customTreeView.addEntry",
 					"when": "viewItem =~ /[|]add([|]|$)/",
-					"group": "4_structure"
+					"group": "4_data@3"
 				},
 				{
 					"command": "customTreeView.renameEntry",
 					"when": "viewItem =~ /[|]rename([|]|$)/",
-					"group": "4_structure"
+					"group": "4_data@4"
 				},
 				{
 					"command": "customTreeView.removeEntry",
 					"when": "viewItem =~ /[|]remove([|]|$)/",
-					"group": "5_remove"
+					"group": "5_remove@2"
 				},
 				{
 					"command": "customTreeView.addEffect",
 					"when": "viewItem =~ /[|]add_effect([|]|$)/",
-					"group": "4_structure"
-				},
-				{
-					"command": "customTreeView.removeConditionFromGroup",
-					"when": "viewItem =~ /[|]condition_link([|]|$)/",
-					"group": "5_remove"
+					"group": "2_create@3"
 				},
 				{
 					"command": "customTreeView.clearRequirements",
-					"when": "viewItem =~ /[|](has_requirements|requirements_link)([|]|$)/",
-					"group": "5_remove"
+					"when": "viewItem =~ /[|]has_requirements([|]|$)/",
+					"group": "5_remove@2"
 				},
 				{
 					"command": "customTreeView.setActionBehavior",
 					"when": "viewItem =~ /^action([|]|$)/",
-					"group": "2_assign@1"
+					"group": "3_assign@3"
 				},
 				{
-					"command": "customTreeView.setAutomationInteraction",
-					"when": "viewItem =~ /^automation([|]|$)/",
-					"group": "2_assign@1"
+					"command": "customTreeView.openOwningResource",
+					"when": "viewItem =~ /[|]open_owner([|]|$)/",
+					"group": "1_open@2"
+				},
+				{
+					"command": "customTreeView.newResource",
+					"when": "viewItem =~ /[|]new_resource([|]|$)/",
+					"group": "2_create@1"
+				},
+				{
+					"command": "customTreeView.createAndLinkResource",
+					"when": "viewItem =~ /[|]link_resource([|]|$)/",
+					"group": "2_create@2"
+				},
+				{
+					"command": "customTreeView.assignExistingResource",
+					"when": "viewItem =~ /[|]link_resource([|]|$)/",
+					"group": "3_assign@1"
+				},
+				{
+					"command": "customTreeView.replaceReference",
+					"when": "viewItem =~ /[|]replace_reference([|]|$)/",
+					"group": "3_assign@2"
+				},
+				{
+					"command": "customTreeView.removeReference",
+					"when": "viewItem =~ /[|]remove_reference([|]|$)/",
+					"group": "5_remove@1"
+				},
+				{
+					"command": "customTreeView.renameResourceFile",
+					"when": "viewItem =~ /[|]resource_file([|]|$)/",
+					"group": "4_file@1"
+				},
+				{
+					"command": "customTreeView.deleteResourceFile",
+					"when": "viewItem =~ /[|]resource_file([|]|$)/",
+					"group": "5_remove@3"
+				},
+				{
+					"command": "customTreeView.sequence.add_action",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_add)($|\\|)/",
+					"group": "sequence@0"
+				},
+				{
+					"command": "customTreeView.sequence.add_group",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_add)($|\\|)/",
+					"group": "sequence@1"
+				},
+				{
+					"command": "customTreeView.sequence.rename",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_step)($|\\|)/",
+					"group": "sequence@2"
+				},
+				{
+					"command": "customTreeView.sequence.remove",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_step)($|\\|)/",
+					"group": "sequence@3"
+				},
+				{
+					"command": "customTreeView.sequence.move_up",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_step)($|\\|)/",
+					"group": "sequence@4"
+				},
+				{
+					"command": "customTreeView.sequence.move_down",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_step)($|\\|)/",
+					"group": "sequence@5"
+				},
+				{
+					"command": "customTreeView.sequence.configure",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_configuration)($|\\|)/",
+					"group": "sequence@6"
+				},
+				{
+					"command": "customTreeView.sequence.executor",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_executor)($|\\|)/",
+					"group": "sequence@7"
+				},
+				{
+					"command": "customTreeView.sequence.condition",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_requirements|sequence_condition)($|\\|)/",
+					"group": "sequence@8"
+				},
+				{
+					"command": "customTreeView.sequence.assign_condition",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_requirements)($|\\|)/",
+					"group": "sequence@9"
+				},
+				{
+					"command": "customTreeView.sequence.remove_condition",
+					"when": "view == customTreeView.resources && viewItem =~ /(sequence_condition)($|\\|)/",
+					"group": "sequence@10"
+				},
+				{
+					"command": "customTreeView.choosePresetFragments",
+					"when": "viewItem =~ /[|]choose_fragments([|]|$)/",
+					"group": "3_assign@7"
+				},
+				{
+					"command": "customTreeView.movePresetFragmentUp",
+					"when": "viewItem =~ /[|]fragment_up([|]|$)/",
+					"group": "3_assign@7"
+				},
+				{
+					"command": "customTreeView.movePresetFragmentDown",
+					"when": "viewItem =~ /[|]fragment_down([|]|$)/",
+					"group": "3_assign@7"
+				},
+				{
+					"command": "customTreeView.addInputBinding",
+					"when": "viewItem =~ /[|]input_bindings([|]|$)/",
+					"group": "configuration@1"
+				},
+				{
+					"command": "customTreeView.editInputKeys",
+					"when": "viewItem =~ /[|]input_binding([|]|$)/",
+					"group": "configuration@2"
+				},
+				{
+					"command": "customTreeView.removeInputBinding",
+					"when": "viewItem =~ /[|]input_binding([|]|$)/",
+					"group": "configuration@3"
+				},
+				{
+					"command": "customTreeView.newConfigurationResource",
+					"when": "viewItem =~ /[|]new_configuration([|]|$)/",
+					"group": "configuration@4"
+				},
+				{
+					"command": "customTreeView.editMovementConfiguration",
+					"when": "viewItem =~ /[|]movement_configuration([|]|$)/",
+					"group": "configuration@5"
 				}
 			]
 		}

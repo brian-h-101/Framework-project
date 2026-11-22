@@ -22,20 +22,22 @@ const context = { projectDirectory: project, workspaceDirectory: path.dirname(pr
 const source = 'res://Scenes/map.tscn';
 const template = 'res://Scenes/template.tscn';
 const interaction = 'res://Framework/Content/Behavior/Interaction/strike.tres';
-const component = 'res://Framework/Content/God/Interaction/interaction_behavior.gd';
-const automationComponent = 'res://Framework/Content/God/Interaction/automation_behavior.gd';
+const component = 'res://Framework/Content/Universal/Interaction/based/Legacy/interaction_behavior.gd';
+const automationComponent = 'res://Framework/Content/Universal/Interaction/based/Legacy/automation_behavior.gd';
+const unified = 'res://Framework/Content/Behavior/Sequence/strike.tres';
+const unifiedComponent = 'res://Framework/Content/Universal/Interaction/based/Bindings/behavior_binding.gd';
 const automation = 'res://Framework/Content/Behavior/Automation/auto_strike.tres';
 const existingInteraction = 'res://Framework/Content/Behavior/Interaction/existing.tres';
 const action = 'res://Framework/Content/Behavior/Action/change_health.tres';
-const movement = 'res://Framework/Content/Configuration/Movement/faster.tres';
-const previousMovement = 'res://Framework/Content/Configuration/Movement/player_movement.tres';
-const movementScript = 'res://Framework/Content/God/Movement/movement_2d.gd';
+const movement = 'res://Framework/Content/Gameplay/Profiles/Movement/Shared/faster.tres';
+const previousMovement = 'res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_2d.tres';
+const movementScript = 'res://Framework/Content/Universal/Movement/based/Physics2D/movement_body_2d.gd';
 const movementAction = 'res://Framework/Content/Behavior/Action/move.tres';
 const nodeScript = 'res://Scripts/node_script.gd';
 const baseScript = 'res://Scripts/base_script.gd';
 const resourceUri = resource => uri(path.join(project, resource.slice(6)));
 const buffers = new Map([[source, Buffer.from('map bytes')], [template, Buffer.from('template bytes')]]);
-for (const resource of [interaction, component, existingInteraction, automationComponent, automation]) { buffers.set(resource, Buffer.from(resource)); }
+for (const resource of [interaction, component, existingInteraction, automationComponent, automation, unified, unifiedComponent]) { buffers.set(resource, Buffer.from(resource)); }
 for (const resource of [movement, previousMovement, movementScript, movementAction]) { buffers.set(resource, Buffer.from(resource)); }
 for (const resource of [nodeScript, baseScript]) { buffers.set(resource, Buffer.from(resource)); }
 const hash = resource => createHash('sha256').update(buffers.get(resource)).digest('hex');
@@ -74,9 +76,12 @@ let catalogLoads = 0;
 let movementCatalogError;
 let movementCatalogEmpty = false;
 let scriptInspectionError;
+let sceneUris = [resourceUri(template), resourceUri(source)];
+let projectUris = [resourceUri('res://project.godot')];
 const api = {
 	__esModule: true,
 	Uri: { file: uri, joinPath: (root, ...parts) => uri(path.join(root.fsPath, ...parts)) },
+	RelativePattern: class { constructor(base, pattern) { this.base = base; this.pattern = pattern; } },
 	EventEmitter: class { event = () => ({ dispose() {} }); fire() {} dispose() {} },
 	TreeItem: class { constructor(label) { this.label = label; } },
 	ThemeIcon: class { constructor(id) { this.id = id; } },
@@ -88,14 +93,26 @@ const api = {
 			const relative = path.relative(project, file.fsPath).split(path.sep).join('/');
 			return buffers.get('res://' + relative);
 		} },
-		async findFiles(pattern) { return pattern === '**/*.gd' ? [resourceUri(nodeScript)] : [resourceUri(template)]; },
+		async findFiles(pattern) {
+			if (pattern === '**/*.gd') { return [resourceUri(nodeScript)]; }
+			assert.equal(pattern.base, project, 'instance discovery is relative to the open scene project');
+			return pattern.pattern === '**/project.godot' ? projectUris : sceneUris;
+		},
 		asRelativePath: file => path.relative(project, file.fsPath)
 	},
 	window: {
 		async showQuickPick(items, options) { const answer = answers.shift(); afterPrompt(); return typeof answer === 'function' ? answer(items, options) : answer; },
 		async showInputBox(options) { const answer = answers.shift(); afterPrompt(); return typeof answer === 'function' ? answer(options) : answer; },
 		async showWarningMessage() { const answer = answers.shift(); afterPrompt(); return answer; },
-		async showErrorMessage(message) { errors.push(message); }, async showInformationMessage(message) { information.push(message); }
+		async showErrorMessage(message) { errors.push(message); },
+		async showInformationMessage(message, options, button) {
+			information.push(message);
+			if (button) {
+				const answer = answers.shift();
+				afterPrompt();
+				return typeof answer === 'function' ? answer(options) : answer;
+			}
+		}
 	}
 };
 const workspace = {
@@ -113,9 +130,12 @@ const workspace = {
 const { SceneTreeProvider, projectUri } = load('scene_tree_provider.js', { vscode: api });
 const provider = new SceneTreeProvider();
 const selection = load('scene_selection.js', { vscode: api, './scene_tree_provider': { projectUri } });
+const instancePicker = load('scene_instance_picker.js', { vscode: api, './project_context': workspace });
 const { SceneEditingCommands } = load('scene_editing_command.js', {
 	vscode: api, './project_context': workspace,
 	'./scene_tree_provider': { projectUri }, './scene_selection': selection,
+	'./scene_property_prompt': load('scene_property_prompt.js', { vscode: api }),
+	'./scene_instance_picker': instancePicker,
 	'./scene_bridge': { async loadSceneGraph() { return graph(template); } },
 	'./resource_catalog_bridge': { async loadResourceCatalog() {
 		catalogLoads++;
@@ -128,6 +148,12 @@ const { SceneEditingCommands } = load('scene_editing_command.js', {
 			dependency_hashes: { [movement]: hash(movement), [movementAction]: hash(movementAction) } }];
 	} },
 	'./scene_editing_bridge': {
+		async inspectNodeProperties() {
+			return [
+				{ name: 'position', type: 'Vector2', saved: true, value: '10, 20' },
+				{ name: 'metadata/entity_spatial_root', type: 'bool', saved: false, value: 'true' }
+			];
+		},
 		async inspectScript(_project, _executable, script) {
 			if (scriptInspectionError) { throw new Error(scriptInspectionError); }
 			return { script_path: script, base_type: 'Node2D', dependency_hashes: { [script]: hash(script), [baseScript]: hash(baseScript) } };
@@ -141,6 +167,48 @@ const { SceneEditingCommands } = load('scene_editing_command.js', {
 	}
 });
 const output = { appendLine() {} };
+const capabilityCalls = [];
+const capabilityControls = 'res://Framework/Content/Configuration/Input/controls.tres';
+const capabilityKeyboard = 'res://Framework/Content/Gameplay/Controller/player_keyboard.tres';
+const capabilityAi = 'res://Framework/Content/Gameplay/Controller/enemy_ai.tres';
+const capabilityGrid = 'res://Framework/Content/Gameplay/Profiles/Movement/Shared/movement_grid.tres';
+buffers.set(capabilityGrid, Buffer.from(capabilityGrid));
+const capabilityToken = 'a'.repeat(64);
+let includeGridProfiles = false;
+const { configureMovementCapability } = load('movement_capability_command.js', {
+	vscode: api, './project_context': workspace, './scene_selection': selection,
+	'./scene_tree_provider': { projectUri },
+	'./scene_editing_bridge': {
+		async runSceneEditing(_project, _executable, [operation, scene, node], request) {
+			capabilityCalls.push({ operation, scene, node, request });
+			const choice = { source_path: movement, behavior_id: 'move', velocity_step_id: 'calculate_velocity' };
+			if (operation === 'inspect-movement') {
+				const configurations = includeGridProfiles ? [
+					{ ...choice, environment: 'physics_2d' },
+					{ ...choice, source_path: capabilityGrid, environment: 'grid' },
+					{ ...choice, source_path: previousMovement, behavior_id: 'walk', environment: 'grid' }
+				] : [choice];
+				return { scene_path: template, body_path: 'MotionBody', current_configuration: '', current_controller: '',
+					configurations, controllers: [
+						{ source_path: capabilityKeyboard, kind: 'keyboard' }, { source_path: capabilityAi, kind: 'ai' }
+					] };
+			}
+			if (operation === 'plan-movement') {
+				return { scene_path: template, body_path: 'MotionBody', configuration_path: request.configuration_path,
+					controller_path: request.controller_path, behavior_path: unified, binding_path: 'MoveBehavior',
+					environment: request.environment,
+					attach_script: true, assign_configuration: true, assign_controller: true, add_binding: false,
+					input_actions: request.controller_path === capabilityKeyboard ? ['move_up', 'move_left'] : [],
+					dependency_hashes: {
+						[source]: hash(source), [template]: hash(template), [capabilityControls]: capabilityToken,
+						[request.configuration_path]: hash(request.configuration_path), [unified]: hash(unified), [request.controller_path]: capabilityToken
+					},
+					token: capabilityToken };
+			}
+			return { scene_path: template, changed: true };
+		}
+	}
+});
 const commands = new SceneEditingCommands(provider, output, async () => { refreshes++; });
 function select(value = graph()) {
 	provider.setGraph(context, value);
@@ -157,6 +225,11 @@ function selectMovement(value = graph()) {
 	return select(value).lamp;
 }
 async function check(label, operation) { await operation(); console.log(`[scene-editing-extension] ${label}: true`); }
+const itemNamed = label => items => {
+	const item = items.find(item => item.label === label);
+	assert.ok(item, 'Missing picker row: ' + label);
+	return item;
+};
 
 (async () => {
 	await check('Native node creation routes type, parent and dependency hashes', async () => {
@@ -164,9 +237,37 @@ async function check(label, operation) { await operation(); console.log(`[scene-
 		assert.equal(writes.at(-1).node_type, 'Marker2D'); assert.equal(writes.at(-1).path, 'Props');
 		assert.equal(writes.at(-1).expected_hashes[source], hash(source)); assert.equal(refreshes, 1);
 	});
-	await check('Searchable instance selection includes candidate dependency hashes', async () => {
-		answers = [items => items[0], 'Placement']; await commands.execute('add_instance', select().root);
+	await check('Folder instance selection includes candidate dependency hashes', async () => {
+		answers = [itemNamed('Scenes/'), itemNamed('template.tscn'), 'Placement'];
+		await commands.execute('add_instance', select().root);
 		assert.equal(writes.at(-1).instance_scene, template); assert.equal(writes.at(-1).expected_hashes[template], hash(template));
+	});
+	await check('Instance folders support parent navigation and searchable duplicate filenames', async () => {
+		const originalScenes = sceneUris;
+		const originalProjects = projectUris;
+		const entity = resourceUri('res://Framework/Content/Gameplay/Presentation/Entity/body.tscn');
+		const fixture = resourceUri('res://Diagnostics/Fixtures/body.tscn');
+		sceneUris = [fixture, entity, resourceUri(template), resourceUri(source),
+			resourceUri('res://Nested/foreign.tscn'), uri(path.join(project + '-other', 'external.tscn'))];
+		projectUris = [...originalProjects, resourceUri('res://Nested/project.godot')];
+		try {
+			answers = [items => {
+				assert.deepEqual(items.map(item => item.label), ['Diagnostics/', 'Framework/', 'Scenes/', 'Search All Scenes…']);
+				return itemNamed('Framework/')(items);
+			}, itemNamed('Content/'), itemNamed('Parent Folder'), itemNamed('Content/'), itemNamed('Gameplay/'),
+			itemNamed('Presentation/'), itemNamed('Entity/'), itemNamed('body.tscn')];
+			assert.equal(await instancePicker.pickSceneInstance(context, source), entity);
+			answers = [itemNamed('Search All Scenes…'), items => {
+				const duplicates = items.filter(item => item.label === 'body.tscn');
+				assert.equal(duplicates.length, 2);
+				assert.ok(!items.some(item => ['map.tscn', 'foreign.tscn', 'external.tscn'].includes(item.label)));
+				return duplicates.find(item => item.description.startsWith('Diagnostics/'));
+			}];
+			assert.equal(await instancePicker.pickSceneInstance(context, source), fixture);
+		} finally {
+			sceneUris = originalScenes;
+			projectUris = originalProjects;
+		}
 	});
 	await check('Rename and remove use the selected nested node', async () => {
 		answers = ['Renamed']; await commands.execute('rename', select().lamp);
@@ -177,7 +278,9 @@ async function check(label, operation) { await operation(); console.log(`[scene-
 	await check('Every cancelled dialog leaves files untouched', async () => {
 		const before = writes.length;
 		for (const input of [[], ['Node2D']]) { answers = input.slice(); await commands.execute('add_node', select().props); }
-		for (const input of [[], [items => items[0]]]) { answers = input.slice(); await commands.execute('add_instance', select().root); }
+		for (const input of [[], [itemNamed('Scenes/')], [itemNamed('Scenes/'), itemNamed('template.tscn')]]) {
+			answers = input.slice(); await commands.execute('add_instance', select().root);
+		}
 		answers = []; await commands.execute('rename', select().lamp);
 		answers = []; await commands.execute('remove', select().lamp);
 		assert.equal(writes.length, before);
@@ -202,7 +305,8 @@ async function check(label, operation) { await operation(); console.log(`[scene-
 		const before = writes.length; const original = buffers.get(source);
 		answers = ['Other']; afterPrompt = () => buffers.set(source, Buffer.from('changed during prompt'));
 		await commands.execute('rename', select().lamp); buffers.set(source, original);
-		answers = [items => items[0], 'Other']; afterPrompt = () => { api.workspace.textDocuments = [{ isDirty: true, uri: resourceUri(template) }]; };
+		answers = [itemNamed('Scenes/'), itemNamed('template.tscn'), 'Other'];
+		afterPrompt = () => { api.workspace.textDocuments = [{ isDirty: true, uri: resourceUri(template) }]; };
 		await commands.execute('add_instance', select().root);
 		api.workspace.textDocuments = []; afterPrompt = () => {};
 		assert.equal(writes.length, before); assert.ok(errors.some(error => /dependency changed/i.test(error)));
@@ -250,6 +354,17 @@ async function check(label, operation) { await operation(); console.log(`[scene-
 		assert.equal(writes.at(-1).interaction_resource, undefined);
 		assert.equal(writes.at(-1).expected_hashes[automationComponent], hash(automationComponent));
 		assert.equal(writes.at(-1).expected_hashes[automation], hash(automation));
+		catalog = defaultCatalog;
+	});
+	await check('Unified Behavior picker guards content and binding script', async () => {
+		catalog = {version: 1, resources: [{id: 'strike', kind: 'behavior', source_path: unified}]};
+		const before = writes.length;
+		answers = [items => {assert.equal(items[0].description, 'behavior: strike'); return items[0];}, 'StrikeBehavior'];
+		await commands.execute('attach_behavior', selectEntity());
+		assert.equal(writes.length, before + 1);
+		assert.equal(writes.at(-1).behavior_resource, unified);
+		assert.equal(writes.at(-1).expected_hashes[unifiedComponent], hash(unifiedComponent));
+		assert.equal(writes.at(-1).expected_hashes[unified], hash(unified));
 		catalog = defaultCatalog;
 	});
 	await check('Non-entity, borrowed, and stale rows cannot start attachment', async () => {
@@ -333,7 +448,7 @@ async function check(label, operation) { await operation(); console.log(`[scene-
 			assert.equal(errors.at(-1), catalogError);
 			catalogError = undefined; catalog = { version: 1, resources: defaultCatalog.resources.filter(entry => entry.kind === 'action') };
 			await commands.execute('attach_behavior', selectEntity());
-			assert.equal(information.at(-1), 'No Interaction or Automation resources are available.');
+			assert.equal(information.at(-1), 'No Behavior resources are available.');
 		} finally { catalogError = undefined; catalog = defaultCatalog; }
 		assert.equal(writes.length, before);
 	});
@@ -348,7 +463,7 @@ async function check(label, operation) { await operation(); console.log(`[scene-
 	await check('Movement picker routes configuration, body and complete dependency hashes without a node name', async () => {
 		const before = writes.length; const previousRefreshes = refreshes; const body = selectMovement();
 		assert.match(provider.getTreeItem(body).contextValue, /_assign_movement/);
-		assert.match(provider.getTreeItem(body).tooltip, /player_movement.tres/);
+		assert.match(provider.getTreeItem(body).tooltip, /movement_2d\.tres/);
 		answers = [(items, options) => {
 			assert.equal(items.length, 1); assert.equal(items[0].label, 'faster.tres');
 			assert.equal(items[0].description, 'move'); assert.match(items[0].detail, /movement_2d/);
@@ -485,6 +600,82 @@ async function check(label, operation) { await operation(); console.log(`[scene-
 		} finally { workspace.resolveProjectContext = resolve; }
 		assert.equal(writes.length, before);
 	});
+	await check('Property picker uses saved values and submits typed native values and metadata', async () => {
+		answers = [items => items[0], options => { assert.equal(options.value, '10, 20'); return '320, 360'; }];
+		await commands.execute('set_property', select().lamp);
+		assert.deepEqual(writes.at(-1), { operation: 'set_property', path: 'Props/Lamp',
+			expected_hashes: { [source]: hash(source) }, property_name: 'position', property_type: 'Vector2', property_value: '320, 360' });
+		answers = [items => items[1], 'true'];
+		await commands.execute('set_property', select().lamp);
+		assert.equal(writes.at(-1).property_name, 'metadata/entity_spatial_root');
+		assert.equal(writes.at(-1).property_type, 'bool');
+		answers = [items => items.at(-1), 'note', items => items.find(item => item.valueType === 'String'), 'Sample'];
+		await commands.execute('set_property', select().lamp);
+		assert.equal(writes.at(-1).property_name, 'metadata/note');
+		assert.equal(writes.at(-1).property_value, 'Sample');
+	});
+	await check('Cancelled property prompts and inherited children perform no write', async () => {
+		const before = writes.length;
+		answers = [items => items[0], undefined];
+		await commands.execute('set_property', select().lamp);
+		const borrowed = graph();
+		borrowed.nodes['Props/Lamp'].structural_scene = template;
+		const lamp = select(borrowed).lamp;
+		assert.doesNotMatch(provider.getTreeItem(lamp).contextValue, /_set_property/);
+		await commands.execute('set_property', lamp);
+		assert.equal(writes.length, before);
+	});
+	await check('Configure Capabilities reviews existing movement resources and sends the approved plan', async () => {
+		const selected = selectEntity();
+		assert.match(provider.getTreeItem(selected).contextValue, /_configure_capabilities/);
+		assert.doesNotMatch(provider.getTreeItem(provider.getChildren(selected)[0]).contextValue, /_configure_capabilities/);
+		answers = [items => items[0], items => items[0], options => {
+			assert.match(options.detail, /Scenes\/template\.tscn/);
+			assert.match(options.detail, /Reuse Behavior binding at MoveBehavior/);
+			assert.match(options.detail, /player_keyboard\.tres/);
+			return 'Apply Movement';
+		}];
+		await configureMovementCapability(provider, selected, output, async () => { refreshes++; });
+		assert.deepEqual(capabilityCalls.slice(-3), [
+			{ operation: 'inspect-movement', scene: source, node: 'Props', request: undefined },
+			{ operation: 'plan-movement', scene: source, node: 'Props',
+				request: { configuration_path: movement, controller_path: capabilityKeyboard } },
+			{ operation: 'apply-movement', scene: source, node: 'Props',
+				request: { configuration_path: movement, controller_path: capabilityKeyboard, token: capabilityToken } }
+		]);
+	});
+	await check('Controller selection reuses the same profile and rejects cancelled or dirty saves', async () => {
+		const before = capabilityCalls.filter(call => call.operation === 'apply-movement').length;
+		answers = [items => items[0], items => items.at(-1), undefined];
+		await configureMovementCapability(provider, selectEntity(), output, async () => { refreshes++; });
+		assert.deepEqual(capabilityCalls.at(-1).request, {
+			configuration_path: movement,
+			controller_path: capabilityAi
+		});
+		answers = [items => items[0], items => items[0], () => {
+			api.workspace.textDocuments = [{ isDirty: true, uri: resourceUri(capabilityKeyboard) }];
+			return 'Apply Movement';
+		}];
+		try {
+			await configureMovementCapability(provider, selectEntity(), output, async () => { refreshes++; });
+			assert.match(errors.at(-1), /unsaved edits/i);
+		} finally { api.workspace.textDocuments = []; }
+		assert.equal(capabilityCalls.filter(call => call.operation === 'apply-movement').length, before);
+	});
+	await check('Movement selects a compatible grid profile, shared Behavior and reusable controller', async () => {
+		includeGridProfiles = true;
+		try {
+			answers = [itemNamed('Movement'), itemNamed('Grid'), itemNamed('move'), itemNamed('enemy_ai.tres'), options => {
+				assert.match(options.detail, /Environment  Grid/);
+				assert.match(options.detail, /movement_grid\.tres/);
+				return 'Apply Movement';
+			}];
+			await configureMovementCapability(provider, selectEntity(), output, async () => { refreshes++; });
+			assert.deepEqual(capabilityCalls.at(-1).request, {
+				configuration_path: capabilityGrid, controller_path: capabilityAi, environment: 'grid', token: capabilityToken
+			});
+		} finally { includeGridProfiles = false; }
+	});
 	await check('Activation registers structural commands and their menus', async () => {
 		let finishLibrary;
 		const registered = new Map(); const disposable = () => ({ dispose() {} });
@@ -498,11 +689,12 @@ async function check(label, operation) { await operation(); console.log(`[scene-
 		load('extension.js', {
 			vscode: api, './scene_selection': { SceneSelection: Selection }, './project_context': workspace,
 			'./scene_tree_provider': { SceneTreeProvider, projectUri }, './scene_editing_command': { SceneEditingCommands },
+			'./movement_capability_command': { configureMovementCapability },
 			'./library/library_manager': { LibraryManager: class { async execute() { await new Promise(resolve => { finishLibrary = resolve; }); } } }
 		}).activate({ subscriptions: [] });
 		const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
 		for (const command of manifest.contributes.commands) { assert.ok(registered.has(command.command), command.command); }
-		for (const name of ['addNode', 'addInstance', 'attachBehavior', 'attachScript', 'removeScript', 'renameNode', 'removeNode', 'openStructure']) {
+		for (const name of ['addNode', 'addInstance', 'attachBehavior', 'attachScript', 'removeScript', 'renameNode', 'removeNode', 'openStructure', 'setNodeProperty']) {
 			assert.ok(manifest.contributes.menus['frameworkScenes.nodeMenu'].some(item => item.command === 'frameworkScenes.' + name));
 		}
 		assert.equal(manifest.contributes.menus['frameworkScenes.nodeMenu']
@@ -522,8 +714,10 @@ async function check(label, operation) { await operation(); console.log(`[scene-
 		assert.equal(attemptedEdit, library);
 		assert.equal(registered.get('frameworkScenes.attachBehavior')(), library);
 		assert.equal(registered.get('frameworkScenes.assignMovement')(), library);
+		assert.equal(registered.get('frameworkScenes.configureCapabilities')(), library);
 		assert.equal(registered.get('frameworkScenes.attachScript')(), library);
 		assert.equal(registered.get('frameworkScenes.removeScript')(), library);
+		assert.equal(registered.get('frameworkScenes.setNodeProperty')(), library);
 		finishLibrary(); await library;
 		console.log('[scene-editing-extension] Library management and structural edits share one operation gate: true');
 	});

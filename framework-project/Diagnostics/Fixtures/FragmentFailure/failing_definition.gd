@@ -1,7 +1,7 @@
 extends RefCounted
 
 const FragmentComposition = preload(
-	"res://Framework/Env/Setup/fragment_composition.gd"
+	"res://Framework/Env/Setup/Composition/fragment_composition.gd"
 )
 
 
