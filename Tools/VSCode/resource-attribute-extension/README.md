@@ -1,6 +1,6 @@
-# Resource Attribute
+# Resource Attribute Extension
 
-`framework-tools.resource-attribute` adds a dedicated **Framework Attributes**
+`framework-tools.resource-attribute-extension` adds a dedicated **Framework Attributes**
 container with **Authored Library** and **Attribute Details** views. Browse actual
 categories and `.tres` files, then open a saved container fragment to edit its
 dictionaries, arrays and native value types. It uses the existing

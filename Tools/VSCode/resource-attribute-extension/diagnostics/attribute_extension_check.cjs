@@ -293,7 +293,7 @@ async function test(label, action) { await action(); console.log(`[attribute-ext
 		const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
 		assert.equal(viewId, 'resourceAttribute.attributes');
 		for (const command of manifest.contributes.commands) { assert.ok(registered.has(command.command), command.command); }
-		assert.equal(manifest.name, 'resource-attribute');
+		assert.equal(manifest.name, 'resource-attribute-extension');
 		assert.ok(subscriptions.length > registered.size);
 	});
 	provider.dispose();

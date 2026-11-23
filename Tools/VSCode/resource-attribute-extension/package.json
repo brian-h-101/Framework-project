@@ -1,6 +1,6 @@
 {
-	"name": "resource-attribute",
-	"displayName": "Resource Attribute",
+	"name": "resource-attribute-extension",
+	"displayName": "Resource Attribute Extension",
 	"description": "Browse authored categories, create and delete container Resources, and edit native attributes.",
 	"version": "0.0.5",
 	"publisher": "framework-tools",
