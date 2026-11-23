@@ -263,6 +263,8 @@ npm.cmd test
 npm.cmd run package:vsix
 ```
 
+The package is written to the extension’s `vsix` folder.
+
 Open this extension folder in VS Code and press F5 for the development host.
 The launch configuration opens the adjacent framework project.
 Godot 4.7.1 and VS Code 1.146.0 were used for verification.

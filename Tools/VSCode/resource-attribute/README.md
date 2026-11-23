@@ -118,6 +118,8 @@ npm.cmd test
 npm.cmd run package:vsix
 ```
 
+The package is written to the extension’s `vsix` folder.
+
 From the Godot project folder:
 
 ```powershell

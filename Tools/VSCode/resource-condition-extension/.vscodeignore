@@ -8,6 +8,7 @@ package-lock.json
 .gitignore
 .vscodeignore
 *.vsix
+vsix/**
 out/**
 !out/extension.js
 !out/bridges/*.js

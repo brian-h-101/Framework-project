@@ -8,6 +8,7 @@ package-lock.json
 .gitignore
 .vscodeignore
 *.vsix
+vsix/**
 *.log
 out/**
 !out/extension.js

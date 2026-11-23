@@ -22,7 +22,7 @@
 		"compile": "tsc -p .",
 		"vscode:prepublish": "npm run compile",
 		"package:list": "vsce ls --no-dependencies",
-		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license",
+		"package:vsix": "node -e \"require('node:fs').mkdirSync('vsix', { recursive: true })\" && vsce package --no-dependencies --allow-missing-repository --skip-license --out vsix",
 		"test": "npm run compile && node diagnostics/behavior_extension_check.cjs && node diagnostics/resource_drag_and_drop_check.cjs && node diagnostics/behavior_library_extension_check.cjs && node diagnostics/resource_structure_extension_check.cjs && node diagnostics/resource_performance_check.cjs",
 		"test:bridge": "node diagnostics/behavior_editing_bridge_check.cjs",
 		"test:library:bridge": "node diagnostics/behavior_library_bridge_check.cjs",

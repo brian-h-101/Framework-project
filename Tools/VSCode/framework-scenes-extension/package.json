@@ -30,7 +30,7 @@
 		"test": "npm run compile && node diagnostics/scene_extension_check.cjs && node diagnostics/scene_editing_extension_check.cjs && node diagnostics/scene_library_extension_check.cjs",
 		"vscode:prepublish": "npm run compile",
 		"package:list": "vsce ls --no-dependencies",
-		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license",
+		"package:vsix": "node -e \"require('node:fs').mkdirSync('vsix', { recursive: true })\" && vsce package --no-dependencies --allow-missing-repository --skip-license --out vsix",
 		"test:library:bridge": "node diagnostics/scene_library_bridge_check.cjs",
 		"test:layouts:bridge": "node diagnostics/layout_preset_bridge_check.cjs",
 		"test:movement:bridge": "node diagnostics/movement_assignment_bridge_check.cjs",

@@ -39,8 +39,10 @@ Run these commands from the outer `Framework-project` folder:
 
 ```powershell
 code.cmd --uninstall-extension framework-tools.custom-tree-view-extension
-code.cmd --install-extension '.\Tools\VSCode\resource-condition-extension\resource-condition-extension-0.0.16.vsix'
+code.cmd --install-extension '.\Tools\VSCode\resource-condition-extension\vsix\resource-condition-extension-0.0.16.vsix'
 ```
+
+From the extension folder, `npm.cmd run package:vsix` writes new packages to `vsix`.
 
 ## Requirements
 

@@ -30,7 +30,7 @@
 		"test": "npm run compile && node diagnostics/attribute_extension_check.cjs && node diagnostics/attribute_library_extension_check.cjs && node diagnostics/library_manage_command_check.cjs",
 		"vscode:prepublish": "npm run compile",
 		"package:list": "vsce ls --no-dependencies",
-		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license",
+		"package:vsix": "node -e \"require('node:fs').mkdirSync('vsix', { recursive: true })\" && vsce package --no-dependencies --allow-missing-repository --skip-license --out vsix",
 		"test:library": "node diagnostics/attribute_library_bridge_check.cjs"
 	},
 	"contributes": {
