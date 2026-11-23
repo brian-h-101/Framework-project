@@ -21,6 +21,8 @@ const project = path.resolve(__dirname, '../../../../framework-project');
 const context = { projectDirectory: project, workspaceDirectory: path.dirname(project) };
 const source = 'res://Scenes/map.tscn';
 const template = 'res://Scenes/template.tscn';
+const layoutPreset = 'res://Framework/Content/Gameplay/Presets/Props/Outdoor/ground.layout.tres';
+const layoutGenerated = 'res://Framework/Content/Gameplay/Presentation/Layouts/Props/Outdoor/ground.tscn';
 const interaction = 'res://Framework/Content/Behavior/Interaction/strike.tres';
 const component = 'res://Framework/Content/Universal/Interaction/based/Legacy/interaction_behavior.gd';
 const automationComponent = 'res://Framework/Content/Universal/Interaction/based/Legacy/automation_behavior.gd';
@@ -37,6 +39,7 @@ const nodeScript = 'res://Scripts/node_script.gd';
 const baseScript = 'res://Scripts/base_script.gd';
 const resourceUri = resource => uri(path.join(project, resource.slice(6)));
 const buffers = new Map([[source, Buffer.from('map bytes')], [template, Buffer.from('template bytes')]]);
+for (const item of [layoutPreset, layoutGenerated]) { buffers.set(item, Buffer.from(item)); }
 for (const resource of [interaction, component, existingInteraction, automationComponent, automation, unified, unifiedComponent]) { buffers.set(resource, Buffer.from(resource)); }
 for (const resource of [movement, previousMovement, movementScript, movementAction]) { buffers.set(resource, Buffer.from(resource)); }
 for (const resource of [nodeScript, baseScript]) { buffers.set(resource, Buffer.from(resource)); }
@@ -95,6 +98,10 @@ const api = {
 		} },
 		async findFiles(pattern) {
 			if (pattern === '**/*.gd') { return [resourceUri(nodeScript)]; }
+			if (pattern.pattern?.endsWith('/*.layout.tres')) {
+				assert.equal(pattern.pattern, 'Framework/Content/Gameplay/Presets/**/*.layout.tres');
+				return [resourceUri(layoutPreset)];
+			}
 			assert.equal(pattern.base, project, 'instance discovery is relative to the open scene project');
 			return pattern.pattern === '**/project.godot' ? projectUris : sceneUris;
 		},
@@ -136,7 +143,7 @@ const { SceneEditingCommands } = load('scene_editing_command.js', {
 	'./scene_tree_provider': { projectUri }, './scene_selection': selection,
 	'./scene_property_prompt': load('scene_property_prompt.js', { vscode: api }),
 	'./scene_instance_picker': instancePicker,
-	'./scene_bridge': { async loadSceneGraph() { return graph(template); } },
+	'./scene_bridge': { async loadSceneGraph(_project, _executable, path) { return graph(path); } },
 	'./resource_catalog_bridge': { async loadResourceCatalog() {
 		catalogLoads++;
 		if (catalogError) { throw new Error(catalogError); }
@@ -148,6 +155,13 @@ const { SceneEditingCommands } = load('scene_editing_command.js', {
 			dependency_hashes: { [movement]: hash(movement), [movementAction]: hash(movementAction) } }];
 	} },
 	'./scene_editing_bridge': {
+		isLayoutPresetPath: require('../out/scene_editing_bridge.js').isLayoutPresetPath,
+		LAYOUT_PRESET_FOLDER: 'Framework/Content/Gameplay/Presets',
+		LAYOUT_SUFFIX: '.layout.tres',
+		async resolveLayout(_project, _executable, path) {
+			assert.equal(path, layoutPreset);
+			return { scene_path: layoutGenerated, dependency_hashes: { [layoutPreset]: hash(layoutPreset), [layoutGenerated]: hash(layoutGenerated) } };
+		},
 		async inspectNodeProperties() {
 			return [
 				{ name: 'position', type: 'Vector2', saved: true, value: '10, 20' },
@@ -241,6 +255,19 @@ const itemNamed = label => items => {
 		answers = [itemNamed('Scenes/'), itemNamed('template.tscn'), 'Placement'];
 		await commands.execute('add_instance', select().root);
 		assert.equal(writes.at(-1).instance_scene, template); assert.equal(writes.at(-1).expected_hashes[template], hash(template));
+	});
+	await check('Layout placement uses the instance operation and includes preset hashes', async () => {
+		const previous = writes.length;
+		answers = [undefined];
+		await commands.execute('add_layout', select().root);
+		assert.equal(writes.length, previous);
+		answers = [itemNamed('Props/Outdoor/ground'), 'Ground'];
+		await commands.execute('add_layout', select().root);
+		assert.equal(writes.length, previous + 1);
+		assert.equal(writes.at(-1).operation, 'add_instance');
+		assert.equal(writes.at(-1).instance_scene, layoutGenerated);
+		assert.equal(writes.at(-1).layout_path, layoutPreset);
+		assert.equal(writes.at(-1).layout_hashes[layoutPreset], hash(layoutPreset));
 	});
 	await check('Instance folders support parent navigation and searchable duplicate filenames', async () => {
 		const originalScenes = sceneUris;
@@ -694,7 +721,7 @@ const itemNamed = label => items => {
 		}).activate({ subscriptions: [] });
 		const manifest = JSON.parse(fs.readFileSync(path.join(__dirname, '../package.json'), 'utf8'));
 		for (const command of manifest.contributes.commands) { assert.ok(registered.has(command.command), command.command); }
-		for (const name of ['addNode', 'addInstance', 'attachBehavior', 'attachScript', 'removeScript', 'renameNode', 'removeNode', 'openStructure', 'setNodeProperty']) {
+		for (const name of ['addNode', 'addInstance', 'addLayoutPreset', 'attachBehavior', 'attachScript', 'removeScript', 'renameNode', 'removeNode', 'openStructure', 'setNodeProperty']) {
 			assert.ok(manifest.contributes.menus['frameworkScenes.nodeMenu'].some(item => item.command === 'frameworkScenes.' + name));
 		}
 		assert.equal(manifest.contributes.menus['frameworkScenes.nodeMenu']

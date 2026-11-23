@@ -1,12 +1,12 @@
-[gd_resource type="Resource" format=3]
+[gd_resource type="Resource" format=3 uid="uid://bsycta5gukw5u"]
 
-[ext_resource type="Script" path="res://Framework/Content/Universal/Movement/based/Controllers/keyboard_movement_controller.gd" id="1_keyboard"]
+[ext_resource type="Script" path="res://Framework/Content/Universal/Movement/based/Controllers/keyboard_movement_controller.gd" id="1_a157f"]
 
 [resource]
-script = ExtResource("1_keyboard")
+script = ExtResource("1_a157f")
 actions = {
+	"down": &"move_down",
 	"left": &"move_left",
 	"right": &"move_right",
-	"up": &"move_up",
-	"down": &"move_down"
+	"up": &"move_up"
 }

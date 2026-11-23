@@ -6,6 +6,3 @@
 script = ExtResource("1")
 startup_mode = &"new"
 save_path = "user://Saves/slot_01.fws"
-map_path_redirects = Dictionary[String, String]({
-	"res://Framework/Content/Maps/city.tscn": "res://Framework/Content/Gameplay/Maps/city.tscn"
-})

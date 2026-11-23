@@ -1,32 +1,8 @@
-[gd_scene format=3 uid="uid://cq5qwyfyap5mj"]
+[gd_scene format=3 uid="uid://bif4v5jjlvr4l"]
 
-[ext_resource type="Script" path="res://Framework/Content/Universal/Map/based/Rendering2D/tile_map_layer_2d.gd" id="1_e4l4j"]
-[ext_resource type="Resource" path="res://Framework/Content/Configuration/Map/city_ground.tres" id="2_3iiga"]
-[ext_resource type="Script" path="res://Framework/Content/Universal/Lighting/based/Rendering2D/lighting_2d.gd" id="3_t4aww"]
-[ext_resource type="Resource" path="res://Framework/Content/Configuration/Lighting/city_lighting.tres" id="4_wxsao"]
+[ext_resource type="PackedScene" path="res://Framework/Content/Gameplay/Presentation/Layouts/Maps/city_layout.tscn" id="scene_edit_6adebdf94e47383b6d2e7135"]
 
-[ext_resource type="PackedScene" path="res://Framework/Content/Gameplay/Presentation/Entity/Player/player_2d.tscn" id="scene_edit_cceb12564d2fe8431df93a56"]
+[node name="City" type="Node2D" unique_id=790861079]
 
-[ext_resource type="PackedScene" path="res://Framework/Content/Gameplay/Presentation/Entity/Enemy/enemy_2d.tscn" id="scene_edit_0a4726c01f2292b7dd38e495"]
-
-[node name="City" type="Node2D" unique_id=542212932]
-
-[node name="Ground" type="TileMapLayer" parent="." unique_id=299038340]
-z_index = -1
-script = ExtResource("1_e4l4j")
-content = ExtResource("2_3iiga")
-metadata/receives_shadow = true
-
-[node name="Lighting" type="Node2D" parent="." unique_id=894953684]
-script = ExtResource("3_t4aww")
-content = ExtResource("4_wxsao")
-
-[node name="Player" parent="." unique_id=1740407907 instance=ExtResource("scene_edit_cceb12564d2fe8431df93a56")]
-position = Vector2(320, 360)
-metadata/entity_key = &"player"
-
-[node name="Enemy" parent="." unique_id=1087579547 instance=ExtResource("scene_edit_0a4726c01f2292b7dd38e495")]
-position = Vector2(640, 36)
-metadata/entity_key = &"enemy"
-
+[node name="CityLayout" parent="." unique_id=1507577311 instance=ExtResource("scene_edit_6adebdf94e47383b6d2e7135")]
 

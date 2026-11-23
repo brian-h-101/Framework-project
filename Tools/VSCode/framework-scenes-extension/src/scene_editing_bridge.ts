@@ -1,6 +1,16 @@
 import { execFile } from 'node:child_process';
 import { validateResourcePath } from './project_context';
 
+export const LAYOUT_PRESET_FOLDER = 'Framework/Content/Gameplay/Presets';
+const LAYOUT_SCENE_FOLDER = 'res://Framework/Content/Gameplay/Presentation/Layouts';
+export const LAYOUT_SUFFIX = '.layout.tres';
+
+export function isLayoutPresetPath(source: string): boolean {
+	const prefix = 'res://' + LAYOUT_PRESET_FOLDER + '/';
+	return source.startsWith(prefix) && source.endsWith(LAYOUT_SUFFIX)
+		&& source.slice(prefix.length).split('/').every(part => part && !part.startsWith('.') && !/[\\:\0]/.test(part));
+}
+
 export type SceneOperation =
 	| 'add_node'
 	| 'add_instance'
@@ -18,6 +28,8 @@ export interface SceneEdit {
 	name?: string;
 	node_type?: string;
 	instance_scene?: string;
+	layout_path?: string;
+	layout_hashes?: Record<string, string>;
 	interaction_resource?: string;
 	automation_resource?: string;
 	behavior_resource?: string;
@@ -26,6 +38,26 @@ export interface SceneEdit {
 	property_name?: string;
 	property_type?: NodePropertyType;
 	property_value?: string;
+}
+
+export async function resolveLayout(project: string, executable: string, source: string,
+	report: (message: string) => void): Promise<{ scene_path: string; dependency_hashes: Record<string, string> }> {
+	validateResourcePath(source, LAYOUT_SUFFIX);
+	if (!isLayoutPresetPath(source)) {
+		throw new Error('Choose a Layout Preset under Gameplay/Presets.');
+	}
+	const value = await runSceneEditing(project, executable, ['resolve-layout', source], undefined, report);
+	const path = source.slice(('res://' + LAYOUT_PRESET_FOLDER + '/').length, -LAYOUT_SUFFIX.length);
+	const scene = LAYOUT_SCENE_FOLDER + '/' + path + '.tscn';
+	if (!isRecord(value) || value.scene_path !== scene || !isRecord(value.dependency_hashes)
+		|| !Object.hasOwn(value.dependency_hashes, source) || !Object.hasOwn(value.dependency_hashes, scene)) {
+		throw new Error('Malformed generated layout inspection.');
+	}
+	for (const [path, hash] of Object.entries(value.dependency_hashes)) {
+		validateResourcePath(path);
+		if (typeof hash !== 'string' || !/^[a-f0-9]{64}$/.test(hash)) { throw new Error('Malformed layout dependency hash.'); }
+	}
+	return value as { scene_path: string; dependency_hashes: Record<string, string> };
 }
 export interface SceneEditResult {
 	scene_path: string;

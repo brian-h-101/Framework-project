@@ -4,6 +4,6 @@
 
 [resource]
 script = ExtResource("1")
-initial_map = "res://Framework/Content/Gameplay/Maps/city.tscn"
+initial_map = ""
 ui_scene = ""
 entities = Array[Dictionary]([])

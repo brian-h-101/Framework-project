@@ -1,0 +1,20 @@
+[gd_scene format=3 uid="uid://dw1n71cwkjnik"]
+
+[ext_resource type="Script" path="res://Framework/Content/Universal/Map/based/Rendering2D/tile_map_layer_2d.gd" id="1_1m0ne"]
+[ext_resource type="Resource" path="res://Framework/Content/Configuration/Map/city_ground.tres" id="2_sua2n"]
+[ext_resource type="Script" path="res://Framework/Content/Universal/Lighting/based/Rendering2D/lighting_2d.gd" id="3_fjuns"]
+[ext_resource type="Resource" path="res://Framework/Content/Configuration/Lighting/city_lighting.tres" id="4_7lmqx"]
+
+[node name="CityLayout" type="Node2D" unique_id=1849753787]
+metadata/layout_preset_source = "res://Framework/Content/Gameplay/Presets/Maps/city_layout.layout.tres"
+metadata/layout_preset_digest = "21c63e73ec0246f1e428036feb10a2a9f607e57569a6f1dba3202441e8fbf943"
+
+[node name="Ground" type="TileMapLayer" parent="." unique_id=404269551]
+z_index = -1
+script = ExtResource("1_1m0ne")
+content = ExtResource("2_sua2n")
+metadata/receives_shadow = true
+
+[node name="Lighting" type="Node2D" parent="." unique_id=1399100601]
+script = ExtResource("3_fjuns")
+content = ExtResource("4_7lmqx")

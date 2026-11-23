@@ -1,9 +1,8 @@
-[gd_resource type="Resource" format=3]
+[gd_resource type="Resource" format=3 uid="uid://dyrppowqxr4jt"]
 
-[ext_resource type="Script" path="res://Framework/Content/Universal/Movement/based/Controllers/ai_movement_controller.gd" id="1_ai"]
+[ext_resource type="Script" path="res://Framework/Content/Universal/Movement/based/Controllers/ai_movement_controller.gd" id="1_kyyb3"]
 
 [resource]
-script = ExtResource("1_ai")
-targeting = "nearest"
+script = ExtResource("1_kyyb3")
 stopping_distance = 4.8
 distance_unit = "gameplay_units"

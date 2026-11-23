@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { createHash } from 'node:crypto';
-import { relative } from 'node:path';
-import { editScene, nodeTypes, inspectScript, inspectNodeProperties } from './scene_editing_bridge';
+import { relative, sep } from 'node:path';
+import { editScene, nodeTypes, inspectScript, inspectNodeProperties, isLayoutPresetPath, LAYOUT_PRESET_FOLDER, LAYOUT_SUFFIX, resolveLayout } from './scene_editing_bridge';
 import type { SceneEdit, SceneOperation } from './scene_editing_bridge';
 import { loadSceneGraph } from './scene_bridge';
 import { loadResourceCatalog } from './resource_catalog_bridge';
@@ -18,7 +18,7 @@ export class SceneEditingCommands {
 	constructor(private readonly provider: SceneTreeProvider, private readonly output: vscode.OutputChannel,
 		private readonly refresh: () => Promise<void>) {}
 
-	async execute(operation: SceneOperation, element: SceneTreeElement): Promise<void> {
+	async execute(operation: SceneOperation | 'add_layout', element: SceneTreeElement): Promise<void> {
 		if (this.busy) { void vscode.window.showInformationMessage('A scene edit is already in progress.'); return; }
 		this.busy = true;
 		try {
@@ -45,6 +45,7 @@ export class SceneEditingCommands {
 				|| vscode.workspace.getConfiguration('godotTools', root).get<string>('editorPath.godot4')?.trim();
 			if (!executable) { throw new Error('Configure frameworkScenes.godotExecutable or godotTools.editorPath.godot4 in Workspace settings.'); }
 			const hashes = { ...graph.dependency_hashes };
+			let layoutHashes: Record<string, string> = {};
 			const readHash = async (source: string): Promise<string> => {
 				const uri = projectUri(context, source);
 				const actual = await resolveProjectContext(uri.fsPath, [context.workspaceDirectory]);
@@ -55,13 +56,13 @@ export class SceneEditingCommands {
 				return createHash('sha256').update(bytes).digest('hex');
 			};
 			const dirty = (): boolean => vscode.workspace.textDocuments.some(document => document.isDirty
-				&& document.uri.scheme === 'file' && Object.keys(hashes).some(source =>
+				&& document.uri.scheme === 'file' && Object.keys({ ...hashes, ...layoutHashes }).some(source =>
 					relative(document.uri.fsPath, projectUri(context, source).fsPath) === ''));
 			const ready = async (): Promise<void> => {
 				this.provider.resolve(element);
 				ensureWorkspace(context);
 				if (dirty()) { throw new Error('Save or revert text edits in this scene and its dependencies first.'); }
-				for (const [source, hash] of Object.entries(hashes)) {
+				for (const [source, hash] of Object.entries({ ...hashes, ...layoutHashes })) {
 					if (await readHash(source) !== hash) {
 						throw new Error(`Scene dependency changed: ${source}. Refresh and run the command again.`);
 					}
@@ -71,7 +72,7 @@ export class SceneEditingCommands {
 				if (dirty()) { throw new Error('A scene dependency gained unsaved text edits. Save or revert them first.'); }
 			};
 			await ready();
-			const request: SceneEdit = { operation, path: node.path, expected_hashes: hashes };
+			const request: SceneEdit = { operation: operation === 'add_layout' ? 'add_instance' : operation, path: node.path, expected_hashes: hashes };
 			if (operation === 'set_property') {
 				const properties = await inspectNodeProperties(context.projectDirectory, executable, graph.source_path,
 					node.path, text => this.output.appendLine(text));
@@ -166,15 +167,37 @@ export class SceneEditingCommands {
 					if (!chosen) { return; }
 					request.node_type = chosen;
 					suggested = chosen;
-				} else if (operation === 'add_instance') {
-					const chosen = await pickSceneInstance(context, graph.source_path);
-					if (!chosen) { return; }
-					const scene = await scenePathInProject(context, chosen.fsPath);
+				} else if (operation === 'add_instance' || operation === 'add_layout') {
+					let scene: string;
+					if (operation === 'add_layout') {
+						const files = await vscode.workspace.findFiles(new vscode.RelativePattern(root, LAYOUT_PRESET_FOLDER + '/**/*' + LAYOUT_SUFFIX));
+						const options = files.filter(file => file.scheme === 'file' && isInside(context.projectDirectory, file.fsPath))
+							.map(file => {
+								const source = 'res://' + relative(context.projectDirectory, file.fsPath).split(sep).join('/');
+								return { label: source.slice(('res://' + LAYOUT_PRESET_FOLDER + '/').length, -LAYOUT_SUFFIX.length), description: source };
+							}).filter(item => isLayoutPresetPath(item.description))
+							.sort((a, b) => a.label.localeCompare(b.label));
+						if (!options.length) {
+							void vscode.window.showInformationMessage('Create and build a Layout Preset in Framework Resources first.');
+							return;
+						}
+						const chosen = await vscode.window.showQuickPick(options, { title: 'Add Layout Preset', matchOnDescription: true, ignoreFocusOut: true });
+						if (!chosen) { return; }
+						await ready();
+						const layout = await resolveLayout(context.projectDirectory, executable, chosen.description, text => this.output.appendLine(text));
+						request.layout_path = chosen.description;
+						request.layout_hashes = layoutHashes = layout.dependency_hashes;
+						scene = layout.scene_path;
+					} else {
+						const chosen = await pickSceneInstance(context, graph.source_path);
+						if (!chosen) { return; }
+						scene = await scenePathInProject(context, chosen.fsPath);
+					}
 					ensureWorkspace(context);
 					const candidate = await loadSceneGraph(context.projectDirectory, executable, scene,
 						text => this.output.appendLine(text));
 					for (const [source, hash] of Object.entries(candidate.dependency_hashes)) {
-						if (hashes[source] && hashes[source] !== hash) { throw new Error('A shared scene dependency changed. Refresh and retry.'); }
+						if ((hashes[source] && hashes[source] !== hash) || (layoutHashes[source] && layoutHashes[source] !== hash)) { throw new Error('A shared scene dependency changed. Refresh and retry.'); }
 						hashes[source] = hash;
 					}
 					request.instance_scene = scene;

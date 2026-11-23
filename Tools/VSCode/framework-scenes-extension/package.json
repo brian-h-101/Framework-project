@@ -2,7 +2,7 @@
 	"name": "framework-scenes-extension",
 	"displayName": "Framework Scenes",
 	"description": "Browse and structurally edit Godot scene hierarchies and nested scene placements.",
-	"version": "0.0.23",
+	"version": "0.0.26",
 	"publisher": "framework-tools",
 	"type": "commonjs",
 	"engines": {
@@ -32,6 +32,7 @@
 		"package:list": "vsce ls --no-dependencies",
 		"package:vsix": "vsce package --no-dependencies --allow-missing-repository --skip-license",
 		"test:library:bridge": "node diagnostics/scene_library_bridge_check.cjs",
+		"test:layouts:bridge": "node diagnostics/layout_preset_bridge_check.cjs",
 		"test:movement:bridge": "node diagnostics/movement_assignment_bridge_check.cjs",
 		"test:movement:capability": "node diagnostics/movement_capability_bridge_check.cjs"
 	},
@@ -116,6 +117,11 @@
 			{
 				"command": "frameworkScenes.addInstance",
 				"title": "Add Scene Instance...",
+				"category": "Framework Scenes"
+			},
+			{
+				"command": "frameworkScenes.addLayoutPreset",
+				"title": "Add Layout Preset...",
 				"category": "Framework Scenes"
 			},
 			{
@@ -231,6 +237,11 @@
 					"group": "2_edit@2"
 				},
 				{
+					"command": "frameworkScenes.addLayoutPreset",
+					"when": "viewItem =~ /_add/",
+					"group": "2_edit@2"
+				},
+				{
 					"command": "frameworkScenes.renameNode",
 					"when": "viewItem =~ /_rename/",
 					"group": "2_edit@4"
@@ -305,6 +316,10 @@
 				},
 				{
 					"command": "frameworkScenes.addInstance",
+					"when": "false"
+				},
+				{
+					"command": "frameworkScenes.addLayoutPreset",
 					"when": "false"
 				},
 				{

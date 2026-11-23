@@ -112,6 +112,7 @@ export function activate(context: vscode.ExtensionContext): void {
 		vscode.commands.registerCommand('frameworkScenes.addNode', (node: SceneTreeElement) => runOperation(() => editing.execute('add_node', node))),
 	vscode.commands.registerCommand('frameworkScenes.setNodeProperty', (node: SceneTreeElement) => runOperation(() => editing.execute('set_property', node))),
 		vscode.commands.registerCommand('frameworkScenes.addInstance', (node: SceneTreeElement) => runOperation(() => editing.execute('add_instance', node))),
+		vscode.commands.registerCommand('frameworkScenes.addLayoutPreset', (node: SceneTreeElement) => runOperation(() => editing.execute('add_layout', node))),
 		vscode.commands.registerCommand('frameworkScenes.attachBehavior', (node: SceneTreeElement) => runOperation(() => editing.execute('attach_behavior', node))),
 		vscode.commands.registerCommand('frameworkScenes.configureCapabilities', (node: SceneTreeElement) =>
 			runOperation(() => configureMovementCapability(provider, node, output, () => selection.refresh()))),

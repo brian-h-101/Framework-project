@@ -3,6 +3,7 @@ extends SceneTree
 const Library = preload("res://Framework/Env/Authoring/Resources/Library/behavior_library_authoring.gd")
 const Values = preload("res://Framework/Env/Authoring/Shared/resource_values.gd")
 const Renaming = preload("res://Framework/Env/Authoring/Resources/Library/behavior_renaming.gd")
+const Configurations = preload("res://Framework/Env/Authoring/Resources/Configuration/custom_configuration_authoring.gd")
 
 
 func _initialize() -> void:
@@ -10,7 +11,11 @@ func _initialize() -> void:
 	var result: Dictionary
 	if arguments.size() == 1 and arguments[0] == "catalogue":
 		result = Library.catalogue()
-	elif arguments.size() == 2 and arguments[0] in ["draft", "deletion-preview", "rename-preview", "rename"]:
+	elif arguments.size() == 1 and arguments[0] == "profile-catalogue":
+		result = Library.profile_catalogue()
+	elif arguments.size() == 2 and arguments[0] == "configuration-types":
+		result = Configurations.catalogue(arguments[1])
+	elif arguments.size() == 2 and arguments[0] in ["draft", "deletion-preview", "profile-deletion-preview", "rename-preview", "rename"]:
 		var input := OS.read_string_from_stdin(1024 * 1024 + 1)
 		var parser := JSON.new()
 		if input.to_utf8_buffer().size() > 1024 * 1024 or parser.parse(input) != OK or not parser.data is Dictionary:
@@ -19,9 +24,10 @@ func _initialize() -> void:
 			match arguments[0]:
 				"draft": result = Library.draft(arguments[1], parser.data)
 				"deletion-preview": result = Library.deletion_preview(arguments[1], parser.data)
+				"profile-deletion-preview": result = Library.profile_deletion_preview(arguments[1], parser.data)
 				"rename-preview": result = Renaming.preview(arguments[1], parser.data)
 				"rename": result = Renaming.rename_resource(arguments[1], parser.data)
 	else:
-		result = Values.failure("Expected catalogue, draft <path>, or deletion-preview <path>.")
+		result = Values.failure("Expected a library or configuration type operation.")
 	print("[behavior-library] ", JSON.stringify(result))
 	quit(0 if result["ok"] else 1)

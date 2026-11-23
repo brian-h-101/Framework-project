@@ -89,15 +89,48 @@ action name and select one or more physical keys by name. **Edit Keys** and
 event, targeting, interaction, or command fields on that binding.
 
 To author a reusable movement profile, use **New Configuration Resource…** from the
-Framework Resources library folder icon or the Command Palette, then choose **Movement**.
+Framework Resources library folder icon or the Command Palette. Choose a profile
+with a `Shared` folder, then choose the **Movement** configuration type.
 Select a manual, self-targeted Behavior with zero
 cooldown, its Movement velocity step, and pixels per unit for the default 2D environment. Framework Resources saves
-the profile under `Content/Gameplay/Profiles/Movement/Shared`. Use **Edit Movement Configuration**
+the configuration under `Content/Gameplay/Profiles/<Profile>/Shared`. Use **Edit Movement Configuration**
 on the profile's root row to update it. Existing 3D profiles show native units per
-gameplay unit. Controller resources under `Content/Gameplay/Controller`
-provide movement direction. A keyboard controller references action names from
-`controls.tres`. In Framework Scenes, assign the profile and controller together using
+gameplay unit. Use **Manage Behavior Library → New Movement Controller…** to
+create a **Keyboard Movement** or **AI Movement** resource in `Content/Gameplay/Controller`.
+Keyboard controllers select distinct actions with bound keys from `controls.tres`.
+AI controllers specify targeting, stopping distance, and its unit.
+In Framework Scenes, assign the profile and controller together using
 **Configure Capabilities → Movement**.
+
+Use **Manage Behavior Library → New Configuration Type…** to define a reusable
+schema for a profile. Enter a label and ID, then add one or more named fields with
+defaults. Supported field types are integer, float, boolean, String, and StringName.
+The type is saved as `<id>.type.tres` in the profile’s `Shared` folder.
+
+**New Configuration Resource…** lists the selected profile’s custom types alongside
+Movement. Choose a type and enter values to save a preset in `Shared`. Presets
+reference their type and keep their own values. Open a preset and right-click a
+field under **Values** to choose **Framework Resources → Edit Configuration Value…**.
+
+## Scene layout presets
+
+Use **Manage Behavior Library → New Layout Preset…** to create a reusable
+`.layout.tres` under `Framework/Content/Gameplay/Presets` or a subcategory. Use
+**New Preset Subcategory…** to create folders at either level. **Delete Preset
+Subcategory…** checks references before offering to move the folder and its
+contents to the Recycle Bin. A generated scene counts as a reference to its
+preset. Open the
+preset and expand **Root**. Right-click a node in Framework Resources to add,
+rename, or remove children, set typed properties, attach a script, or assign
+a saved data Resource. After attaching a script, its supported exported
+properties are available in the property and Resource pickers.
+
+Right-click the preset file row and choose **Build Layout Scene…** to generate
+its `.tscn` in `Framework/Content/Gameplay/Presentation/Layouts`.
+The build mirrors the preset subcategory under that folder.
+Edit the preset and rebuild it to update linked instances.
+In Framework Scenes, use **Add Layout Preset…** on the intended parent and
+position the resulting instance in the destination scene.
 
 ## Assignment and editing
 
@@ -211,10 +244,13 @@ without an open resource, including parent-folder and multi-root workspaces.
 
 The searchable menu offers these operations:
 
+- **New Profile** creates `Framework/Content/Gameplay/Profiles/<Profile name>/` with empty `Behavior`, `Executor`, and `Shared` folders.
 - **New Category** creates a folder directly beneath a profile’s `Behavior` folder.
 - **New Subcategory** creates a folder inside an existing category.
 - **New Behavior Resource** creates a Behavior with Configuration and Steps.
-- **New Configuration Resource** opens the profile category picker. The Movement category saves under `Framework/Content/Gameplay/Profiles/Movement/Shared`.
+- **New Configuration Type** defines a profile’s reusable fields and defaults.
+- **New Configuration Resource** chooses a profile and configuration type, then saves the resource in the selected profile’s `Shared` folder.
+- **Delete Profile** checks for references from elsewhere in the Godot project and asks for confirmation before moving the profile and its contents to the Recycle Bin.
 - **Delete Resource** checks dependencies before offering Recycle Bin deletion.
 - **Delete Empty Category** offers only empty folders and preserves the Behavior root.
 

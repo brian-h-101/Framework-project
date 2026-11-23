@@ -1,10 +1,11 @@
-import { lstat, mkdir, open, readdir, readFile, unlink } from 'node:fs/promises';
+import { lstat, mkdir, open, readdir, readFile, rmdir, unlink } from 'node:fs/promises';
 import { join } from 'node:path';
 import { libraryRequest, validateCatalogue, type LibraryCatalogue, type LibraryEntry,
-	type ResourceDraft, type DeletionPreview, type RenamePreview, isBehaviorRoot } from '../bridges/behavior_library_bridge';
+	type ResourceDraft, type DeletionPreview, type ProfileDeletionPreview, type RenamePreview,
+	isBehaviorRoot, isProfilePath, PROFILES_ROOT } from '../bridges/behavior_library_bridge';
 import { loadResourceGraph } from '../bridges/resource_bridge';
 import type { ProjectContext } from '../workspace/project_context';
-import { checkedBehaviorPath, checkedProjectPath, directoryFingerprint, nameError, sha256 } from './library_paths';
+import { checkedBehaviorPath, checkedProjectPath, directoryFingerprint, nameError, sha256, verifyLibrarySnapshot } from './library_paths';
 
 export class LibraryService {
 	constructor(readonly context: ProjectContext, private readonly executable: string,
@@ -14,6 +15,47 @@ export class LibraryService {
 	async catalogue(signal?: AbortSignal): Promise<LibraryCatalogue> {
 		return validateCatalogue(await libraryRequest(this.context.projectDirectory, this.executable,
 			'catalogue', undefined, {}, this.report, signal));
+	}
+
+	async profileCatalogue(): Promise<LibraryCatalogue> {
+		return validateCatalogue(await libraryRequest(this.context.projectDirectory, this.executable,
+			'profile-catalogue', undefined, {}, this.report));
+	}
+
+	async createProfile(entry: LibraryEntry, name: string): Promise<string> {
+		const error = nameError(name);
+		if (error) { throw new Error(error); }
+		if (entry.kind !== 'root' || entry.source_path !== PROFILES_ROOT) { throw new Error('Choose the Profiles folder.'); }
+		await this.ready();
+		const parent = await checkedProjectPath(this.context, PROFILES_ROOT);
+		const siblings = await readdir(parent);
+		if (siblings.some(sibling => sibling.toLowerCase() === name.toLowerCase())) {
+			throw new Error('A file or profile with that name already exists.');
+		}
+		if (await directoryFingerprint(parent) !== entry.fingerprint) {
+			throw new Error('The Profiles folder changed. Open Manage Behavior Library again.');
+		}
+		const source = PROFILES_ROOT + '/' + name;
+		const path = join(parent, name);
+		await mkdir(path);
+		const created = [source];
+		try {
+			for (const folder of ['Behavior', 'Executor', 'Shared']) {
+				const child = source + '/' + folder;
+				await mkdir(join(await checkedProjectPath(this.context, source), folder));
+				created.push(child);
+			}
+		} catch (failure) {
+			try {
+				for (const child of created.reverse()) {
+					await rmdir(await checkedProjectPath(this.context, child));
+				}
+			} catch (cleanupFailure) {
+				throw new AggregateError([failure, cleanupFailure], `Could not finish creating or clean up ${source}.\n${String(failure)}\n${String(cleanupFailure)}`);
+			}
+			throw failure;
+		}
+		return source;
 	}
 
 	private async parent(entry: LibraryEntry, name: string): Promise<string> {
@@ -115,19 +157,42 @@ export class LibraryService {
 			|| preview.content_hash !== entry.fingerprint) { throw new Error('The deletion selection changed. Refresh and retry.'); }
 		if (preview.consumers.length) { throw new Error('This Resource is still referenced. Unassign it from its consumers first.'); }
 		await this.ready(true);
-		for (const [source, expected] of Object.entries(preview.hashes)) {
-			const path = await checkedProjectPath(this.context, source);
-			if (!/^[a-f0-9]{64}$/.test(expected) || sha256(await readFile(path)) !== expected) {
-				throw new Error('Project references changed. Run Delete Resource again.');
-			}
-		}
-		for (const [source, expected] of Object.entries(preview.directories)) {
-			const path = source === 'res://' ? this.context.projectDirectory : await checkedProjectPath(this.context, source);
-			if (await directoryFingerprint(path) !== expected) { throw new Error(`Project directories changed: ${source}. Run Delete Resource again.`); }
-		}
+		await verifyLibrarySnapshot(this.context, preview, 'Delete Resource');
 		const path = await checkedBehaviorPath(this.context, entry.source_path, 'file');
 		await this.ready(true);
 		if (sha256(await readFile(path)) !== entry.fingerprint) { throw new Error('The Resource changed. Refresh and retry.'); }
+		await trash(path);
+	}
+
+	private async checkedProfile(entry: LibraryEntry): Promise<string> {
+		if (entry.kind !== 'folder' || !isProfilePath(entry.source_path) || entry.parent_path !== PROFILES_ROOT) {
+			throw new Error('Choose a profile directly under Profiles.');
+		}
+		const path = await checkedProjectPath(this.context, entry.source_path);
+		if (await directoryFingerprint(path) !== entry.fingerprint) { throw new Error('The profile changed. Refresh and retry.'); }
+		return path;
+	}
+
+	async previewProfileDeletion(entry: LibraryEntry): Promise<ProfileDeletionPreview> {
+		await this.ready(true);
+		await this.checkedProfile(entry);
+		const preview = await libraryRequest(this.context.projectDirectory, this.executable, 'profile-deletion-preview',
+			entry.source_path, { expected_directory: entry.fingerprint }, this.report) as ProfileDeletionPreview;
+		if (!preview || preview.source_path !== entry.source_path || !Array.isArray(preview.consumers)
+			|| !preview.hashes || preview.directories?.[entry.source_path] !== entry.fingerprint
+			|| !Number.isSafeInteger(preview.file_count) || preview.file_count < 0) {
+			throw new Error('Invalid profile deletion preview.');
+		}
+		return preview;
+	}
+
+	async deleteProfile(entry: LibraryEntry, preview: ProfileDeletionPreview, trash: (path: string) => Promise<void>): Promise<void> {
+		if (preview.source_path !== entry.source_path || preview.directories[entry.source_path] !== entry.fingerprint
+			|| preview.consumers.length) { throw new Error('The profile deletion was not cleared by dependency checking.'); }
+		await this.ready(true);
+		await verifyLibrarySnapshot(this.context, preview, 'Delete Profile');
+		await this.ready(true);
+		const path = await this.checkedProfile(entry);
 		await trash(path);
 	}
 

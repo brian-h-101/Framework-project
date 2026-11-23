@@ -16,9 +16,9 @@ const Paths = preload("res://Framework/Env/Setup/Library/library_path_policy.gd"
 const BehaviorPaths = preload("res://Framework/Env/Setup/Library/behavior_library_policy.gd")
 
 const Intent = preload("res://Framework/Content/Universal/Movement/based/Contracts/movement_intent.gd")
-const Executor = preload("res://Framework/Content/Gameplay/Profiles/Movement/Executor/movement_executor.gd")
-const PlanarExecutor = preload("res://Framework/Content/Gameplay/Profiles/Movement/Executor/movement_2d_executor.gd")
-const EXECUTOR_PATH := "res://Framework/Content/Gameplay/Profiles/Movement/Executor/movement_executor.gd"
+const Executors = preload("res://Framework/Env/Authoring/Resources/Inspection/executor_catalog.gd")
+const MOVEMENT_ID := &"movement"
+const PLANAR_MOVEMENT_ID := &"movement_2d"
 const INPUT := "res://Framework/Content/Configuration/Input/controls.tres"
 const LOCK := "res://.godot/authoring/movement_capability.lock"
 
@@ -186,7 +186,7 @@ static func _prepare(scene: String, path: String, options: Dictionary) -> Dictio
 	var selected := _load_profile(profile_path, hashes)
 	if not selected["ok"]:
 		return selected
-	var profile: Movement = selected["value"]
+	var profile: Movement = selected["value"]["profile"]
 	var spec := profile.resolved_environment()
 	if not _compatible(profile, state["body_type"]):
 		return Document.failure("The movement environment is incompatible with %s." % state["body_type"])
@@ -214,8 +214,7 @@ static func _prepare(scene: String, path: String, options: Dictionary) -> Dictio
 		return Document.failure("Multiple bindings use Behavior '%s' on this entity." % behavior_id)
 	if not matching.is_empty() and (not matching[0]["enabled"] or matching[0]["resource"] != behavior_path):
 		return Document.failure("The '%s' binding is disabled or references a different resource. Check %s." % [behavior_id, matching[0]["path"]])
-	var executor_path: String = _velocity_executor(profile).resource_path
-	var dependency_paths: Array[String] = [executor_path, EXECUTOR_PATH]
+	var dependency_paths: Array[String] = [selected["value"]["executor_path"]]
 	for original in [state["current_configuration"], state["current_controller"]]:
 		if not String(original).is_empty():
 			dependency_paths.append(String(original).get_slice("::", 0))
@@ -279,7 +278,7 @@ static func _load_profile(path: String, hashes: Dictionary) -> Dictionary:
 	hashes.merge(inspected["value"]["dependency_hashes"])
 	var profile := ResourceLoader.load(path, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP) as Movement
 	var checked := _validate_profile(profile)
-	return Document.success(profile) if checked["ok"] else checked
+	return Document.success({"profile": profile, "executor_path": checked["value"]}) if checked["ok"] else checked
 
 
 static func _compatible(profile: Movement, body_type: String) -> bool:
@@ -295,21 +294,23 @@ static func _validate_profile(profile: Movement) -> Dictionary:
 	var error := BehaviorPaths.resource_error(profile.movement_behavior.resource_path)
 	if not error.is_empty():
 		return Document.failure(error)
-	if _velocity_executor(profile) == null:
-		return Document.failure("The shared profile's velocity step must use the Movement executor or its legacy planar variant.")
-	return Document.success(true)
-
-
-static func _velocity_executor(profile: Movement) -> Script:
 	var step := profile.velocity_step()
 	var arguments: Dictionary = step.get("arguments", {})
+	var executor_id := StringName(step.get("executor_id", ""))
 	var semantic := Intent.has_axes(arguments, Intent.AXES)
-	match step.get("executor_id"):
-		Executor.BEHAVIOR_ID:
-			return Executor if semantic else null
-		PlanarExecutor.BEHAVIOR_ID:
-			return PlanarExecutor if not semantic and Intent.has_axes(arguments, Intent.LEGACY_AXES) else null
-	return null
+	var valid_step := (
+		executor_id == MOVEMENT_ID and semantic
+		or executor_id == PLANAR_MOVEMENT_ID and not semantic and Intent.has_axes(arguments, Intent.LEGACY_AXES)
+	)
+	if not valid_step:
+		return Document.failure("The shared profile's velocity step must use the Movement executor or its legacy planar variant.")
+	var registered := Executors.describe(executor_id)
+	if not registered["ok"]:
+		return registered
+	var executor_path: String = registered["value"].get("script_path", "")
+	if executor_path.is_empty():
+		return Document.failure("Choose a registered Movement executor backed by a project script.")
+	return Document.success(executor_path)
 
 
 static func _check_input_actions(mapping: Dictionary, hashes: Dictionary) -> Dictionary:

@@ -4,6 +4,7 @@ const Values = preload("res://Framework/Env/Authoring/Shared/resource_values.gd"
 const Files = preload("res://Framework/Env/Authoring/Shared/resource_files.gd")
 const IGNORED = [".git", ".godot", "node_modules", "out"]
 const REFERENCE_EXTENSIONS = ["tres", "tscn", "res", "scn", "gd", "godot", "gdshader"]
+const SERIALIZED_RESOURCES = ["tres", "tscn", "res", "scn"]
 
 
 static func catalogue(root: String, path_check: Callable, describe: Callable, extension: String = "tres", file_check: Callable = Callable()) -> Dictionary:
@@ -58,7 +59,7 @@ static func _discard_draft(stage: String, result: Dictionary) -> Dictionary:
 static func verify_snapshot(snapshot: Dictionary, staged: String = "") -> Dictionary:
 	for source: String in snapshot["hashes"]:
 		if FileAccess.get_sha256(source) != snapshot["hashes"][source]:
-			return Values.failure("A project file changed during dependency checking. Retry deletion.")
+			return Values.failure("A project file changed during dependency checking: " + source + ". Retry deletion.")
 	for folder: String in snapshot["directories"]:
 		var ignored := staged.get_file() if not staged.is_empty() and staged.get_base_dir() == folder else ""
 		if fingerprint(folder, ignored) != snapshot["directories"][folder]:
@@ -129,21 +130,67 @@ static func deletion_preview(path: String, expected_hash: Variant, file_check: C
 	if hash != expected_hash:
 		return Values.failure("The selected Resource changed. Refresh and retry.")
 	var snapshot := {"hashes": {}, "directories": {}, "consumers": []}
-	checked = _scan_references("res://", path, Files.resource_uid(path), snapshot, 0)
+	var uid := Files.resource_uid(path)
+	var uids := {} if uid == ResourceUID.INVALID_ID else {ResourceUID.id_to_text(uid): true}
+	checked = _scan_references("res://", path, uids, snapshot, 0)
 	if not checked["ok"]:
 		return checked
-	for source: String in snapshot["hashes"]:
-		if FileAccess.get_sha256(source) != snapshot["hashes"][source]:
-			return Values.failure("A project file changed during dependency checking. Retry deletion.")
-	for folder: String in snapshot["directories"]:
-		if fingerprint(folder) != snapshot["directories"][folder]:
-			return Values.failure("Project directories changed during dependency checking. Retry deletion.")
+	checked = verify_snapshot(snapshot)
+	if not checked["ok"]:
+		return checked
 	return Values.success({"source_path": path, "content_hash": hash, "consumers": snapshot["consumers"], "hashes": snapshot["hashes"], "directories": snapshot["directories"]})
+
+
+static func folder_deletion_preview(path: String, expected_directory: Variant) -> Dictionary:
+	var snapshot := {"source_path": path, "hashes": {}, "directories": {}, "consumers": []}
+	var uids := {}
+	var checked := _folder_contents(path, snapshot, uids, 0)
+	if not checked["ok"]:
+		return checked
+	if snapshot["directories"][path] != expected_directory:
+		return Values.failure("The selected folder changed. Refresh and retry.")
+	snapshot["file_count"] = snapshot["hashes"].size()
+	checked = _scan_references("res://", path + "/", uids, snapshot, 0)
+	if not checked["ok"]:
+		return checked
+	checked = verify_snapshot(snapshot)
+	return Values.success(snapshot) if checked["ok"] else checked
+
+
+static func _folder_contents(folder: String, snapshot: Dictionary, uids: Dictionary, depth: int) -> Dictionary:
+	if depth > 64 or snapshot["directories"].size() > 10000 or snapshot["hashes"].size() > 20000:
+		return Values.failure("Dependency scanning exceeded its project size limits.")
+	var directory := DirAccess.open(folder)
+	if directory == null or FileAccess.file_exists(folder.path_join("project.godot")):
+		return Values.failure("Cannot inspect this folder for deletion: " + folder)
+	directory.include_hidden = true
+	snapshot["directories"][folder] = fingerprint(folder)
+	for name: String in Array(directory.get_directories()) + Array(directory.get_files()):
+		var path := folder.path_join(name)
+		if directory.is_link(name):
+			return Values.failure("Cannot delete a folder containing a symbolic link: " + path)
+		if directory.dir_exists(name):
+			var checked := _folder_contents(path, snapshot, uids, depth + 1)
+			if not checked["ok"]:
+				return checked
+			continue
+		var hash := FileAccess.get_sha256(path)
+		if hash.is_empty():
+			return Values.failure("Cannot check a file in the selected folder: " + path)
+		snapshot["hashes"][path] = hash
+		var uid := ResourceUID.INVALID_ID
+		if path.get_extension() in SERIALIZED_RESOURCES:
+			uid = ResourceLoader.get_resource_uid(path)
+		elif name.ends_with(".uid") and FileAccess.get_size(path) < 100:
+			uid = ResourceUID.text_to_id(FileAccess.get_file_as_string(path).strip_edges())
+		if uid != ResourceUID.INVALID_ID:
+			uids[ResourceUID.id_to_text(uid)] = true
+	return Values.success(true)
 
 
 static func reference_snapshot() -> Dictionary:
 	var snapshot := {"hashes": {}, "directories": {}, "consumers": []}
-	var checked := _scan_references("res://", "", ResourceUID.INVALID_ID, snapshot, 0)
+	var checked := _scan_references("res://", "", {}, snapshot, 0)
 	if not checked["ok"]:
 		return checked
 	snapshot.erase("consumers")
@@ -151,7 +198,7 @@ static func reference_snapshot() -> Dictionary:
 	return {"ok": true, "value": snapshot, "error": ""} if checked["ok"] else checked
 
 
-static func _scan_references(folder: String, target: String, target_uid: int, snapshot: Dictionary, depth: int) -> Dictionary:
+static func _scan_references(folder: String, target: String, uids: Dictionary, snapshot: Dictionary, depth: int) -> Dictionary:
 	if depth > 64 or snapshot["directories"].size() > 10000 or snapshot["hashes"].size() > 20000:
 		return Values.failure("Dependency scanning exceeded its project size limits.")
 	var directory := DirAccess.open(folder)
@@ -165,9 +212,9 @@ static func _scan_references(folder: String, target: String, target_uid: int, sn
 		var child := folder.path_join(name)
 		if directory.is_link(name):
 			return Values.failure("Cannot verify dependencies through a project directory link: " + child)
-		if FileAccess.file_exists(child.path_join("project.godot")):
+		if child == target.trim_suffix("/") or FileAccess.file_exists(child.path_join("project.godot")):
 			continue
-		var checked := _scan_references(child, target, target_uid, snapshot, depth + 1)
+		var checked := _scan_references(child, target, uids, snapshot, depth + 1)
 		if not checked["ok"]:
 			return checked
 	for name in directory.get_files():
@@ -184,21 +231,34 @@ static func _scan_references(folder: String, target: String, target_uid: int, sn
 		if target.is_empty() or path == target:
 			continue
 		var referenced := false
-		if name.get_extension() in ["tres", "tscn", "res", "scn"]:
+		if name.get_extension() in SERIALIZED_RESOURCES:
 			for dependency in ResourceLoader.get_dependencies(path):
 				var fallback := dependency.get_slice("::", 2) if dependency.contains("::") else dependency
 				if not fallback.begins_with("res://"):
 					fallback = path.get_base_dir().path_join(fallback).simplify_path()
-				var dependency_uid := ResourceUID.text_to_id(dependency.get_slice("::", 0)) if dependency.contains("::") else ResourceUID.INVALID_ID
-				if fallback == target or (target_uid != ResourceUID.INVALID_ID and dependency_uid == target_uid):
+				if _matches_path(fallback, target) or uids.has(dependency.get_slice("::", 0)):
 					referenced = true
+					break
 		if name.get_extension() not in ["res", "scn"]:
 			var text := FileAccess.get_file_as_string(path)
-			var uid_text := ResourceUID.id_to_text(target_uid) if target_uid != ResourceUID.INVALID_ID else ""
-			referenced = referenced or text.contains(target) or (not uid_text.is_empty() and text.contains(uid_text)) or _relative_literal_reference(text, path, target)
+			referenced = referenced or text.contains(target) or _relative_literal_reference(text, path, target)
+			if not referenced:
+				for uid: String in uids:
+					if text.contains(uid):
+						referenced = true
+						break
 		if referenced:
-			snapshot["consumers"].append({"source_path": path, "kind": "resource" if name.get_extension() in ["tres", "tscn", "res", "scn"] else "text"})
+			snapshot["consumers"].append({"source_path": path, "kind": "resource" if name.get_extension() in SERIALIZED_RESOURCES else "text"})
 	return Values.success(true)
+
+
+static func _matches_path(path: String, target: String) -> bool:
+	if not target.ends_with("/"):
+		return path == target
+	if OS.get_name() == "Windows":
+		path = path.to_lower()
+		target = target.to_lower()
+	return path.begins_with(target) or path == target.trim_suffix("/")
 
 
 static func _relative_literal_reference(text: String, source: String, target: String) -> bool:
@@ -223,6 +283,8 @@ static func _relative_literal_reference(text: String, source: String, target: St
 			else:
 				literal += character
 		var value := literal.c_unescape()
-		if value.get_extension() == target.get_extension() and not value.contains(":") and source.get_base_dir().path_join(value).simplify_path() == target:
+		if value.begins_with("res://") and target.ends_with("/") and _matches_path(value, target):
+			return true
+		if not value.is_empty() and not value.contains(":") and (target.ends_with("/") or value.get_extension() == target.get_extension()) and _matches_path(source.get_base_dir().path_join(value).simplify_path(), target):
 			return true
 	return false

@@ -51,5 +51,24 @@ static func resource_error(path: String) -> String:
 	return error if not error.is_empty() else "" if path.get_extension() == "tres" else "Choose an external .tres behavior Resource."
 
 
+static func is_shared_folder(folder: String) -> bool:
+	return folder.get_file() == "Shared" and folder.get_base_dir().get_base_dir() == ROOT
+
+
+static func shared_folder_error(folder: String) -> String:
+	if not is_shared_folder(folder):
+		return "Choose a Shared folder directly under a profile in Content/Gameplay/Profiles."
+	var error := Paths.project_error(folder)
+	if not error.is_empty():
+		return error
+	var behavior_folder := folder.get_base_dir().path_join("Behavior")
+	error = path_error(behavior_folder)
+	if not error.is_empty():
+		return error
+	if not DirAccess.dir_exists_absolute(folder) or not DirAccess.dir_exists_absolute(behavior_folder):
+		return "Choose an existing profile with Behavior and Shared folders."
+	return ""
+
+
 static func name_error(name: String) -> String:
 	return Paths.name_error(name)

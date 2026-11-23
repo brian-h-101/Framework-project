@@ -66,6 +66,10 @@ Right-click a node and open **Framework Scenes**:
 
 - **Add Child Node...** searches instantiable built-in Godot Node types, including plain, 2D, 3D and UI nodes.
 - **Add Scene Instance...** browses the selected project's folders. Choose **Parent Folder** to go up or **Search All Scenes...** at the project root to search by filename or path.
+- **Add Layout Preset...** lists `.layout.tres` files from `Gameplay/Presets` and its subcategories.
+  Build the selected preset in Framework Resources first. Linked placements use
+  the generated scene in the matching subcategory of `Gameplay/Presentation/Layouts` and keep their local
+  position overrides across rebuilds.
 - **Set Node Property...** adds or replaces a supported native value or metadata entry on a locally declared node.
 - **Rename Node...** changes a local node or local scene placement name and repairs supported local references.
 - **Remove Node...** removes a local subtree and its associated signal connections after confirmation.

@@ -1,5 +1,5 @@
 import * as vscode from 'vscode';
-import { bindingAction } from '../resources/configuration_fields';
+import { bindingAction, isCustomConfigurationField } from '../resources/configuration_fields';
 import { validateGraph, isPath, type ResourceGraph, type ResourceNode } from '../bridges/resource_bridge';
 import { isBehaviorPath } from '../bridges/behavior_library_bridge';
 import type { ValueNode } from '../bridges/behavior_editing_bridge';
@@ -94,6 +94,10 @@ export class ResourceTreeProvider
 			item.tooltip = (executor?.script_path ? 'Script: ' + executor.script_path + '\n' : '') + 'Owned by ' + resource.source_path + (row.step_id ? '\nStep ID: ' + row.step_id : '');
 		} else if (data) {
 			const editFlags: string[] = [];
+			if (resource.kind === 'layout' && data.layout_path !== undefined) {
+				editFlags.push('layout_node');
+				if (data.layout_path !== '.') { editFlags.push('layout_child'); }
+			}
 			if (resource.configuration_type === 'input' && data.path[0]?.text === 'Bindings') {
 				if (data.path.length === 1) { editFlags.push('input_bindings'); }
 				const action = bindingAction(data);
@@ -101,6 +105,9 @@ export class ResourceTreeProvider
 					item.label = action;
 					editFlags.push('input_binding');
 				}
+			}
+			if (resource.configuration_type === 'custom' && isCustomConfigurationField(data)) {
+				editFlags.push('configuration_value');
 			}
 			if (resource.kind === 'starting_attributes' && data.path[0]?.text === 'Fragments') {
 				if (data.path.length === 1) { editFlags.push('choose_fragments'); }
@@ -126,7 +133,8 @@ export class ResourceTreeProvider
 				}
 				if (relationships(resource.kind).length) { flags.push('link_resource'); }
 				if (resource.kind === 'starting_attributes') { flags.push('choose_fragments'); }
-				else if (resource.kind !== 'configuration') { flags.push('new_resource'); }
+				else if (resource.kind !== 'configuration' && resource.kind !== 'layout') { flags.push('new_resource'); }
+				if (resource.kind === 'layout') { flags.push('layout_build'); }
 				if (resource.kind === 'configuration') { flags.push('new_configuration'); }
 				if (resource.configuration_type === 'movement') { flags.push('movement_configuration'); }
 				if (isBehaviorPath(resource.source_path)) { flags.push('resource_file'); }

@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process';
 import type { ExecutorSnapshot } from '../resources/executor_metadata';
+import type { ConfigurationFieldType } from './configuration_types';
 
 export interface DataPathPart {
 	kind: 'String' | 'StringName' | 'int' | 'index' | 'unsupported';
@@ -9,6 +10,7 @@ export interface DataPathPart {
 export interface SequenceRow { role: string; step_id: string; [key: string]: unknown }
 
 export interface ValueNode {
+	layout_path?: string;
 	sequence?: SequenceRow;
 	label: string;
 	kind: string;
@@ -31,8 +33,17 @@ export interface BehaviorEdit {
 	movement_behavior_path?: string;
 	velocity_step_id?: string;
 	input_actions?: Record<string, string>;
+	controller_kind?: 'keyboard' | 'ai';
+	targeting?: string;
+	distance_unit?: string;
+	stopping_distance?: number;
 	pixels_per_unit?: number;
 	expected_parent?: string;
+	type_id?: string;
+	type_label?: string;
+	type_fields?: { name: string; type: ConfigurationFieldType; value_text: string }[];
+	configuration_schema_path?: string;
+	configuration_values?: Record<string, string>;
 	presentation_preset?: boolean;
 	fragment_paths?: string[];
 	step_id?: string;
@@ -70,7 +81,7 @@ interface EditResult {
 	uid?: unknown;
 }
 
-export async function draftMovementConfiguration(
+export async function draftConfiguration(
 	project: string,
 	executable: string,
 	source: string,
@@ -81,7 +92,7 @@ export async function draftMovementConfiguration(
 	if (typeof result.source_text !== 'string' || Buffer.byteLength(result.source_text, 'utf8') > 1024 * 1024
 		|| typeof result.uid !== 'string' || !/^uid:\/\/[a-z0-9]+$/.test(result.uid)
 		|| !result.source_text.split(/\r?\n/, 1)[0].includes(`uid="${result.uid}"`)) {
-		throw new Error('Godot returned an invalid Movement configuration draft.');
+		throw new Error('Godot returned an invalid configuration draft.');
 	}
 	return { ...result, source_text: result.source_text, uid: result.uid };
 }

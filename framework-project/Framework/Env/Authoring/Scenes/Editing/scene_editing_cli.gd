@@ -4,6 +4,8 @@ const Editing = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_edit
 const Document = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_document.gd")
 const SceneScript = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_script.gd")
 const MovementCapability = preload("res://Framework/Env/Authoring/Scenes/Configuration/movement_capability.gd")
+const Layouts = preload("res://Framework/Env/Authoring/Scenes/Creation/scene_layout_authoring.gd")
+const LayoutBuilder = Layouts.Builder
 
 
 func _initialize() -> void:
@@ -17,6 +19,27 @@ func _initialize() -> void:
 		result = Editing.node_properties(arguments[1], arguments[2])
 	elif arguments.size() == 3 and arguments[0] == "inspect-movement":
 		result = MovementCapability.inspect(arguments[1], arguments[2])
+	elif arguments.size() == 3 and arguments[0] == "inspect-layout":
+		result = Layouts.inspect(arguments[1], arguments[2])
+	elif arguments.size() == 2 and arguments[0] == "resolve-layout":
+		result = LayoutBuilder.resolve(arguments[1])
+	elif arguments.size() == 1 and arguments[0] == "layout-categories":
+		result = Layouts.categories()
+	elif arguments.size() == 2 and arguments[0] in ["create-layout", "edit-layout", "build-layout", "create-layout-category", "preview-layout-category-deletion"]:
+		var text := OS.read_string_from_stdin(1024 * 1024 + 1)
+		var parser := JSON.new()
+		if text.to_utf8_buffer().size() > 1024 * 1024 or parser.parse(text) != OK or not parser.data is Dictionary:
+			result = Document.failure("Expected layout options as a JSON object of at most 1 MiB.")
+		elif arguments[0] == "create-layout":
+			result = Layouts.create(arguments[1], parser.data)
+		elif arguments[0] == "edit-layout":
+			result = Layouts.edit(arguments[1], parser.data)
+		elif arguments[0] == "create-layout-category":
+			result = Layouts.create_category(arguments[1], parser.data)
+		elif arguments[0] == "preview-layout-category-deletion":
+			result = Layouts.preview_category_deletion(arguments[1], parser.data)
+		else:
+			result = LayoutBuilder.build(arguments[1], parser.data)
 	elif arguments.size() == 2 and arguments[0] == "edit":
 		var text := OS.read_string_from_stdin(1024 * 1024 + 1)
 		var parser := JSON.new()
@@ -34,6 +57,6 @@ func _initialize() -> void:
 		else:
 			result = MovementCapability.apply(arguments[1], arguments[2], parser.data, parser.data.get("token"))
 	else:
-		result = Document.failure("Expected node-types, inspect-script, inspect-properties, edit, or a movement capability command.")
+		result = Document.failure("Expected a scene editing, layout, or movement capability command.")
 	print("[scene-editing] ", JSON.stringify(result))
 	quit(0 if result["ok"] else 1)

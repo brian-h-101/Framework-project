@@ -12,7 +12,6 @@ const Names = preload("res://Framework/Env/Setup/Library/behavior_library_policy
 const Values = preload("res://Framework/Env/Authoring/Shared/resource_values.gd")
 
 const INPUT := "res://Framework/Content/Configuration/Input/controls.tres"
-const MOVEMENT_FOLDER := Inspection.PROFILES_ROOT + "/Movement/Shared"
 const OPERATIONS := ["draft_movement_configuration", "set_movement_configuration"]
 
 
@@ -39,8 +38,14 @@ static func edit(path: String, request: Dictionary) -> Dictionary:
 	if request.has("input_actions"):
 		required.append(INPUT)
 	if creating:
-		if path.get_base_dir() != MOVEMENT_FOLDER:
-			return Values.failure("Create Movement profiles in Content/Gameplay/Profiles/Movement/Shared.")
+		var folder := path.get_base_dir()
+		if path.ends_with(".type.tres"):
+			return Values.failure("Use a preset filename ending in .tres. The .type.tres suffix is for definitions.")
+		if not Names.is_shared_folder(folder):
+			return Values.failure("Create Movement configurations directly in Content/Gameplay/Profiles/<Profile>/Shared.")
+		error = Names.shared_folder_error(folder)
+		if not error.is_empty():
+			return Values.failure(error)
 		error = Names.name_error(path.get_file())
 		if not error.is_empty():
 			return Values.failure(error)

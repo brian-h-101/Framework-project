@@ -2,7 +2,7 @@
 	"name": "resource-condition-extension",
 	"displayName": "Resource Condition Extension",
 	"description": "Inspect and structurally edit framework actions, interactions, conditions, and nested data.",
-	"version": "0.0.29",
+	"version": "0.0.36",
 	"publisher": "framework-tools",
 	"type": "commonjs",
 	"capabilities": {
@@ -26,6 +26,8 @@
 		"test": "npm run compile && node diagnostics/behavior_extension_check.cjs && node diagnostics/resource_drag_and_drop_check.cjs && node diagnostics/behavior_library_extension_check.cjs && node diagnostics/resource_structure_extension_check.cjs && node diagnostics/resource_performance_check.cjs",
 		"test:bridge": "node diagnostics/behavior_editing_bridge_check.cjs",
 		"test:library:bridge": "node diagnostics/behavior_library_bridge_check.cjs",
+		"test:profiles:bridge": "node diagnostics/profile_library_bridge_check.cjs",
+		"test:controllers:bridge": "node diagnostics/movement_controller_authoring_bridge_check.cjs",
 		"test:automation:bridge": "node diagnostics/automation_bridge_check.cjs",
 		"test:structure:bridge": "node diagnostics/resource_structure_bridge_check.cjs",
 		"test:browsing:bridge": "node diagnostics/resource_browsing_bridge_check.cjs"
@@ -55,6 +57,46 @@
 			}
 		],
 		"commands": [
+			{
+				"command": "customTreeView.layoutNew",
+				"title": "New Layout Preset...",
+				"category": "Framework Resources"
+			},
+			{
+				"command": "customTreeView.layoutBuild",
+				"title": "Build Layout Scene...",
+				"category": "Framework Resources"
+			},
+			{
+				"command": "customTreeView.layoutAdd",
+				"title": "Add Layout Child...",
+				"category": "Framework Resources"
+			},
+			{
+				"command": "customTreeView.layoutRename",
+				"title": "Rename Layout Node...",
+				"category": "Framework Resources"
+			},
+			{
+				"command": "customTreeView.layoutRemove",
+				"title": "Remove Layout Node...",
+				"category": "Framework Resources"
+			},
+			{
+				"command": "customTreeView.layoutSet",
+				"title": "Set Layout Property...",
+				"category": "Framework Resources"
+			},
+			{
+				"command": "customTreeView.layoutAttach",
+				"title": "Attach Layout Script...",
+				"category": "Framework Resources"
+			},
+			{
+				"command": "customTreeView.layoutAssign",
+				"title": "Assign Layout Resource...",
+				"category": "Framework Resources"
+			},
 			{
 				"command": "customTreeView.refresh",
 				"title": "Refresh Resources",
@@ -261,6 +303,10 @@
 			{
 				"command": "customTreeView.editMovementConfiguration",
 				"title": "Edit Movement Configuration..."
+			},
+			{
+				"command": "customTreeView.editConfigurationValue",
+				"title": "Edit Configuration Value..."
 			}
 		],
 		"submenus": [
@@ -271,6 +317,34 @@
 		],
 		"menus": {
 			"commandPalette": [
+				{
+					"command": "customTreeView.layoutBuild",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.layoutAdd",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.layoutRename",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.layoutRemove",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.layoutSet",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.layoutAttach",
+					"when": "false"
+				},
+				{
+					"command": "customTreeView.layoutAssign",
+					"when": "false"
+				},
 				{
 					"command": "customTreeView.openResource",
 					"when": "false"
@@ -418,6 +492,10 @@
 				{
 					"command": "customTreeView.editMovementConfiguration",
 					"when": "false"
+				},
+				{
+					"command": "customTreeView.editConfigurationValue",
+					"when": "false"
 				}
 			],
 			"view/title": [
@@ -435,11 +513,46 @@
 			"view/item/context": [
 				{
 					"submenu": "customTreeView.resourceMenu",
-					"when": "view == customTreeView.resources && viewItem =~ /^(behavior|sequence|automation|interaction|action|condition_group|condition|behavior_data|starting_attributes|configuration)([|]|$)/",
+					"when": "view == customTreeView.resources && viewItem =~ /^(behavior|sequence|automation|interaction|action|condition_group|condition|behavior_data|starting_attributes|configuration|layout)([|]|$)/",
 					"group": "framework@1"
 				}
 			],
 			"customTreeView.resourceMenu": [
+				{
+					"command": "customTreeView.layoutBuild",
+					"when": "viewItem =~ /[|]layout_build([|]|$)/",
+					"group": "5_layout@1"
+				},
+				{
+					"command": "customTreeView.layoutAdd",
+					"when": "viewItem =~ /[|]layout_node([|]|$)/",
+					"group": "5_layout@2"
+				},
+				{
+					"command": "customTreeView.layoutRename",
+					"when": "viewItem =~ /[|]layout_node([|]|$)/",
+					"group": "5_layout@3"
+				},
+				{
+					"command": "customTreeView.layoutRemove",
+					"when": "viewItem =~ /[|]layout_child([|]|$)/",
+					"group": "5_layout@4"
+				},
+				{
+					"command": "customTreeView.layoutSet",
+					"when": "viewItem =~ /[|]layout_node([|]|$)/",
+					"group": "5_layout@5"
+				},
+				{
+					"command": "customTreeView.layoutAttach",
+					"when": "viewItem =~ /[|]layout_node([|]|$)/",
+					"group": "5_layout@6"
+				},
+				{
+					"command": "customTreeView.layoutAssign",
+					"when": "viewItem =~ /[|]layout_node([|]|$)/",
+					"group": "5_layout@7"
+				},
 				{
 					"command": "customTreeView.openResource",
 					"group": "1_open@1"
@@ -623,6 +736,11 @@
 					"command": "customTreeView.editMovementConfiguration",
 					"when": "viewItem =~ /[|]movement_configuration([|]|$)/",
 					"group": "configuration@5"
+				},
+				{
+					"command": "customTreeView.editConfigurationValue",
+					"when": "viewItem =~ /[|]configuration_value([|]|$)/",
+					"group": "configuration@6"
 				}
 			]
 		}

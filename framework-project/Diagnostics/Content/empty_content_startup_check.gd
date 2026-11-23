@@ -7,6 +7,7 @@ const Paths = preload("res://Framework/Env/Setup/Library/library_path_policy.gd"
 const Definitions = preload("res://Framework/Env/Setup/Definitions/starting_definitions.gd")
 const BehaviorLibrary = preload("res://Framework/Env/Authoring/Resources/Library/behavior_library_authoring.gd")
 const SceneLibrary = preload("res://Framework/Env/Authoring/Scenes/Library/scene_library.gd")
+const Controllers = preload("res://Framework/Env/Authoring/Scenes/Configuration/movement_controller_catalog.gd")
 const Templates = preload("res://Framework/Env/Authoring/Scenes/Creation/scene_templates.gd")
 const Shared = preload("res://Framework/Env/Authoring/Shared/resource_library_files.gd")
 const Inspection = preload("res://Framework/Env/Authoring/Resources/Inspection/behavior_inspection.gd")
@@ -30,9 +31,9 @@ func _initialize() -> void:
 
 
 func _run() -> void:
-	for folder: String in ["Behavior", "Gameplay/Presentation", "Executor"]:
-		var listed := Paths.paths_in("res://Framework/Content/" + folder, "gd" if folder == "Executor" else "tres")
-		_check(folder + " contains no game definitions", listed["ok"] and listed["value"].is_empty())
+	for source in [["Gameplay/Presentation", "tres"], ["Gameplay/Profiles", "tres"], ["Gameplay/Profiles", "gd"]]:
+		var listed := Paths.paths_in("res://Framework/Content/" + source[0], source[1])
+		_check("%s contains no authored .%s definitions" % source, listed["ok"] and listed["value"].is_empty())
 	var scenes := Paths.paths_in("res://Framework/Content", "tscn")
 	_check("Content contains no scenes", scenes["ok"] and scenes["value"].is_empty())
 	var authored := Paths.paths_in("res://Framework/Content/Gameplay/Authored")
@@ -43,6 +44,8 @@ func _run() -> void:
 	_check("Behavior library management opens without game Resources", behaviors["ok"])
 	var libraries := SceneLibrary.catalogue()
 	_check("Scene library management opens without example scenes", libraries["ok"])
+	var controllers := Controllers.read()
+	_check("Movement controller discovery accepts an empty folder", controllers["ok"] and controllers["value"].is_empty())
 	var inspected := Inspection.graph()
 	_check("Resource graph accepts an empty Behavior library", inspected["ok"] and inspected["value"]["roots"].is_empty())
 	var setup := Setup.new()
@@ -65,7 +68,9 @@ func _run() -> void:
 		return
 	_check("No example entities are spawned", host.entry.entity_ids.is_empty())
 	_check("No map or HUD is attached", host.maps.get_active_map() == null and host.ui == null)
-	_check("Gameplay executor scripts are absent", not host.entry.runtime.has_executor(&"change_health") and not host.entry.runtime.has_executor(&"movement_2d"))
+	_check("Gameplay executor scripts are absent",
+		not host.entry.runtime.has_executor(&"change_health") and not host.entry.runtime.has_executor(&"movement")
+		and not host.entry.runtime.has_executor(&"movement_2d"))
 	_check("Built-in framework execution remains available", host.entry.runtime.has_executor(&"attribute_effects"))
 	var captured := host.entry.snapshot_session()
 	_check("Empty session snapshots remain valid", captured["ok"] and captured["value"]["entities"].is_empty())

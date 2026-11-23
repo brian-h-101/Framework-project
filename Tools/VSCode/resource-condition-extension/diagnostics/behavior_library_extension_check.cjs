@@ -11,6 +11,10 @@ const project = path.resolve(__dirname, 'mock-project');
 const other = path.resolve(__dirname, 'other-project');
 const uri = file => ({ scheme: 'file', fsPath: file, path: file.replaceAll('\\', '/'), toString: () => pathToFileURL(file).href });
 const hash = createHash('sha256').update('[]').digest('hex');
+const presets = 'res://Framework/Content/Gameplay/Presets';
+const props = presets + '/Props';
+const layoutRequests = [];
+let changedBeforeTrash = false;
 const entry = (source, kind, extra = {}) => ({ source_path: source, parent_path: source === profiles ? '' : source.slice(0, source.lastIndexOf('/')),
 	name: source.split('/').at(-1), kind, fingerprint: hash, supported: false, ...extra });
 const catalog = { version: 1, root_path: profiles, executors: [{id:'attribute_effects', label:'Attribute Effects', description:'', supports_effects:true, arguments:[]}], entries: [
@@ -37,9 +41,13 @@ const contexts = directory => ({ projectDirectory: directory, workspaceDirectory
 class Service {
 	constructor(context, executable, report, ready) { this.context = context; this.ready = ready; }
 	async catalogue() { return catalog; }
+	async profileCatalogue() { return { ...catalog, entries: catalog.entries.slice(0, 2) }; }
+	async createProfile(entry, name) { await this.ready(); calls.push(['profile', this.context, entry, name]); return entry.source_path + '/' + name; }
 	async createCategory(entry, name) { await this.ready(); calls.push(['category', this.context, entry, name]); return entry.source_path + '/' + name; }
 	async createResource(entry, name, request, snapshot) { await this.ready(); calls.push(['resource', this.context, entry, name, request, snapshot]); return entry.source_path + '/' + name; }
 	async previewDeletion(entry) { await this.ready(true); calls.push(['preview', this.context, entry]); return { consumers }; }
+	async previewProfileDeletion(entry) { await this.ready(true); calls.push(['profile-preview', this.context, entry]); return { consumers, file_count: 4 }; }
+	async deleteProfile(entry, preview, callback) { await this.ready(true); calls.push(['delete-profile']); await callback(path.join(this.context.projectDirectory, entry.source_path.slice(6))); }
 	async deleteResource(entry, preview, callback) { await this.ready(true); calls.push(['delete-resource']); await callback(path.join(this.context.projectDirectory, entry.source_path.slice(6))); }
 	async deleteEmptyCategory(entry, callback) { await this.ready(true); calls.push(['delete-category']); await callback(path.join(this.context.projectDirectory, entry.source_path.slice(6))); }
 }
@@ -50,6 +58,26 @@ function load(file) {
 	const localRequire = name => {
 		if (name === 'vscode') { return api; }
 		if (name === './library_service') { return { LibraryService: Service }; }
+		if (file.endsWith('layout_editing_command.js')) {
+			if (name === './configuration_editing_command') { return { projectFor: async () => contexts(project) }; }
+			if (name === '../library/library_paths') {
+				return { ...require('../out/library/library_paths.js'),
+					checkedProjectPath: async (context, source) => path.join(context.projectDirectory, source.slice(6)),
+					directoryFingerprint: async () => hash,
+					verifyLibrarySnapshot: async () => { if (changedBeforeTrash) { throw new Error('Project references changed.'); } },
+				};
+			}
+			if (name === '../bridges/layout_bridge') {
+				return { ...require('../out/bridges/layout_bridge.js'),
+					runLayout: async (_project, _executable, [operation, source], _report, body) => {
+						layoutRequests.push({ operation, source, body });
+						if (operation === 'layout-categories') { return [presets, props].map(source_path => ({ source_path, fingerprint: hash })); }
+						if (operation === 'create-layout-category') { return { source_path: source }; }
+						return { source_path: source, hashes: {}, directories: { [source]: hash }, consumers, file_count: 1 };
+					}
+				};
+			}
+		}
 		if (name.endsWith('/project_context')) { return { ...require('../out/workspace/project_context.js'), resolveProjectContext: async file => contexts(path.dirname(file)) }; }
 		return name.startsWith('.') ? load(path.resolve(path.dirname(file), name + '.js')) : require(name);
 	};
@@ -58,9 +86,10 @@ function load(file) {
 }
 const { LibraryManager } = load(path.join(__dirname, '../out/library/library_manager.js'));
 const { creationDetails } = load(path.join(__dirname, '../out/library/resource_prompts.js'));
-let configurationStarts = 0;
+const configurationStarts = [];
+const layoutStarts = [];
 const manager = new LibraryManager({ appendLine() {} }, async (...args) => changed.push(args),
-	async () => { configurationStarts++; });
+	async operation => { configurationStarts.push(operation); }, async operation => { layoutStarts.push(operation); });
 const check = label => console.log(`[behavior-library-ui] ${label}: true`);
 const op = label => items => items.find(item => item.label.startsWith(label));
 const destination = source => items => {
@@ -73,10 +102,21 @@ async function main() {
 	check('Cancelling management performs no discovery or write');
 	picks.push(op('New Configuration Resource'));
 	await manager.execute();
-	assert.equal(configurationStarts, 1);
+	picks.push(op('New Configuration Type'));
+	await manager.execute();
+	picks.push(op('New Movement Controller'));
+	await manager.execute();
+	assert.deepEqual(configurationStarts, ['new_configuration', 'new_configuration_type', 'new_movement_controller']);
+	picks.push(op('New Layout Preset'));
+	await manager.execute();
+	picks.push(op('New Preset Subcategory'));
+	await manager.execute();
+	picks.push(op('Delete Preset Subcategory'));
+	await manager.execute();
+	assert.deepEqual(layoutStarts, ['create', 'create_category', 'delete_category']);
 	assert.equal(discoveries, 0);
 	assert.deepEqual(calls, []);
-	check('New Configuration Resource opens its own workflow from the library menu');
+	check('Configuration and movement controller creation open their own workflows from the library menu');
 	picks.push(op('New Category'), destination(root)); inputs.push('Magic2'); await manager.execute();
 	picks.push(op('New Subcategory'), destination(root + '/Magic')); inputs.push('Healing'); await manager.execute();
 	assert.deepEqual(calls.slice(0, 2).map(call => [call[0], call[2].source_path, call[3]]), [['category', root, 'Magic2'], ['category', root + '/Magic', 'Healing']]);
@@ -145,6 +185,55 @@ async function main() {
 	picks.push(op('Delete Empty Category'), items => { assert.ok(items.every(item => item.entry.source_path === root + '/Magic')); return items[0]; }, 'Move to Recycle Bin');
 	await manager.execute(); assert.equal(trash.length, 2);
 	check('Referenced resources are blocked; confirmed file and empty-folder deletions use nonrecursive Trash');
+	const selectProfileEntry = source => items => {
+		assert.equal(items.length, 2);
+		assert.ok(items.every(item => item.entry.source_path === source));
+		return items.find(item => item.library.context.projectDirectory === project);
+	};
+	picks.push(op('New Profile'), selectProfileEntry(profiles)); inputs.push('Combat'); await manager.execute();
+	assert.deepEqual(calls.at(-1).slice(2).map(value => value.source_path ?? value), [profiles, 'Combat']);
+	assert.equal(changed.at(-1)[0].fsPath, path.join(project, profiles.slice(6), 'Combat'));
+	assert.equal(changed.at(-1)[1], false);
+	assert.equal(opened.length, 1);
+	consumers = [{ source_path: 'res://outside.tscn', kind: 'resource' }];
+	picks.push(op('Delete Profile'), selectProfileEntry(category)); await manager.execute();
+	assert.match(JSON.stringify(messages.at(-1)), /outside\.tscn/); assert.equal(trash.length, 2);
+	consumers = [];
+	picks.push(op('Delete Profile'), selectProfileEntry(category), undefined); await manager.execute();
+	assert.match(messages.at(-1)[1].detail, /entire profile.*4 file/); assert.equal(trash.length, 2);
+	picks.push(op('Delete Profile'), selectProfileEntry(category), 'Move to Recycle Bin'); await manager.execute();
+	assert.equal(trash.length, 3);
+	assert.deepEqual(trash.at(-1)[1], { useTrash: true, recursive: true });
+	assert.equal(trash.at(-1)[0].fsPath, path.join(project, category.slice(6)));
+	assert.equal(changed.at(-1)[1], true);
+	check('Profile actions target the selected project; referenced or cancelled deletions never move a directory');
+	const { LayoutCommands } = load(path.join(__dirname, '../out/commands/layout_editing_command.js'));
+	const removed = [];
+	const layouts = new LayoutCommands({}, { appendLine() {} }, async () => {}, folder => removed.push(folder));
+	picks.push(op('Props')); inputs.push('Outdoor'); await layouts.execute('create_category');
+	assert.deepEqual(layoutRequests.at(-1), { operation: 'create-layout-category', source: props + '/Outdoor', body: { expected_parent: hash } });
+	const selectLayoutCategory = items => {
+		assert.deepEqual(items.map(item => item.label), ['Props']);
+		return items[0];
+	};
+	consumers = [{ source_path: 'res://generated.tscn' }];
+	picks.push(selectLayoutCategory); await layouts.execute('delete_category');
+	assert.equal(trash.length, 3);
+	assert.match(JSON.stringify(messages.at(-1)), /generated\.tscn/);
+	consumers = [];
+	picks.push(selectLayoutCategory, undefined); await layouts.execute('delete_category');
+	assert.equal(trash.length, 3);
+	changedBeforeTrash = true;
+	picks.push(selectLayoutCategory, 'Move to Recycle Bin'); await layouts.execute('delete_category');
+	assert.match(messages.at(-1), /Project references changed/);
+	assert.equal(trash.length, 3);
+	changedBeforeTrash = false;
+	picks.push(selectLayoutCategory, 'Move to Recycle Bin'); await layouts.execute('delete_category');
+	assert.equal(trash.length, 4);
+	assert.equal(trash.at(-1)[0].fsPath, path.join(project, props.slice(6)));
+	assert.deepEqual(trash.at(-1)[1], { useTrash: true, recursive: true });
+	assert.equal(removed.at(-1).fsPath, trash.at(-1)[0].fsPath);
+	check('Preset subcategories use their chosen parent and only enter the Recycle Bin after confirmation and revalidation');
 	onPrompt = options => { if (options.title === 'New Category — Name') { api.workspace.isTrusted = false; } };
 	picks.push(op('New Category'), destination(root)); inputs.push('Blocked'); const count = calls.length; await manager.execute();
 	assert.equal(calls.length, count); assert.match(messages.at(-1), /workspace changed/); onPrompt = undefined; api.workspace.isTrusted = true;

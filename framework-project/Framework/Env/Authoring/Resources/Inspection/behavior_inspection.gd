@@ -8,6 +8,7 @@ const InteractionContent = preload("res://Framework/Env/Setup/Definitions/intera
 const Executors = preload("res://Framework/Env/Authoring/Resources/Inspection/executor_catalog.gd")
 const StartingPresets = preload("res://Framework/Env/Authoring/Resources/Presentation/starting_preset_authoring.gd")
 const Configurations = preload("res://Framework/Env/Authoring/Resources/Configuration/configuration_inspection.gd")
+const Layouts = preload("res://Framework/Env/Authoring/Scenes/Creation/scene_layout_authoring.gd")
 
 
 static func browse(selected: String) -> Dictionary:
@@ -23,6 +24,8 @@ static func browse(selected: String) -> Dictionary:
 	var resource := ResourceLoader.load(selected, "", ResourceLoader.CACHE_MODE_IGNORE_DEEP)
 	if resource == null:
 		return Values.failure("Could not load the selected Resource: " + selected)
+	if resource is Layouts.Preset and Layouts.Builder.path_error(selected).is_empty():
+		return Layouts.graph(selected, resource, hashes, true)
 	if Configurations.supports(selected, resource):
 		return Configurations.graph(selected, resource, hashes, true)
 	if StartingPresets.supports(selected, resource):
@@ -57,6 +60,10 @@ static func graph(selected: String = "") -> Dictionary:
 			return Values.failure("Could not load the selected Resource: " + selected)
 		if FileAccess.get_sha256(selected) != before:
 			return Values.failure("Resource changed during inspection: %s. Refresh and retry." % selected)
+		if resource is Layouts.Preset and Layouts.Builder.path_error(selected).is_empty():
+			var hashes := {}
+			checked = Library._hash_resources(selected, hashes, 0)
+			return Layouts.graph(selected, resource, hashes, false) if checked["ok"] else checked
 		if Configurations.supports(selected, resource):
 			var hashes := {}
 			checked = Library._hash_resources(selected, hashes, 0)

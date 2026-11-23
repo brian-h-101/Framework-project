@@ -1,4 +1,4 @@
-import { lstat, realpath, readdir } from 'node:fs/promises';
+import { lstat, realpath, readdir, readFile } from 'node:fs/promises';
 import { join, relative } from 'node:path';
 import { createHash } from 'node:crypto';
 import { isBehaviorPath } from '../bridges/behavior_library_bridge';
@@ -58,6 +58,27 @@ export async function directoryFingerprint(path: string): Promise<string> {
 }
 
 export function sha256(bytes: Uint8Array): string { return createHash('sha256').update(bytes).digest('hex'); }
+
+export interface DependencySnapshot {
+	hashes: Record<string, string>;
+	directories: Record<string, string>;
+}
+
+export async function verifyLibrarySnapshot(context: ProjectContext, preview: DependencySnapshot, command: string): Promise<void> {
+	for (const [source, expected] of Object.entries(preview.hashes)) {
+		const path = await checkedProjectPath(context, source);
+		if (!/^[a-f0-9]{64}$/.test(expected) || sha256(await readFile(path)) !== expected) {
+			throw new Error(`Project references changed. Run ${command} again.`);
+		}
+	}
+	for (const [source, expected] of Object.entries(preview.directories)) {
+		const path = source === 'res://' ? context.projectDirectory : await checkedProjectPath(context, source);
+		if (await directoryFingerprint(path) !== expected) {
+			throw new Error(`Project directories changed: ${source}. Run ${command} again.`);
+		}
+	}
+}
+
 export function missing(error: unknown): boolean {
 	return typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT';
 }

@@ -2,6 +2,12 @@ extends RefCounted
 
 const Controls = preload("res://Framework/Env/Configuration/Resources/Input/controls_resource.gd")
 const Movement = preload("res://Framework/Content/Universal/Movement/based/Configuration/movement_profile.gd")
+const Controller = preload("res://Framework/Content/Universal/Movement/based/Controllers/movement_controller.gd")
+const ControllerAuthoring = preload("res://Framework/Env/Authoring/Resources/Configuration/movement_controller_authoring.gd")
+const Custom = preload("res://Framework/Env/Configuration/Resources/Shared/custom_configuration_resource.gd")
+const ConfigurationType = preload("res://Framework/Env/Configuration/Resources/Shared/configuration_type_resource.gd")
+const Policy = preload("res://Framework/Env/Setup/Library/behavior_library_policy.gd")
+const Authoring = preload("res://Framework/Env/Authoring/Resources/Configuration/custom_configuration_authoring.gd")
 const Files = preload("res://Framework/Env/Authoring/Shared/resource_files.gd")
 const Values = preload("res://Framework/Env/Authoring/Shared/resource_values.gd")
 const ValueTree = preload("res://Framework/Env/Authoring/Shared/value_tree.gd")
@@ -14,6 +20,11 @@ static func supports(path: String, resource: Resource) -> bool:
 	return (
 		resource is Controls and path.begins_with(ROOT)
 		or resource is Movement and is_movement_path(path)
+		or resource is Controller and path.begins_with(ControllerAuthoring.ROOT + "/")
+		or Policy.is_shared_folder(path.get_base_dir()) and (
+			resource is Custom and not path.ends_with(Authoring.TYPE_SUFFIX)
+			or resource is ConfigurationType and path.ends_with(Authoring.TYPE_SUFFIX)
+		)
 	)
 
 
@@ -28,13 +39,37 @@ static func graph(
 	browsing: bool
 ) -> Dictionary:
 	if not supports(path, resource):
-		return Values.failure("Expected a Movement profile or an Input configuration.")
+		return Values.failure("Expected a supported configuration resource.")
 
 	var fields: Dictionary
-	var configuration_type := "input" if resource is Controls else "movement"
+	var configuration_type: String
 	if resource is Controls:
+		configuration_type = "input"
 		fields = {"Bindings": resource.bindings}
+	elif resource is Controller:
+		var checked: Dictionary = resource.read()
+		if not checked["ok"]:
+			return checked
+		configuration_type = "movement_controller"
+		fields = checked["value"]
+	elif resource is ConfigurationType:
+		var error: String = resource.validation_error()
+		if not error.is_empty():
+			return Values.failure(error)
+		configuration_type = "custom_type"
+		fields = {"Type ID": resource.id, "Label": resource.label, "Fields": resource.fields}
+	elif resource is Custom:
+		var folder := path.get_base_dir()
+		var schema_path := _resource_path(resource.schema)
+		if schema_path.get_base_dir() != folder or not schema_path.ends_with(Authoring.TYPE_SUFFIX) or not hashes.has(schema_path):
+			return Values.failure("Choose a preset with a saved Configuration Type from the same profile.")
+		var checked: Dictionary = resource.read()
+		if not checked["ok"]:
+			return checked
+		configuration_type = "custom"
+		fields = {"Type": resource.schema.label, "Type Resource": schema_path, "Values": checked["value"]}
 	else:
+		configuration_type = "movement"
 		var movement := resource as Movement
 		var environment := movement.resolved_environment()
 		fields = {

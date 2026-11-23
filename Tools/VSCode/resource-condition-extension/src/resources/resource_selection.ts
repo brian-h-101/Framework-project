@@ -70,7 +70,7 @@ export class ResourceSelection implements vscode.Disposable {
 	}
 
 	removed(uri: vscode.Uri, after?: Promise<void>): void {
-		if (uri.toString() !== this.selectedUri?.toString()) { this.changed(uri, after); return; }
+		if (!this.selectedUri || !isInside(uri.fsPath, this.selectedUri.fsPath)) { this.changed(uri, after); return; }
 		this.invalidate(uri); this.stopLoad(); this.requestId++;
 		this.selectedUri = undefined; this.dependencies.clear(); this.unsupported = false;
 		this.provider.clear(); this.status('Open a framework .tres file to view its relationships.');
@@ -87,7 +87,7 @@ export class ResourceSelection implements vscode.Disposable {
 			this.invalidate(); this.stopLoad(); this.requestId++; this.provider.clear();
 			this.status('Resource loading requires a trusted workspace.'); return;
 		}
-		if (this.unsupported) { this.status('Open a Behavior, a related resource, a Presentation starting preset, or an Input or Movement configuration in Framework Resources.'); return; }
+		if (this.unsupported) { this.status('Open a Behavior, a related resource, a Presentation starting preset, or a supported configuration in Framework Resources.'); return; }
 		const dirty = vscode.workspace.textDocuments.some(document => document.isDirty && (
 			this.dependencies.has(document.uri.toString()) || document.uri.toString() === this.selectedUri?.toString()
 			|| this.projectUri && document.uri.scheme === 'file' && isInside(this.projectUri.fsPath, document.uri.fsPath)));

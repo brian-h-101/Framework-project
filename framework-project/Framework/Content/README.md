@@ -9,6 +9,11 @@ through the framework extensions. The framework schemas, authoring backends,
 Authored attribute library, reusable [Universal components](Universal/README.md), and configuration
 templates remain available.
 
+The City rebuild also clears `Gameplay/Maps/city.tscn`, the Player and Enemy
+presentations and their starting-attribute presets, the Movement profile, and the
+keyboard and AI controller resources. Startup opens an empty session during
+authoring.
+
 The cleanup removed 11 Behavior Resources, 10 Presentation Resources, 12 Content
 scenes (Maps, Presentation, Camera and UI/HUD), and two gameplay executor scripts.
 It also removed the old per-player Movement resource because it referenced
@@ -41,8 +46,9 @@ the runtime, world bridge, entity IDs and display definitions to configure_sessi
 components in the HUD. The HUD and its root can both receive this configuration.
 
 `Configuration/Input/controls.tres` defines the configured input bindings.
-Persistence starts in new mode and redirects the former City scene path to its
-location under `Gameplay/Maps` when restoring a save.
+Persistence starts in new mode. A restored save that references City requires
+the map to be recreated. Legacy map paths can be redirected once their
+destination scenes exist.
 
 ## Rebuilding
 
@@ -53,8 +59,9 @@ location under `Gameplay/Maps` when restoring a save.
    retained Authored library as the source of available containers and attributes.
 3. Add gameplay executor scripts under `Content/Gameplay/Profiles/<category>/Executor`, then
    use Framework Resources to create Behaviors under that category’s `Behavior` folder.
-4. Attach presentation instances and Behavior Resources through Framework Scenes.
-   Recreate a CanvasLayer HUD if required.
+4. Recreate the keyboard and AI controller resources under `Gameplay/Controller`.
+   Assign them to the corresponding entity presentations, then attach the
+   presentation instances and Behavior Resources through Framework Scenes.
 5. Set initial_map and ui_scene in startup.tres to the newly authored scene paths.
    Author startup entities and input bindings for the rebuilt game as needed.
 

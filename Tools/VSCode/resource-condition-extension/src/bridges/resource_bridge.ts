@@ -1,6 +1,11 @@
 import { execFile } from 'node:child_process';
 import type { ValueNode } from './behavior_editing_bridge';
+import { isProfileSharedFolder, PROFILES_ROOT } from './behavior_library_bridge';
+import { CONFIGURATION_TYPE_SUFFIX } from './configuration_types';
+import { isLayoutCategory, LAYOUT_SUFFIX } from './layout_bridge';
 import { validateExecutors, validateSpecs, type ArgumentSpec, type ExecutorDescriptor, type ExecutorSnapshot } from '../resources/executor_metadata';
+
+export const MOVEMENT_CONTROLLER_ROOT = 'res://Framework/Content/Gameplay/Controller';
 
 export interface ResourceLink {
 	role: string;
@@ -22,7 +27,7 @@ export interface ResourceNode {
 	behavior_error?: string;
 	argument_specs?: ArgumentSpec[];
 	fragment_paths?: string[];
-	configuration_type?: 'input' | 'movement';
+	configuration_type?: 'input' | 'movement' | 'movement_controller' | 'custom_type' | 'custom';
 	physical_keys?: { label: string; code: string }[];
 }
 
@@ -65,7 +70,7 @@ export function validateGraph(value: unknown): asserts value is ResourceGraph {
 	for (const [path, node] of Object.entries(value.nodes)) {
 		if (!isPath(path) || !isRecord(node) || node.source_path !== path
 			|| typeof node.id !== 'string'
-			|| !['action', 'interaction', 'condition', 'condition_group', 'automation', 'behavior', 'starting_attributes', 'configuration'].includes(String(node.kind))
+			|| !['action', 'interaction', 'condition', 'condition_group', 'automation', 'behavior', 'starting_attributes', 'configuration', 'layout'].includes(String(node.kind))
 			|| node.content_hash !== value.dependency_hashes[path]
 			|| !Array.isArray(node.links)) {
 			throw new Error(`Malformed resource node: ${path}`);
@@ -78,15 +83,25 @@ export function validateGraph(value: unknown): asserts value is ResourceGraph {
 			}
 		}
 		validateValueNode(node.data, 0, { count: 0 });
+		if (node.kind === 'layout' && (!isLayoutCategory(path.slice(0, path.lastIndexOf('/'))) || !path.endsWith(LAYOUT_SUFFIX))) {
+			throw new Error('Choose a Layout Preset under Gameplay/Presets.');
+		}
 		if (node.kind === 'configuration') {
-			if (node.configuration_type !== 'input' && node.configuration_type !== 'movement') {
+			const type = node.configuration_type;
+			if (type !== 'input' && type !== 'movement' && type !== 'movement_controller' && type !== 'custom_type' && type !== 'custom') {
 				throw new Error('Unknown Configuration resource type.');
 			}
-			if (!path.startsWith('res://Framework/Content/Configuration/')
-				&& !(node.configuration_type === 'movement' && path.startsWith('res://Framework/Content/Gameplay/Profiles/'))) {
+			if (type === 'custom' || type === 'custom_type') {
+				if (!isProfileSharedFolder(path.slice(0, path.lastIndexOf('/'))) || path.endsWith(CONFIGURATION_TYPE_SUFFIX) !== (type === 'custom_type')) {
+					throw new Error('Choose a custom Configuration Type or preset in a profile’s Shared folder.');
+				}
+			} else if (type === 'movement_controller') {
+				if (!path.startsWith(MOVEMENT_CONTROLLER_ROOT + '/')) { throw new Error('Choose a resource under Gameplay/Controller.'); }
+			} else if (!path.startsWith('res://Framework/Content/Configuration/')
+				&& !(type === 'movement' && path.startsWith(PROFILES_ROOT + '/'))) {
 				throw new Error('Choose a resource under Framework/Content/Configuration or a Movement profile under Framework/Content/Gameplay/Profiles.');
 			}
-			if (node.configuration_type === 'input') {
+			if (type === 'input') {
 				const keys = node.physical_keys;
 				if (!Array.isArray(keys) || keys.length > 1000 || keys.some(key =>
 					!isRecord(key) || typeof key.label !== 'string' || !key.label
@@ -139,6 +154,10 @@ function validateValueNode(node: unknown, depth: number, state: { count: number 
 	if (node.sequence !== undefined && (!isRecord(node.sequence) || typeof node.sequence.step_id !== 'string'
 		|| !['root', 'steps', 'step', 'configuration', 'requirements', 'condition', 'executor', 'argument', 'argument_data'].includes(String(node.sequence.role)))) {
 		throw new Error('Malformed Behavior step ownership metadata.');
+	}
+	if (node.layout_path !== undefined && (typeof node.layout_path !== 'string'
+		|| (node.layout_path !== '.' && node.layout_path.split('/').some(part => !part || part === '.' || part === '..' || /[:\\%\r\n]/.test(part))))) {
+		throw new Error('Malformed Layout Preset node path.');
 	}
 	for (const child of node.children) { validateValueNode(child, depth + 1, state); }
 }

@@ -4,6 +4,14 @@ import { validateExecutors, validateSpecs, type ArgumentSpec, type ExecutorDescr
 
 export const PROFILES_ROOT = 'res://Framework/Content/Gameplay/Profiles';
 
+export function isProfilePath(source: string): boolean {
+	return source.slice(0, source.lastIndexOf('/')) === PROFILES_ROOT;
+}
+
+export function isProfileSharedFolder(source: string): boolean {
+	return source.endsWith('/Shared') && isProfilePath(source.slice(0, -'/Shared'.length));
+}
+
 export function isBehaviorPath(source: string): boolean {
 	if (!source.startsWith(PROFILES_ROOT + '/')) { return false; }
 	const [category, folder] = source.slice(PROFILES_ROOT.length + 1).split('/');
@@ -28,13 +36,14 @@ export interface LibraryEntry {
 export interface LibraryCatalogue { version: 1; root_path: string; entries: LibraryEntry[];
 	executors?: ExecutorDescriptor[]; executor_snapshot?: ExecutorSnapshot }
 export interface ResourceDraft { source_path: string; source_text: string; content_hash: string; uid: string }
-export interface DeletionPreview {
+interface DependencyPreview {
 	source_path: string;
-	content_hash: string;
 	consumers: { source_path: string; kind: string }[];
 	hashes: Record<string, string>;
 	directories: Record<string, string>;
 }
+export interface DeletionPreview extends DependencyPreview { content_hash: string }
+export interface ProfileDeletionPreview extends DependencyPreview { file_count: number }
 export interface RenamePreview {
 	source_path: string;
 	destination_path: string;
@@ -45,10 +54,10 @@ export interface RenamePreview {
 	directories: Record<string, string>;
 }
 
-export function libraryRequest(project: string, executable: string, operation: 'catalogue' | 'draft' | 'deletion-preview' | 'rename-preview' | 'rename',
+export function libraryRequest(project: string, executable: string, operation: 'catalogue' | 'profile-catalogue' | 'configuration-types' | 'draft' | 'deletion-preview' | 'profile-deletion-preview' | 'rename-preview' | 'rename',
 	source: string | undefined, request: Record<string, unknown>, report: (message: string) => void,
 	signal?: AbortSignal): Promise<unknown> {
-	if (source !== undefined) { validateResourcePath(source, '.tres'); }
+	if (source !== undefined) { validateResourcePath(source, ['profile-deletion-preview', 'configuration-types'].includes(operation) ? undefined : '.tres'); }
 	const input = JSON.stringify(request);
 	if (Buffer.byteLength(input) > 1024 * 1024) { throw new Error('Library requests cannot exceed 1 MiB.'); }
 	return new Promise((resolve, reject) => {
@@ -90,7 +99,7 @@ export function validateCatalogue(value: unknown): LibraryCatalogue {
 			throw new Error('Malformed authored library entry.');
 		}
 		validateResourcePath(entry.source_path);
-		const category = entry.kind === 'folder' && entry.parent_path === PROFILES_ROOT;
+		const category = entry.kind === 'folder' && isProfilePath(entry.source_path);
 		if ((entry.source_path !== PROFILES_ROOT && !category && !isBehaviorPath(entry.source_path))
 			|| seen.has(entry.source_path) || entry.name !== entry.source_path.split('/').at(-1)) {
 			throw new Error('Invalid or repeated authored library path.');

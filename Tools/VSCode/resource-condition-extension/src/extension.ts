@@ -18,6 +18,7 @@ import { LibraryManager } from './library/library_manager';
 import { openExecutorScript } from './commands/executor_navigation_command';
 import { ResourceStructureCommands, type ResourceOperation } from './commands/resource_structure_command';
 import { ConfigurationCommands } from './commands/configuration_editing_command';
+import { LayoutCommands } from './commands/layout_editing_command';
 
 export function activate(context: vscode.ExtensionContext): void {
 	const output = vscode.window.createOutputChannel(
@@ -27,10 +28,11 @@ export function activate(context: vscode.ExtensionContext): void {
 	const provider = new ResourceTreeProvider();
 	const selection = new ResourceSelection(provider, output, message => { view.message = message; });
 	const configuration = new ConfigurationCommands(provider, output, () => selection.refresh());
+	const layouts = new LayoutCommands(provider, output, () => selection.refresh(), uri => selection.removed(uri));
 	const library = new LibraryManager(output, async (uri, removed) => {
 		if (removed) { selection.removed(uri); }
-		else { await selection.refresh(); }
-	}, () => configuration.execute('draft_movement_configuration'));
+		await selection.refresh();
+	}, operation => configuration.execute(operation), operation => layouts.execute(operation));
 	const resourceStructure = new ResourceStructureCommands(provider, output, async (uri, removed) => {
 		if (uri && removed) { selection.removed(uri); }
 		await selection.refresh();
@@ -246,11 +248,24 @@ export function activate(context: vscode.ExtensionContext): void {
 		['addInputBinding', 'add_input_binding'],
 		['editInputKeys', 'set_input_binding_keys'],
 		['removeInputBinding', 'remove_input_binding'],
-		['newConfigurationResource', 'draft_movement_configuration'],
+		['newConfigurationResource', 'new_configuration'],
 		['editMovementConfiguration', 'set_movement_configuration'],
+		['editConfigurationValue', 'set_custom_configuration_field'],
 	] as const).map(([command, operation]) => vscode.commands.registerCommand(
 		'customTreeView.' + command,
 		(element?: ResourceTreeElement) => runOperation(() => configuration.execute(operation, element))
+	));
+	const layoutCommands = ([
+		['layoutNew', 'create'],
+		['layoutBuild', 'build'],
+		['layoutAdd', 'add'],
+		['layoutRename', 'rename'],
+		['layoutRemove', 'remove'],
+		['layoutSet', 'set_property'],
+		['layoutAttach', 'attach_script'],
+		['layoutAssign', 'assign_resource'],
+	] as const).map(([command, operation]) => vscode.commands.registerCommand(
+		'customTreeView.' + command, (element?: ResourceTreeElement) => runOperation(() => layouts.execute(operation, element))
 	));
 	const watcher = vscode.workspace.createFileSystemWatcher('**/*.{tres,gd,godot,tscn,res,scn,gdshader}');
 	const changed = (uri: vscode.Uri): void => selection.changed(uri, pendingOperation);
@@ -268,6 +283,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
 	context.subscriptions.push(
 		...configurationCommands,
+		...layoutCommands,
 		...sequenceCommands,
 		...resourceCommands,
 		...structuralCommands,

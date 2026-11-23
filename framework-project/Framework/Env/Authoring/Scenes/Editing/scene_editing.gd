@@ -9,6 +9,7 @@ const SceneGraph = preload("res://Framework/Env/Authoring/Scenes/Inspection/scen
 const References = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_references.gd")
 const SceneScript = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_script.gd")
 const SceneProperties = preload("res://Framework/Env/Authoring/Scenes/Editing/scene_properties.gd")
+const LayoutBuilder = preload("res://Framework/Env/Authoring/Scenes/Creation/scene_layout_builder.gd")
 const MovementCatalog = preload(
 	"res://Framework/Env/Authoring/Scenes/Configuration/movement_configuration_catalog.gd"
 )
@@ -117,6 +118,19 @@ static func edit(scene_path: String, request: Dictionary) -> Dictionary:
 	var edits: Array[Dictionary] = []
 	var verification := {"operation": operation, "path": path, "new_path": new_path, "added_count": 0}
 	var all_hashes: Dictionary = hashes.duplicate()
+	if operation == "add_instance" and request.has("layout_path"):
+		if not request["layout_path"] is String or not request.get("layout_hashes") is Dictionary:
+			return Document.failure("Choose an inspected Layout Preset.")
+		var layout := LayoutBuilder.resolve(request["layout_path"])
+		if not layout["ok"]:
+			return layout
+		if layout["value"]["scene_path"] != request.get("instance_scene"):
+			return Document.failure("The selected Layout Preset does not match the generated scene.")
+		var layout_hashes: Dictionary = layout["value"]["dependency_hashes"]
+		guarded = LayoutBuilder.verify_hashes(request["layout_hashes"], layout_hashes)
+		if not guarded["ok"]:
+			return guarded
+		verification["layout_hashes"] = layout_hashes
 	if operation == "set_property":
 		var property_edit := SceneProperties.edit(document, request, path, target_node["type"])
 		if not property_edit["ok"]:
@@ -564,6 +578,10 @@ static func _publish(path: String, source: String, before: Dictionary, hashes: D
 	var checked := _check_hashes(hashes, hashes)
 	if not checked["ok"]:
 		return _discard(staged, checked["error"])
+	if operation.has("layout_hashes"):
+		checked = LayoutBuilder.verify_hashes(operation["layout_hashes"], operation["layout_hashes"])
+		if not checked["ok"]:
+			return _discard(staged, checked["error"])
 	var published := DirAccess.rename_absolute(staged, path)
 	if published != OK:
 		return _discard(staged, "Could not publish the scene: %s" % error_string(published))
